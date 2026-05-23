@@ -1,0 +1,52 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: gunicorn -b 0.0.0.0:5000 --workers 1 --threads 4 --timeout 120 app:app
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: sqlite:////data/vexnd.db
+      DB_SCHEMA_LOCK_FILE: /data/vexnd_db_schema.lock
+    volumes:
+      - vexnd_data:/data
+    expose:
+      - "5000"
+    restart: unless-stopped
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python bot.py
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: sqlite:////data/vexnd.db
+      DB_SCHEMA_LOCK_FILE: /data/vexnd_db_schema.lock
+    volumes:
+      - vexnd_data:/data
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    env_file:
+      - ./.env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  vexnd_data:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {{ _('Регистрация') }}
+{% endblock %}
+
+{% block meta_robots %}
+  <meta name="robots" content="noindex,nofollow">
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center px-4 py-12">
+    <div class="glass-effect max-w-md w-full rounded-2xl p-8">
+        <h2 class="text-3xl font-bold text-center mb-8">
+            {{ _('Создать аккаунт') }}
+        </h2>
+        
+        {#
+           Same reason as login.html: /register and /en/register share the
+           same endpoint name. url_for('register') always resolves to /register,
+           which can cause a POST redirect and lost form data when EN is active.
+        #}
+        
+        {% if referrer_email %}
+        <div class="mb-6 rounded-xl border border-purple-500/25 bg-purple-500/10 p-4">
+            <div class="font-semibold text-purple-200">{{ _('Вы перешли по реферальной ссылке') }}</div>
+            <div class="text-sm text-gray-300 mt-1">
+                {{ _('Пригласил:') }} <span class="font-mono">{{ referrer_email }}</span><br>
+                {{ _('После первой оплаты вы получите +3 дня к периоду подписки.') }}
+            </div>
+        </div>
+        {% endif %}
+
+<form method="POST" action="{{ request.path }}" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-300 mb-2">
+                    Email
+                </label>
+                <input type="email" id="email" name="email" required
+                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-600"
+                       placeholder="your@email.com">
+            </div>
+            
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-300 mb-2">
+                    {{ _('Пароль') }}
+                </label>
+                <input type="password" id="password" name="password" required
+                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-600">
+            </div>
+            
+            <div>
+                <label for="password2" class="block text-sm font-medium text-gray-300 mb-2">
+                    {{ _('Повторите пароль') }}
+                </label>
+                <input type="password" id="password2" name="password2" required
+                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-600">
+            </div>
+            
+            <button type="submit" 
+                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-all hover-glow">
+                {{ _('Зарегистрироваться') }}
+            </button>
+        </form>
+        
+        <div class="text-center mt-6">
+            <p class="text-gray-400">
+                {{ _('Уже есть аккаунт?') }}
+                <a href="{{ url_lang('login') }}" class="text-purple-400 hover:text-purple-300 font-semibold">
+                    {{ _('Войти') }}
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<section class="relative pt-24 sm:pt-28 md:pt-32 pb-16 sm:pb-20 px-4">
+    <div class="absolute inset-0 opacity-10"
+         style="background-image: linear-gradient(#1f1f1f 1px, transparent 1px), linear-gradient(90deg, #1f1f1f 1px, transparent 1px); background-size: 40px 40px;">
+    </div>
+
+    <div class="max-w-5xl mx-auto relative z-10">
+        <div class="mb-8 sm:mb-12">
+            <h1 class="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tighter mb-3 sm:mb-4 text-white uppercase">
+                {{ page_title }}
+            </h1>
+            <p class="text-gray-500 font-mono text-xs sm:text-sm uppercase">{{ updated_line }}</p>
+        </div>
+
+        <div class="glass-effect rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 md:p-16 space-y-12 sm:space-y-16 text-gray-300 leading-relaxed font-sans shadow-2xl border border-white/5">
+            <article class="policy-content max-w-none space-y-6 [&_h2]:text-2xl [&_h2]:sm:text-3xl [&_h2]:font-bold [&_h2]:text-white [&_h2]:uppercase [&_h2]:tracking-tight [&_h2]:mb-6 [&_h2]:mt-0 [&_h3]:text-lg [&_h3]:sm:text-xl [&_h3]:text-white [&_h3]:font-semibold [&_h3]:mt-6 [&_h3]:mb-4 [&_p]:text-gray-300 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:list-inside [&_ul]:space-y-2 [&_ul]:ml-4 [&_ul]:text-gray-400 [&_li]:text-gray-400">
+                {{ page_content | safe }}
+            </article>
+
+            {% include '_legal_contact.html' %}
+        </div>
+
+        <div class="mt-16 text-center">
+            <a href="{{ url_lang('index') }}" class="group text-gray-500 hover:text-white transition-all inline-flex items-center">
+                <svg class="w-4 h-4 mr-2 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                {{ _('Вернуться на главную') }}
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

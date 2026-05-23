@@ -1,0 +1,11 @@
+{$CADDY_SITE_ADDRESS::80} {
+    encode zstd gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+
+    reverse_proxy web:5000
+}

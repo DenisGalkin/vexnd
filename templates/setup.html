@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Инструкции по установке') }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h1 class="text-4xl font-bold text-center mb-4">{{ _('Инструкции по установке') }}</h1>
+    <p class="text-gray-400 text-center mb-12 max-w-2xl mx-auto">
+        {{ _('Выберите ваше устройство и следуйте простым инструкциям') }}
+    </p>
+    
+    <div class="space-y-12">
+        <!-- iOS -->
+        <div class="glass-effect rounded-2xl p-8">
+            <div class="flex items-center mb-6">
+                <div class="text-4xl mr-4">📱</div>
+                <h2 class="text-3xl font-bold">iOS</h2>
+            </div>
+            <div class="grid md:grid-cols-2 gap-6">
+                {% for client in clients.ios %}
+                <a href="{{ client.url }}" target="_blank" class="glass-effect p-6 rounded-xl hover:scale-105 transition-all">
+                    <h3 class="text-xl font-bold mb-2">{{ client.name }}</h3>
+                    <p class="text-gray-400 text-sm mb-4">{{ _('Скачать из App Store') }}</p>
+                    <div class="text-purple-400">{{ _('Установить →') }}</div>
+                </a>
+                {% endfor %}
+            </div>
+            <div class="mt-6 p-4 bg-gray-800/50 rounded-lg">
+                <p class="text-gray-300">
+                    <span class="font-bold">{{ _('Инструкция:') }}</span> 
+                    {{ _('Скачайте приложение, откройте его и импортируйте вашу подписку (subscription URL) из личного кабинета.') }}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Android -->
+        <div class="glass-effect rounded-2xl p-8">
+            <div class="flex items-center mb-6">
+                <div class="text-4xl mr-4">🤖</div>
+                <h2 class="text-3xl font-bold">Android</h2>
+            </div>
+            <div class="grid md:grid-cols-2 gap-6">
+                {% for client in clients.android %}
+                <a href="{{ client.url }}" target="_blank" class="glass-effect p-6 rounded-xl hover:scale-105 transition-all">
+                    <h3 class="text-xl font-bold mb-2">{{ client.name }}</h3>
+                    <p class="text-gray-400 text-sm mb-4">{{ _('Скачать из магазина') }}</p>
+                    <div class="text-purple-400">{{ _('Установить →') }}</div>
+                </a>
+                {% endfor %}
+            </div>
+            <div class="mt-6 p-4 bg-gray-800/50 rounded-lg">
+                <p class="text-gray-300">
+                    <span class="font-bold">{{ _('Инструкция:') }}</span> 
+                    {{ _('Установите приложение, нажмите "+" и выберите "Импорт из буфера обмена", вставьте ссылку на подписку.') }}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Windows -->
+        <div class="glass-effect rounded-2xl p-8">
+            <div class="flex items-center mb-6">
+                <div class="text-4xl mr-4">💻</div>
+                <h2 class="text-3xl font-bold">Windows</h2>
+            </div>
+            <div class="grid md:grid-cols-2 gap-6">
+                {% for client in clients.windows %}
+                <a href="{{ client.url }}" target="_blank" class="glass-effect p-6 rounded-xl hover:scale-105 transition-all">
+                    <h3 class="text-xl font-bold mb-2">{{ client.name }}</h3>
+                    <p class="text-gray-400 text-sm mb-4">{{ _('Скачать с GitHub') }}</p>
+                    <div class="text-purple-400">{{ _('Скачать →') }}</div>
+                </a>
+                {% endfor %}
+            </div>
+            <div class="mt-6 p-4 bg-gray-800/50 rounded-lg">
+                <p class="text-gray-300">
+                    <span class="font-bold">{{ _('Инструкция:') }}</span> 
+                    {{ _('Распакуйте архив, запустите приложение, добавьте ссылку на подписку через меню "Сервер" → "Импорт из буфера".') }}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

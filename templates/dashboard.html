@@ -1,0 +1,479 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Личный кабинет') }}{% endblock %}
+
+{% block meta_robots %}
+  <meta name="robots" content="noindex,nofollow">
+{% endblock %}
+
+{% block content %}
+{% set is_active = subscription and subscription.is_active and subscription.expiry_date and subscription.expiry_date > now %}
+{% set days_left = remaining_days if remaining_days is not none and remaining_days > 0 else (((subscription.expiry_date - now).total_seconds() / 86400)|round(0, 'ceil')|int if subscription and subscription.expiry_date and subscription.expiry_date > now else 0) %}
+{% set expiry_date = subscription.expiry_date.strftime('%d.%m.%Y') if subscription and subscription.expiry_date else '—' %}
+{% set referrals_total_value = referrals_total or 0 %}
+{% set referrals_paid_value = referrals_paid or 0 %}
+
+<div class="dashboard-shell max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
+  <div class="dashboard-surface space-y-6">
+    <section class="glass-effect rounded-[1.75rem] p-5 sm:p-7 overflow-hidden">
+      <div class="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+        <div class="max-w-2xl">
+          <div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-300">
+            <span class="inline-block h-2 w-2 rounded-full {{ 'bg-emerald-400' if is_active else 'bg-amber-400' }}"></span>
+            {{ _('VEXND Account') }}
+          </div>
+          <h1 class="mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">{{ _('Личный кабинет') }}</h1>
+          <p class="mt-3 text-sm sm:text-base text-gray-400">
+            {{ _('Аккаунт:') }}
+            <span class="text-gray-100 font-semibold break-anywhere">{{ current_user.email }}</span>
+          </p>
+          <p class="mt-2 max-w-xl text-sm sm:text-base text-gray-400">
+            {{ _('Здесь собраны подписка, импорт конфигурации, реферальная ссылка и настройки безопасности в одном месте.') }}
+          </p>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-3 xl:min-w-[33rem]">
+          <div class="dashboard-card dashboard-card-compact rounded-2xl p-4">
+            <div class="dashboard-label">{{ _('Статус') }}</div>
+            <div class="mt-2 text-base font-semibold {{ 'text-emerald-300' if is_active else 'text-amber-300' }}">
+              {{ _('Активна') if is_active else _('Нужна оплата') }}
+            </div>
+          </div>
+          <div class="dashboard-card dashboard-card-compact rounded-2xl p-4">
+            <div class="dashboard-label">{{ _('Осталось') }}</div>
+            <div class="mt-2 text-base font-semibold text-white">
+              {{ days_left if is_active else 0 }} {{ _('дн.') }}
+            </div>
+          </div>
+          <a href="{{ url_lang('setup') }}"
+             class="dashboard-card dashboard-card-compact rounded-2xl p-4 hover:bg-white/10 transition-all">
+            <div class="dashboard-label">{{ _('Быстрый старт') }}</div>
+            <div class="mt-2 text-base font-semibold text-white">{{ _('Открыть инструкции') }}</div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <div class="glass-effect rounded-2xl p-2">
+      <div class="dash-tabs flex gap-2 overflow-x-auto touch-scroll" role="tablist" aria-label="{{ _('Разделы кабинета') }}">
+        <button id="tab-btn-sub" type="button" role="tab" aria-selected="true" aria-controls="tab-sub"
+                class="tab-btn active shrink-0 min-w-[10rem] sm:min-w-0 sm:flex-1 px-4 py-3 rounded-xl font-semibold text-sm sm:text-base leading-tight transition tap-target">
+          {{ _('Подписка') }}
+        </button>
+        <button id="tab-btn-ref" type="button" role="tab" aria-selected="false" aria-controls="tab-ref"
+                class="tab-btn shrink-0 min-w-[10rem] sm:min-w-0 sm:flex-1 px-4 py-3 rounded-xl font-semibold text-sm sm:text-base leading-tight transition tap-target">
+          {{ _('Реферальная программа') }}
+        </button>
+        <button id="tab-btn-settings" type="button" role="tab" aria-selected="false" aria-controls="tab-settings"
+                class="tab-btn shrink-0 min-w-[10rem] sm:min-w-0 sm:flex-1 px-4 py-3 rounded-xl font-semibold text-sm sm:text-base leading-tight transition tap-target">
+          {{ _('Настройки') }}
+        </button>
+      </div>
+    </div>
+
+    <div id="tab-sub" role="tabpanel" aria-labelledby="tab-btn-sub" class="space-y-6">
+      {% if is_active %}
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.75fr)]">
+          <section class="glass-effect rounded-2xl p-5 sm:p-6 space-y-6">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div class="min-w-0">
+                <div class="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+                  <span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>
+                  {{ _('Подписка активна') }}
+                </div>
+                <h2 class="mt-4 text-2xl font-bold">{{ _('Подключение') }}</h2>
+                <p class="mt-2 max-w-2xl text-sm text-gray-400">
+                  {{ _('Откройте ссылку на телефоне для импорта или используйте QR‑код.') }}
+                </p>
+              </div>
+              <a href="{{ url_lang('index') }}#pricing"
+                 class="inline-flex items-center justify-center px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition font-semibold tap-target">
+                {{ _('Продлить / сменить тариф') }}
+              </a>
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-3">
+              <div class="dashboard-card rounded-2xl p-4">
+                <div class="dashboard-label">{{ _('Статус') }}</div>
+                <div class="mt-2 text-base font-semibold text-emerald-300">{{ _('Активна') }}</div>
+              </div>
+              <div class="dashboard-card rounded-2xl p-4">
+                <div class="dashboard-label">{{ _('Действует до:') }}</div>
+                <div class="mt-2 text-base font-semibold text-white">{{ expiry_date }}</div>
+              </div>
+              <div class="dashboard-card rounded-2xl p-4">
+                <div class="dashboard-label">{{ _('Платформа') }}</div>
+                <div class="mt-2 text-base font-semibold text-white">VLESS Reality</div>
+              </div>
+            </div>
+
+            {% if subscription_url %}
+              <div class="space-y-3">
+                <label class="block text-sm text-gray-400">{{ _('Ссылка на подписку') }}</label>
+                <a href="{{ subscription_url }}"
+                   class="dashboard-link block rounded-2xl px-4 py-4 text-sm font-mono text-purple-200 break-anywhere transition"
+                   title="{{ _('Открыть ссылку') }}"
+                   target="_blank" rel="noopener noreferrer">
+                  {{ subscription_url }}
+                </a>
+                <div class="grid gap-2 sm:grid-cols-2">
+                  <button type="button"
+                          class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 transition font-semibold tap-target"
+                          onclick="copyText('{{ subscription_url|e }}', this)">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    <span>{{ _('Копировать ссылку') }}</span>
+                  </button>
+                  <a href="{{ subscription_url }}"
+                     class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition font-semibold tap-target"
+                     target="_blank" rel="noopener noreferrer">
+                    <span>{{ _('Открыть импорт') }}</span>
+                  </a>
+                </div>
+              </div>
+            {% else %}
+              <div class="dashboard-card rounded-2xl p-5">
+                <div class="font-semibold text-white">{{ _('Ссылка ещё не создана') }}</div>
+                <div class="mt-1 text-sm text-gray-400">{{ _('Пожалуйста, дождитесь активации подписки.') }}</div>
+              </div>
+            {% endif %}
+
+            <div class="grid gap-3 sm:grid-cols-3">
+              <a href="{{ url_lang('setup') }}" class="dashboard-action rounded-2xl p-4 transition">
+                <div class="text-lg font-semibold text-white">{{ _('Инструкции') }}</div>
+                <div class="mt-1 text-sm text-gray-400">{{ _('iOS • Android • Windows') }}</div>
+              </a>
+              <a href="{{ url_lang('faq_page') }}" class="dashboard-action rounded-2xl p-4 transition">
+                <div class="text-lg font-semibold text-white">{{ _('FAQ') }}</div>
+                <div class="mt-1 text-sm text-gray-400">{{ _('Частые вопросы') }}</div>
+              </a>
+              <a href="{{ url_lang('index') }}#pricing" class="dashboard-action rounded-2xl p-4 transition">
+                <div class="text-lg font-semibold text-white">{{ _('Продлить') }}</div>
+                <div class="mt-1 text-sm text-gray-400">{{ _('Выбор тарифа') }}</div>
+              </a>
+            </div>
+          </section>
+
+          <aside class="glass-effect rounded-2xl p-5 sm:p-6 space-y-5">
+            <div>
+              <h2 class="text-2xl font-bold">{{ _('QR‑код') }}</h2>
+              <p class="mt-1 text-sm text-gray-400">{{ _('Откройте приложение и отсканируйте.') }}</p>
+            </div>
+
+            {% if qr_code %}
+              <div class="rounded-[1.75rem] bg-white p-4 shadow-[0_18px_45px_rgba(255,255,255,0.08)]">
+                <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="w-full rounded-2xl">
+              </div>
+              <div class="pill-muted rounded-2xl p-4 text-sm text-gray-300">
+                {{ _('Если импорт не открылся автоматически, откройте приложение VPN и добавьте конфигурацию через QR или ссылку вручную.') }}
+              </div>
+            {% else %}
+              <div class="dashboard-card rounded-2xl p-5 text-sm text-gray-400">
+                {{ _('QR-код появится после активации подписки.') }}
+              </div>
+            {% endif %}
+          </aside>
+        </div>
+      {% else %}
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
+          <section class="glass-effect rounded-2xl p-5 sm:p-6 space-y-6">
+            <div class="flex items-start gap-3">
+              <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-red-500/15 text-red-400 border border-red-500/25 shrink-0">!</span>
+              <div>
+                <h2 class="text-2xl font-bold text-red-200">{{ _('Подписка истекла') }}</h2>
+                <p class="mt-2 text-sm text-gray-400">{{ _('Оформите подписку, чтобы получить доступ к сервису.') }}</p>
+              </div>
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div class="dashboard-card rounded-2xl p-4">
+                <div class="dashboard-label">{{ _('Статус') }}</div>
+                <div class="mt-2 text-base font-semibold text-amber-300">{{ _('Нужна оплата') }}</div>
+              </div>
+              <div class="dashboard-card rounded-2xl p-4">
+                <div class="dashboard-label">{{ _('Осталось') }}</div>
+                <div class="mt-2 text-base font-semibold text-white">0 {{ _('дн.') }}</div>
+              </div>
+            </div>
+
+            <a href="{{ url_lang('index') }}#pricing"
+               class="inline-flex w-full items-center justify-center px-5 py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 transition font-semibold tap-target">
+              {{ _('Выбрать тариф') }}
+            </a>
+          </section>
+
+          <aside class="glass-effect rounded-2xl p-5 sm:p-6 space-y-3">
+            <h2 class="text-2xl font-bold">{{ _('Быстрый старт') }}</h2>
+            <p class="text-sm text-gray-400">{{ _('После оплаты здесь появятся ссылка для импорта и QR‑код для быстрого подключения.') }}</p>
+            <a href="{{ url_lang('setup') }}" class="dashboard-action rounded-2xl p-4 transition">
+              <div class="text-lg font-semibold text-white">{{ _('Инструкции') }}</div>
+              <div class="mt-1 text-sm text-gray-400">{{ _('Открыть инструкции') }}</div>
+            </a>
+            <a href="{{ url_lang('faq_page') }}" class="dashboard-action rounded-2xl p-4 transition">
+              <div class="text-lg font-semibold text-white">{{ _('FAQ') }}</div>
+              <div class="mt-1 text-sm text-gray-400">{{ _('Частые вопросы') }}</div>
+            </a>
+          </aside>
+        </div>
+      {% endif %}
+    </div>
+
+    <div id="tab-ref" class="hidden space-y-6" role="tabpanel" aria-labelledby="tab-btn-ref">
+      <section class="glass-effect rounded-2xl p-5 sm:p-6 space-y-5">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div class="max-w-2xl">
+            <h2 class="text-2xl font-bold">{{ _('Реферальная программа') }}</h2>
+            <p class="mt-2 text-sm text-gray-400">
+              {{ _('Приглашайте друзей: им +3 дня к первой оплате, вам +5 дней после их первой оплаты.') }}
+            </p>
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2 lg:min-w-[18rem]">
+            <div class="dashboard-card rounded-2xl p-4">
+              <div class="dashboard-label">{{ _('Приглашено:') }}</div>
+              <div class="mt-2 text-xl font-semibold text-white">{{ referrals_total_value }}</div>
+            </div>
+            <div class="dashboard-card rounded-2xl p-4">
+              <div class="dashboard-label">{{ _('Оплатили:') }}</div>
+              <div class="mt-2 text-xl font-semibold text-white">{{ referrals_paid_value }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <label class="block text-sm text-gray-400">{{ _('Ваша реферальная ссылка') }}</label>
+          <input type="text" readonly value="{{ referral_link }}"
+                 class="dashboard-link w-full rounded-2xl px-4 py-4 text-sm font-mono text-purple-200 break-all focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                 aria-label="{{ _('Реферальная ссылка') }}">
+          <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <div class="pill-muted rounded-2xl px-4 py-3 text-sm text-gray-300">
+              {{ _('Не открывайте ссылку сами — просто отправьте её другу.') }}
+            </div>
+            <button type="button"
+                    class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 transition font-semibold tap-target"
+                    onclick="copyText('{{ referral_link|e }}', this)">
+              <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M8 2a2 2 0 00-2 2v2H5a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2v-1h2a2 2 0 002-2V7l-5-5H8z" />
+              </svg>
+              <span>{{ _('Скопировать') }}</span>
+            </button>
+          </div>
+          <div class="text-sm text-gray-400">
+            <span class="text-gray-200 font-semibold">{{ _('Важно:') }}</span>
+            {{ _('Бонусы начисляются один раз — после первой успешной оплаты приглашённого пользователя.') }}
+          </div>
+        </div>
+      </section>
+
+      <section class="glass-effect rounded-2xl p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <h3 class="text-xl font-bold">{{ _('Ваши рефералы') }}</h3>
+          <div class="text-sm text-gray-400">{{ _('Всего:') }} <span class="font-semibold text-gray-200">{{ referrals_total_value }}</span></div>
+        </div>
+
+        {% if referrals_list and referrals_list|length > 0 %}
+          <div class="space-y-3 md:hidden">
+            {% for r in referrals_list %}
+              {% set paid = r.bonuses_applied_at %}
+              <div class="pill-muted rounded-2xl p-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="font-mono text-sm text-purple-200 break-anywhere">{{ r.email_masked }}</div>
+                    <div class="mt-2 text-xs text-gray-500">{{ _('Регистрация:') }} {{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '—' }}</div>
+                    <div class="mt-1 text-xs text-gray-500">{{ _('Первая оплата:') }} {{ r.first_paid_at.strftime('%Y-%m-%d') if r.first_paid_at else '—' }}</div>
+                  </div>
+                  {% if paid %}
+                    <span class="px-2.5 py-1 rounded-xl bg-green-500/15 text-green-400 border border-green-500/25 shrink-0">{{ _('Оплатил') }}</span>
+                  {% else %}
+                    <span class="px-2.5 py-1 rounded-xl bg-white/5 text-gray-200 border border-white/10 shrink-0">{{ _('Ожидает') }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <div class="dashboard-table-wrap hidden md:block overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-gray-400 border-b border-white/10 bg-white/[0.03]">
+                  <th class="py-2 pr-4">{{ _('Реферал') }}</th>
+                  <th class="py-2 pr-4">{{ _('Статус') }}</th>
+                  <th class="py-2 pr-4">{{ _('Регистрация') }}</th>
+                  <th class="py-2">{{ _('Первая оплата') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in referrals_list %}
+                  {% set paid = r.bonuses_applied_at %}
+                  <tr class="border-b border-white/5">
+                    <td class="py-3 pr-4 font-mono text-purple-200">{{ r.email_masked }}</td>
+                    <td class="py-3 pr-4">
+                      {% if paid %}
+                        <span class="px-2.5 py-1 rounded-xl bg-green-500/15 text-green-400 border border-green-500/25">{{ _('Оплатил') }}</span>
+                      {% else %}
+                        <span class="px-2.5 py-1 rounded-xl bg-white/5 text-gray-200 border border-white/10">{{ _('Зарегистрировался') }}</span>
+                      {% endif %}
+                    </td>
+                    <td class="py-3 pr-4 text-gray-300">{{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '—' }}</td>
+                    <td class="py-3 text-gray-300">{{ r.first_paid_at.strftime('%Y-%m-%d') if r.first_paid_at else '—' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-3 text-xs text-gray-500">
+            {{ _('Для защиты от абуза система учитывает устройство/браузер и не даёт использовать рефералку повторно с одного устройства.') }}
+          </div>
+        {% else %}
+          <div class="text-gray-400">
+            {{ _('Пока нет рефералов. Поделитесь ссылкой — и они появятся здесь.') }}
+          </div>
+        {% endif %}
+      </section>
+    </div>
+
+    <div id="tab-settings" class="hidden" role="tabpanel" aria-labelledby="tab-btn-settings">
+      <div class="grid lg:grid-cols-2 gap-6">
+        <section class="glass-effect rounded-2xl p-5 sm:p-6">
+          <h2 class="text-2xl font-bold">{{ _('Смена пароля') }}</h2>
+          <p class="text-gray-400 text-sm mt-1">{{ _('Рекомендуем обновлять пароль регулярно') }}</p>
+
+          <form method="POST" action="{{ url_for('account_change_password') }}" class="mt-5 space-y-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">{{ _('Текущий пароль') }}</label>
+              <input type="password" name="current_password" required autocomplete="current-password"
+                     class="w-full bg-gray-900/40 border border-gray-800 rounded-xl px-4 py-3 focus:outline-none focus:border-purple-500/50">
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label class="block text-sm text-gray-400 mb-1">{{ _('Новый пароль') }}</label>
+                <input type="password" name="new_password" required autocomplete="new-password"
+                       class="w-full bg-gray-900/40 border border-gray-800 rounded-xl px-4 py-3 focus:outline-none focus:border-purple-500/50">
+              </div>
+              <div>
+                <label class="block text-sm text-gray-400 mb-1">{{ _('Повтор') }}</label>
+                <input type="password" name="new_password2" required autocomplete="new-password"
+                       class="w-full bg-gray-900/40 border border-gray-800 rounded-xl px-4 py-3 focus:outline-none focus:border-purple-500/50">
+              </div>
+            </div>
+
+            <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-2xl font-semibold transition tap-target">
+              {{ _('Сменить пароль') }}
+            </button>
+
+            <div class="text-xs text-gray-500 leading-relaxed">
+              {{ _('Минимум 10 символов, желательно сочетание букв, цифр и символов.') }}
+            </div>
+          </form>
+        </section>
+
+        <section class="glass-effect rounded-2xl p-5 sm:p-6 border border-red-500/20">
+          <h2 class="text-2xl font-bold text-red-200">{{ _('Удаление аккаунта') }}</h2>
+          <p class="text-gray-400 text-sm mt-1">{{ _('Полное удаление аккаунта и подписки из нашей базы. Действие необратимо.') }}</p>
+
+          <form method="POST" action="{{ url_for('account_delete') }}" class="mt-5 space-y-3" onsubmit="return confirmDelete()">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">{{ _('Пароль') }}</label>
+              <input type="password" name="password" required autocomplete="current-password"
+                     class="w-full bg-gray-900/40 border border-gray-800 rounded-xl px-4 py-3 focus:outline-none focus:border-red-400/50">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">{{ _('Введите DELETE для подтверждения') }}</label>
+              <input type="text" name="confirm" required placeholder="DELETE"
+                     class="w-full bg-gray-900/40 border border-gray-800 rounded-xl px-4 py-3 uppercase tracking-widest focus:outline-none focus:border-red-400/50">
+            </div>
+
+            <button type="submit" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-2xl font-semibold transition tap-target">
+              {{ _('Удалить аккаунт') }}
+            </button>
+          </form>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .tab-btn { color: rgba(229,231,235,.85); background: transparent; border: 1px solid rgba(255,255,255,.08); }
+  .tab-btn:hover { background: rgba(255,255,255,.06); }
+  .tab-btn.active { background: linear-gradient(135deg, #8b5cf6, #ec4899); color: #fff; border-color: rgba(255,255,255,.12); }
+</style>
+
+<script>
+  function confirmDelete(){
+    return confirm("{{ _('Вы уверены? Аккаунт будет удалён без возможности восстановления.') }}");
+  }
+
+  async function copyText(text, btn){
+    try{
+      await navigator.clipboard.writeText(text);
+      const prev = btn.innerHTML;
+      btn.innerHTML = `
+        <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 10-1.414 1.414L9 13.414l4.707-4.707z" clip-rule="evenodd" />
+        </svg>
+        <span>{{ _('Скопировано') }}</span>`;
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.innerHTML = prev;
+        btn.disabled = false;
+      }, 1400);
+    }catch(e){
+      alert("{{ _('Не удалось скопировать. Скопируйте вручную.') }}");
+    }
+  }
+
+  const tabBtnSub = document.getElementById('tab-btn-sub');
+  const tabBtnSettings = document.getElementById('tab-btn-settings');
+  const tabBtnRef = document.getElementById('tab-btn-ref');
+
+  const tabSub = document.getElementById('tab-sub');
+  const tabSettings = document.getElementById('tab-settings');
+  const tabRef = document.getElementById('tab-ref');
+
+  function setTab(name){
+    const isSub = name === 'sub';
+    const isSettings = name === 'settings';
+    const isRef = name === 'ref';
+
+    tabBtnSub.classList.toggle('active', isSub);
+    tabBtnSettings.classList.toggle('active', isSettings);
+    tabBtnRef.classList.toggle('active', isRef);
+
+    tabBtnSub.setAttribute('aria-selected', isSub ? 'true' : 'false');
+    tabBtnSettings.setAttribute('aria-selected', isSettings ? 'true' : 'false');
+    tabBtnRef.setAttribute('aria-selected', isRef ? 'true' : 'false');
+
+    tabSub.classList.toggle('hidden', !isSub);
+    tabSettings.classList.toggle('hidden', !isSettings);
+    tabRef.classList.toggle('hidden', !isRef);
+
+    try { localStorage.setItem('dashTab', name); } catch(e) {}
+  }
+
+  if (tabBtnSub) tabBtnSub.addEventListener('click', () => setTab('sub'));
+  if (tabBtnSettings) tabBtnSettings.addEventListener('click', () => setTab('settings'));
+  if (tabBtnRef) tabBtnRef.addEventListener('click', () => setTab('ref'));
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const forced = params.get('tab');
+    if (forced === 'sub' || forced === 'ref' || forced === 'settings') {
+      setTab(forced);
+      if (window.history && window.history.replaceState) {
+        const clean = window.location.pathname + window.location.hash;
+        window.history.replaceState(null, '', clean);
+      }
+    } else {
+      const saved = localStorage.getItem('dashTab');
+      if (saved === 'settings') setTab('settings');
+      else if (saved === 'ref') setTab('ref');
+    }
+  } catch(e) {}
+</script>
+{% endblock %}

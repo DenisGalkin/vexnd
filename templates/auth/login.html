@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {{ _('Вход') }}
+{% endblock %}
+
+{% block meta_robots %}
+  <meta name="robots" content="noindex,nofollow">
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center px-4 py-12">
+    <div class="glass-effect max-w-md w-full rounded-2xl p-8">
+    <h2 class="text-3xl font-bold text-center mb-8">
+        {{ _('Вход в аккаунт') }}
+    </h2>
+        
+        {#
+           IMPORTANT:
+           This view is reachable at both /login and /en/login.
+           If we post to a fixed URL (url_for('login') -> /login), the
+           language canonicalizer can redirect POST -> GET and drop the
+           credentials.
+           Posting back to the current path keeps the locale stable and
+           fixes login for both RU and EN.
+        #}
+        <form method="POST" action="{{ request.path }}" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-300 mb-2">
+                    Email
+                </label>
+                <input type="email" id="email" name="email" required
+                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-600"
+                       placeholder="your@email.com">
+            </div>
+            
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-300 mb-2">
+                    {{ _('Пароль') }}
+                </label>
+                <input type="password" id="password" name="password" required
+                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-600">
+            </div>
+            
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <input type="checkbox" id="remember_me" name="remember_me" 
+                           class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-600 rounded bg-gray-800">
+                    <label for="remember_me" class="ml-2 block text-sm text-gray-300">
+                        {{ _('Запомнить меня') }}
+                    </label>
+                </div>
+            </div>
+            
+            <button type="submit" 
+                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-all hover-glow">
+                {{ _('Войти') }}
+            </button>
+        </form>
+        
+        <div class="text-center mt-6">
+            <p class="text-gray-400">
+                {{ _('Нет аккаунта?') }}
+                <a href="{{ url_lang('register') }}" class="text-purple-400 hover:text-purple-300 font-semibold">
+                    {{ _('Зарегистрироваться') }}
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="{{ get_locale() }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000000">
+    <meta name="color-scheme" content="dark">
+    <title>VEXND - {% block title %}{% endblock %}</title>
+
+    {# SEO basics #}
+    <link rel="canonical" href="https://vexnd.com{{ request.path }}">
+    {% block meta_robots %}
+        <meta name="robots" content="index,follow">
+    {% endblock %}
+    <meta name="description" content="{% block meta_description %}{{ default_meta_description }}{% endblock %}">
+
+    {# Search engine verification (set env vars to enable): GOOGLE_SITE_VERIFICATION / BING_SITE_VERIFICATION #}
+    {% if google_site_verification %}
+        <meta name="google-site-verification" content="{{ google_site_verification }}">
+    {% endif %}
+    {% if bing_site_verification %}
+        <meta name="msvalidate.01" content="{{ bing_site_verification }}">
+    {% endif %}
+
+    {# Social previews (OpenGraph) #}
+    <meta property="og:title" content="VEXND">
+    <meta property="og:description" content="{% block og_description %}{{ default_meta_description }}{% endblock %}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://vexnd.com{{ request.path }}">
+    <meta property="og:image" content="{{ og_image_url }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('favicon') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('favicon') }}">
+    <!-- Include the consolidated stylesheet. See static/css/styles.css. -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+    {# Tailwind CDN (loaded synchronously to avoid unstyled flashes) #}
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-black text-gray-100 min-h-screen font-sans antialiased">
+    <nav class="glass-effect fixed w-full z-50 border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16 relative">
+                <!-- Логотип слева -->
+                <div class="relative z-10 flex-shrink-0">
+                    <a href="{{ url_lang('index') }}" class="block">
+                        <img src="{{ url_for('static', filename='images/logo.png') }}"
+                             alt="VEXND Logo"
+                             class="h-14 w-auto hover:opacity-90 transition-opacity"
+                             style="max-height: 52px; width: auto;"
+                             decoding="async" fetchpriority="high">
+                    </a>
+                </div>
+
+                <!-- Desktop navigation (center) -->
+                <div class="hidden md:flex absolute left-1/2 transform -translate-x-1/2 items-center space-x-8">
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_lang('index') }}" class="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition-colors relative group">
+                            {{ _('Главная') }}
+                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+                        </a>
+                        <a href="{{ url_lang('dashboard') }}" class="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition-colors relative group">
+                            {{ _('Личный кабинет') }}
+                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+                        </a>
+                        <a href="{{ url_lang('setup') }}" class="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition-colors relative group">
+                            {{ _('Инструкции') }}
+                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+                        </a>
+                    {% else %}
+                        <a href="{{ url_lang('login') }}" class="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition-colors relative group">
+                            {{ _('Войти') }}
+                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+                        </a>
+                        <a href="{{ url_lang('register') }}" class="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition-colors relative group">
+                            {{ _('Регистрация') }}
+                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+                        </a>
+                    {% endif %}
+                </div>
+
+                <!-- Right controls (mobile menu + language + logout) -->
+                <div class="relative z-10 flex items-center space-x-4">
+                    <!-- Mobile menu button -->
+                    <button type="button"
+                            class="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-white/10 hover:bg-white/5 transition-all"
+                            aria-label="Menu"
+                            onclick="toggleMobileMenu()">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+
+                    {% if current_user.is_authenticated %}
+                        <form method="POST" action="{{ url_for('logout') }}" class="hidden sm:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-gray-400 hover:text-white text-sm font-medium transition-colors">
+                                {{ _('Выйти') }}
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    <!-- Текстовый переключатель языка RU | EN -->
+                    {% set lang_switch_path = request.path %}
+                    <div class="lang-switch">
+                        {#
+                            Determine the currently active language.  If a language
+                            is stored in the session we respect it.  Otherwise we
+                            derive the locale from the request path – URLs
+                            starting with `/en` are considered English, all
+                            others default to Russian.  This logic avoids the
+                            situation where the page is in Russian but the
+                            switcher highlights English (or vice versa).
+                        #}
+                        {#
+                            Language switcher: highlight only one active
+                            language based on the session preference.  When a
+                            language is stored in the session we rely solely
+                            on that; otherwise we infer the language from the
+                            URL prefix.  This avoids the situation where both
+                            buttons are highlighted (e.g. on /en/soon when
+                            session lang is 'ru').
+                        #}
+                        {% if session.get('lang') %}
+                            <a href="{{ url_for('set_language', lang='ru', next=lang_switch_path) }}"
+                               class="{{ 'active' if session.get('lang') == 'ru' else '' }}">RU</a>
+                            <span class="separator">|</span>
+                            <a href="{{ url_for('set_language', lang='en', next=lang_switch_path) }}"
+                               class="{{ 'active' if session.get('lang') == 'en' else '' }}">EN</a>
+                        {% else %}
+                            <a href="{{ url_for('set_language', lang='ru', next=lang_switch_path) }}"
+                               class="{{ 'active' if not request.path.startswith('/en') else '' }}">RU</a>
+                            <span class="separator">|</span>
+                            <a href="{{ url_for('set_language', lang='en', next=lang_switch_path) }}"
+                               class="{{ 'active' if request.path.startswith('/en') else '' }}">EN</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile menu panel -->
+        <div id="mobile-menu" class="mobile-menu-panel md:hidden border-t border-gray-800">
+            <div class="px-4 py-4 space-y-2">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_lang('index') }}" class="block px-3 py-2 rounded-lg hover:bg-white/5 transition-all">
+                        {{ _('Главная') }}
+                    </a>
+                    <a href="{{ url_lang('dashboard') }}" class="block px-3 py-2 rounded-lg hover:bg-white/5 transition-all">
+                        {{ _('Личный кабинет') }}
+                    </a>
+                    <a href="{{ url_lang('setup') }}" class="block px-3 py-2 rounded-lg hover:bg-white/5 transition-all">
+                        {{ _('Инструкции') }}
+                    </a>
+                    <form method="POST" action="{{ url_for('logout') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="block w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-all text-gray-300">
+                            {{ _('Выйти') }}
+                        </button>
+                    </form>
+                {% else %}
+                    <a href="{{ url_lang('login') }}" class="block px-3 py-2 rounded-lg hover:bg-white/5 transition-all">
+                        {{ _('Войти') }}
+                    </a>
+                    <a href="{{ url_lang('register') }}" class="block px-3 py-2 rounded-lg hover:bg-white/5 transition-all">
+                        {{ _('Регистрация') }}
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    {# Flash messages: fixed stack under the navbar so messages are always visible #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div id="flash-container"
+                 class="fixed left-0 right-0 z-50 pointer-events-none"
+                 style="top: calc(4rem + env(safe-area-inset-top));">
+                <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <div class="flash-stack space-y-3">
+                        {% for category, message in messages %}
+                            {# Normalize category values #}
+                            {% set cat = category or 'info' %}
+                            {% if cat not in ['success','error','warning','info'] %}
+                                {% set cat = 'info' %}
+                            {% endif %}
+
+                            {% set tone_bg = 'bg-emerald-500/10 border-emerald-400/30' if cat == 'success' else
+                                             'bg-red-500/10 border-red-400/30' if cat == 'error' else
+                                             'bg-amber-500/10 border-amber-400/30' if cat == 'warning' else
+                                             'bg-sky-500/10 border-sky-400/30' %}
+                            {% set tone_text = 'text-emerald-200' if cat == 'success' else
+                                               'text-red-200' if cat == 'error' else
+                                               'text-amber-200' if cat == 'warning' else
+                                               'text-sky-200' %}
+
+                            <div class="flash-item flex items-center gap-3 rounded-xl border {{ tone_bg }} px-4 py-3 backdrop-blur-md pointer-events-auto"
+                                 data-flash-category="{{ cat }}">
+                                <div class="shrink-0">
+                                    {% if cat == 'success' %}
+                                        <svg class="w-5 h-5 text-emerald-300" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 10-1.414 1.414L9 13.414l4.707-4.707z" clip-rule="evenodd" />
+                                        </svg>
+                                    {% elif cat == 'error' %}
+                                        <svg class="w-5 h-5 text-red-300" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-5a1 1 0 112 0 1 1 0 01-2 0zm0-8a1 1 0 012 0v6a1 1 0 11-2 0V5z" clip-rule="evenodd" />
+                                        </svg>
+                                    {% elif cat == 'warning' %}
+                                        <svg class="w-5 h-5 text-amber-300" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.721-1.36 3.486 0l6.516 11.59c.75 1.334-.214 2.991-1.743 2.991H3.484c-1.53 0-2.493-1.657-1.743-2.99l6.516-11.591zM11 14a1 1 0 10-2 0 1 1 0 002 0zm-1-8a1 1 0 00-1 1v4a1 1 0 102 0V7a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                        </svg>
+                                    {% else %}
+                                        <svg class="w-5 h-5 text-sky-300" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-8-4a1 1 0 00-1 1v4a1 1 0 102 0V7a1 1 0 00-1-1zm0 8a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd" />
+                                        </svg>
+                                    {% endif %}
+                                </div>
+
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm leading-relaxed {{ tone_text }} break-anywhere whitespace-pre-line">{{ message }}</p>
+                                </div>
+
+                                <button type="button"
+                                        class="ml-2 inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 border border-white/10 text-gray-300 hover:text-white transition-all"
+                                        aria-label="{{ _('Закрыть') }}"
+                                        onclick="dismissFlash(this)">
+                                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <main class="pt-16">
+        <div class="page-enter">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Футер -->
+    {% include 'footer.html' %}
+
+    <script>
+        function dismissFlash(btn) {
+            const item = btn.closest('.flash-item');
+            if (!item) return;
+            item.classList.add('flash-hide');
+            setTimeout(() => item.remove(), 180);
+        }
+
+        // Auto-dismiss flash messages (keep errors a bit longer).
+        window.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.flash-item').forEach((el) => {
+                const cat = el.getAttribute('data-flash-category') || 'info';
+                const ms = (cat === 'error') ? 9000 : (cat === 'warning') ? 8000 : 6500;
+                setTimeout(() => {
+                    if (document.body.contains(el)) {
+                        el.classList.add('flash-hide');
+                        setTimeout(() => el.remove(), 180);
+                    }
+                }, ms);
+            });
+        });
+
+        function toggleMobileMenu() {
+            const el = document.getElementById('mobile-menu');
+            if (!el) return;
+            el.classList.toggle('open');
+        }
+
+        // -----------------------------------------------------------------
+        // Anchor (#hash) scrolling with fixed navbar offset
+        // -----------------------------------------------------------------
+        function _vexndHeaderOffsetPx() {
+            const nav = document.querySelector('nav');
+            const navH = nav ? nav.getBoundingClientRect().height : 64;
+
+            // Extra breathing room so headings never sit under the bar.
+            // On iOS Safari the dynamic address bar can make the first paint
+            // land a bit too high, so we use a slightly larger mobile offset.
+            const isMobile = window.matchMedia('(max-width: 767px)').matches;
+            // Mobile (especially iOS Safari) still tends to land a bit too high.
+            // Give more breathing room ONLY on small screens.
+            const extra = isMobile ? 54 : 18;
+            return Math.round(navH + extra);
+        }
+
+        function scrollToHashWithOffset(hash, behavior) {
+            if (!hash || hash.length < 2) return;
+            const id = decodeURIComponent(hash.slice(1));
+            const el = document.getElementById(id);
+            if (!el) return;
+
+            const y = el.getBoundingClientRect().top + window.pageYOffset - _vexndHeaderOffsetPx();
+            window.scrollTo({ top: y, behavior: behavior || 'auto' });
+        }
+
+        // On initial load with hash
+        window.addEventListener('load', () => {
+            if (window.location.hash) {
+                // Wait a tick so layout settles (important for iOS Safari)
+                setTimeout(() => scrollToHashWithOffset(window.location.hash, 'auto'), 0);
+            }
+        });
+
+        // On hash changes
+        window.addEventListener('hashchange', () => {
+            setTimeout(() => scrollToHashWithOffset(window.location.hash, 'smooth'), 0);
+        });
+
+        // Close mobile menu on navigation
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('mobile-menu');
+            if (!menu || !menu.classList.contains('open')) return;
+            const isMenuBtn = e.target.closest && e.target.closest('button[aria-label="Menu"]');
+            const isInsideMenu = e.target.closest && e.target.closest('#mobile-menu');
+            if (!isMenuBtn && !isInsideMenu) {
+                menu.classList.remove('open');
+            }
+        });
+
+        // Close mobile menu when a menu link is clicked
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest && e.target.closest('#mobile-menu a');
+            if (!link) return;
+            const menu = document.getElementById('mobile-menu');
+            if (menu) menu.classList.remove('open');
+        });
+
+    </script>
+    
+    <!-- Единый блок для скриптов -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>

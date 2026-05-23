@@ -1,0 +1,432 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Оплата') }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <!-- Step 1: Payment Methods -->
+    <div class="glass-effect rounded-2xl p-5 sm:p-8">
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-4 mb-5 sm:mb-6">
+            <div>
+                <h1 class="text-3xl font-bold">{{ _('Оплата') }}</h1>
+                <p class="text-gray-400 mt-1">{{ _('Выберите способ оплаты') }}</p>
+            </div>
+            <div class="hidden sm:block text-right">
+                <p class="text-gray-400 text-sm">{{ _('Тариф:') }} <span class="text-white font-semibold">{{ plan_duration_label(plan) }}</span></p>
+                <p class="text-gray-400 text-sm">{{ _('Сумма:') }} <span id="header-price" class="text-white font-semibold">${{ price }}</span></p>
+            </div>
+        </div>
+
+        {# Mobile-only compact summary: keeps "Оплата" header clean #}
+        <div class="sm:hidden grid grid-cols-2 gap-2 mb-5">
+            <div class="glass-effect rounded-xl px-3 py-2">
+                <p class="text-[11px] text-gray-400">{{ _('Тариф') }}</p>
+                <p class="text-sm font-semibold text-white leading-tight">{{ plan_duration_label(plan) }}</p>
+            </div>
+            <div class="glass-effect rounded-xl px-3 py-2 text-right">
+                <p class="text-[11px] text-gray-400">{{ _('Сумма') }}</p>
+                <p id="mobile-price" class="text-sm font-semibold text-white leading-tight">${{ price }}</p>
+            </div>
+        </div>
+        
+        <!-- Filter Tabs -->
+        <div class="flex gap-2 mb-6 sm:mb-8 overflow-x-auto pb-2 -mx-1 px-1">
+            <button onclick="filterPayments('all', event)" class="filter-btn active px-3 sm:px-4 py-2 rounded-lg bg-purple-600 text-white font-medium transition-all whitespace-nowrap shrink-0">
+                {{ _('Все') }}
+            </button>
+            <button onclick="filterPayments('crypto', event)" class="filter-btn px-3 sm:px-4 py-2 rounded-lg glass-effect hover:bg-white/10 font-medium transition-all whitespace-nowrap shrink-0">
+                <span class="sm:hidden">{{ _('Крипта') }}</span>
+                <span class="hidden sm:inline">{{ _('Криптовалюта') }}</span>
+            </button>
+            <button onclick="filterPayments('ru', event)" class="filter-btn px-3 sm:px-4 py-2 rounded-lg glass-effect hover:bg-white/10 font-medium transition-all whitespace-nowrap shrink-0">
+                <span class="sm:hidden">{{ _('RU карты') }}</span>
+                <span class="hidden sm:inline">{{ _('Банковские карты РФ') }}</span>
+            </button>
+            <button onclick="filterPayments('global', event)" class="filter-btn px-3 sm:px-4 py-2 rounded-lg glass-effect hover:bg-white/10 font-medium transition-all whitespace-nowrap shrink-0">
+                <span class="sm:hidden">{{ _('Global') }}</span>
+                <span class="hidden sm:inline">{{ _('Global Cards') }}</span>
+            </button>
+        </div>
+        
+        <!-- Payment Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4" id="payment-grid">
+            {# payment_methods is an ordered flat list (see checkout() in app.py) #}
+            {% for method in payment_methods %}
+                {# Determine the target URL for each payment method.  CryptoBot
+                   initiates a real payment through the start_payment route;
+                   all other methods still point to the coming soon page. #}
+                {% set target = url_lang('coming_soon') %}
+                {% if method.slug == 'cryptobot' %}
+                    {% set target = url_for('start_payment', method='cryptobot', plan=plan) %}
+                {% elif method.slug == 'crystalpay' %}
+                    {% set target = url_for('start_payment', method='crystalpay', plan=plan) %}
+                {% elif method.slug == 'apays' %}
+                    {% set target = url_for('start_payment', method='apays', plan=plan) %}
+                {% elif method.slug == 'platega' %}
+                    {% set target = url_for('start_payment', method='platega', plan=plan) %}
+                {% elif method.slug == 'heleket' %}
+                    {% set target = url_for('start_payment', method='heleket', plan=plan) %}
+                {% endif %}
+                <button type="button"
+                        class="payment-item {{ method.class }} glass-effect p-4 sm:p-6 rounded-xl md:hover:scale-105 transition-all cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70"
+                        data-target="{{ target }}"
+                        data-name="{{ method.name }}"
+                        data-icon="{{ method.icon }}"
+                        onclick="selectPayment(this)">
+                    <div class="pm-row flex items-center gap-4">
+                        <div class="text-3xl sm:text-4xl leading-none">{{ method.icon }}</div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="font-bold text-base sm:text-lg leading-snug">{{ method.name }}</h3>
+                            {# Method-specific subtitle: show what the provider accepts #}
+                            {% set m = method.slug %}
+                            {% if m in ['cryptobot', 'heleket'] %}
+                                {% set subtitle = _('Криптовалюты') %}
+                            {% elif m == 'platega' %}
+                                {% set subtitle = _('СБП (QR)') %}
+                            {% elif m == 'crystalpay' %}
+                                {% set subtitle = _('Криптовалюты + LOLZ') %}
+                            {% elif m == 'apays' %}
+                                {% set subtitle = _('Карты РФ') %}
+                            {% else %}
+                                {% set subtitle = _('Мгновенно • Без комиссии') %}
+                            {% endif %}
+                            <p class="text-sm text-gray-400 mt-0.5">{{ subtitle }}</p>
+                        </div>
+
+
+                        <div class="pm-actions ml-auto flex items-center justify-end gap-2">
+                          {% if method.preferred %}
+                            <span class="pm-badge shrink-0 whitespace-nowrap text-[11px] font-semibold px-2 py-1 rounded-lg bg-purple-500/15 border border-purple-400/30 text-purple-200">
+                              {{ _('Рекомендуем') }}
+                            </span>
+                          {% endif %}
+                          <svg class="pm-arrow hidden sm:block w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M9 18l6-6-6-6" />
+                        </svg>
+                        </div>
+                    </div>
+                </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Step 2: Order Summary (shown after selecting a method) -->
+    <div id="order-summary" class="glass-effect rounded-2xl p-5 sm:p-8 mt-6 sm:mt-8 hidden">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div class="flex items-start gap-4">
+                <div id="summary-icon" class="text-4xl leading-none">💳</div>
+                <div>
+                    <h2 class="text-2xl font-bold">{{ _('Оформление заказа') }}</h2>
+                    <p class="text-gray-400 mt-1">{{ _('Способ оплаты:') }} <span id="summary-method" class="text-white font-semibold"></span></p>
+                </div>
+            </div>
+            <button type="button" class="px-4 py-2 rounded-xl glass-effect hover:bg-white/10 transition-all"
+                    onclick="resetSelection()">
+                {{ _('Изменить способ оплаты') }}
+            </button>
+        </div>
+
+        <!-- Content card -->
+        <div class="bg-white/5 rounded-2xl border border-white/5 overflow-hidden">
+            <!-- Plan & total -->
+            <div class="p-5 sm:p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-semibold tracking-widest text-gray-400 uppercase">{{ _('План') }}</div>
+                        <div class="text-lg font-bold text-white mt-1">{{ plan_duration_label(plan) }}</div>
+                        <div class="text-sm text-gray-400 mt-1">{{ _('Аккаунт:') }} <span class="text-gray-300 break-all">{{ user_email }}</span></div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs font-semibold tracking-widest text-gray-400 uppercase">{{ _('К оплате') }}</div>
+                        <div id="summary-price" class="text-3xl font-extrabold text-purple-400 mt-1">${{ price }}</div>
+                        <div id="summary-original-wrap" class="text-sm text-gray-500 mt-1 {% if not coupon_applied %}hidden{% endif %}">
+                            <span class="line-through">$<span id="summary-original-price">{{ original_price }}</span></span>
+                        </div>
+                        <div id="summary-discount-wrap" class="text-sm text-green-400 mt-1 {% if not coupon_applied %}hidden{% endif %}">
+                            {{ _('Скидка') }}: -$<span id="summary-discount">{{ discount_amount }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="h-px bg-white/10"></div>
+
+            <div class="p-5 sm:p-6">
+                <div class="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-3">{{ _('Промокод') }}</div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input id="coupon-input" type="text" value="{{ coupon_code }}" placeholder="{{ _('Введите промокод') }}"
+                           class="flex-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white placeholder:text-gray-500 outline-none focus:border-purple-500/60">
+                    <button id="coupon-apply-btn" type="button"
+                            class="px-5 py-3 rounded-xl glass-effect hover:bg-white/10 transition-all font-semibold"
+                            onclick="applyCoupon()">
+                        {{ _('Применить') }}
+                    </button>
+                </div>
+                <p id="coupon-message" class="mt-3 text-sm {% if coupon_applied %}text-green-400{% else %}text-gray-500{% endif %}">
+                    {% if coupon_applied %}
+                        {{ _('Промокод применён.') }}
+                    {% else %}
+                        {{ _('Введите промокод после выбора способа оплаты.') }}
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="h-px bg-white/10"></div>
+
+            <!-- Subscription preview -->
+            <div class="p-5 sm:p-6">
+                <div class="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-3">{{ _('Подписка') }}</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white/5 rounded-xl p-4 border border-white/5">
+                        <div class="text-gray-400 text-sm">{{ _('Начало') }}</div>
+                        <div class="text-white font-semibold mt-1">{{ start_dt.strftime('%Y-%m-%d') }}</div>
+                    </div>
+                    <div class="bg-white/5 rounded-xl p-4 border border-white/5">
+                        <div class="text-gray-400 text-sm">{{ _('Окончание') }}</div>
+                        <div class="text-white font-semibold mt-1">{{ end_dt.strftime('%Y-%m-%d') }}</div>
+                    </div>
+                    <div class="bg-white/5 rounded-xl p-4 border border-white/5">
+                        <div class="text-gray-400 text-sm">{{ _('Автопродление') }}</div>
+                        <div class="text-white font-semibold mt-1">{{ _('Выключено') }}</div>
+                    </div>
+                </div>
+                <div class="mt-4 text-xs text-gray-400 leading-relaxed">
+                    {{ _('Подписка активируется после успешной оплаты. Даты указаны предварительно и могут отличаться на несколько минут.') }}
+                    <a href="{{ url_lang('refund_policy_page') }}" class="text-purple-400 hover:text-purple-300 underline underline-offset-2 ml-1">{{ _('Политика возврата') }}</a>
+                </div>
+            </div>
+
+            <div class="h-px bg-white/10"></div>
+
+            <!-- Included (collapsible) -->
+            <div class="p-5 sm:p-6">
+                <button type="button" class="w-full flex items-center justify-between text-left"
+                        onclick="toggleIncluded()">
+                    <div>
+                        <div class="text-xs font-semibold tracking-widest text-gray-400 uppercase">{{ _('Включено в план') }}</div>
+                        <div class="text-sm text-gray-400 mt-1">{{ _('Посмотреть список преимуществ') }}</div>
+                    </div>
+                    <svg id="included-chevron" class="w-5 h-5 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                <div id="included-list" class="mt-4 hidden">
+                    <ul class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                        {% for feature in plan_features %}
+                        <li class="flex items-center">
+                            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {{ _(feature) }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <div class="mt-4 text-xs text-gray-400">
+                        {{ _('После оплаты ссылка на подписку появится в личном кабинете.') }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-5 checkout-actions">
+            <form id="pay-form" method="POST" action="#">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="coupon_code" id="coupon-code-hidden" value="{{ coupon_code }}">
+                <button id="pay-btn" type="submit" class="w-full text-center bg-purple-600 hover:bg-purple-700 px-6 py-4 rounded-2xl font-semibold transition-all tap-target">
+                    {{ _('Перейти к оплате') }}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const couponPreviewUrl = "{{ url_lang('coupon_preview') }}";
+const checkoutPlan = {{ plan|int }};
+
+function filterPayments(type, ev) {
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active', 'bg-purple-600');
+        btn.classList.add('glass-effect');
+    });
+    const t = (ev && ev.currentTarget) ? ev.currentTarget : null;
+    if (t) {
+        t.classList.remove('glass-effect');
+        t.classList.add('active', 'bg-purple-600');
+    }
+    
+    const items = document.querySelectorAll('.payment-item');
+    items.forEach(item => {
+        if (type === 'all' || item.classList.contains(type)) {
+            item.classList.remove('hidden');
+        } else {
+            item.classList.add('hidden');
+        }
+    });
+}
+
+function selectPayment(el) {
+    // Visual selection
+    document.querySelectorAll('.payment-item').forEach(item => {
+        item.classList.remove('ring-2', 'ring-purple-500');
+    });
+    el.classList.add('ring-2', 'ring-purple-500');
+
+    // Fill summary
+    const name = el.dataset.name || '';
+    const icon = el.dataset.icon || '💳';
+    const target = el.dataset.target || '#';
+
+    document.getElementById('summary-method').textContent = name;
+    document.getElementById('summary-icon').textContent = icon;
+
+    const payForm = document.getElementById('pay-form');
+    payForm.action = target;
+
+    // Show summary
+    const summary = document.getElementById('order-summary');
+    summary.classList.remove('hidden');
+
+    // Scroll with fixed header offset (iOS Safari friendly)
+    const offset = (typeof _vexndHeaderOffsetPx === 'function') ? _vexndHeaderOffsetPx() : 92;
+    const y = summary.getBoundingClientRect().top + window.pageYOffset - offset;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+}
+
+function setCouponMessage(text, isError = false) {
+    const msg = document.getElementById('coupon-message');
+    msg.textContent = text;
+    msg.classList.remove('text-green-400', 'text-red-400', 'text-gray-500');
+    msg.classList.add(isError ? 'text-red-400' : 'text-green-400');
+}
+
+function normalizeCouponClient(value) {
+    return (value || '').toUpperCase().replace(/[^A-Z0-9_-]+/g, '').slice(0, 64);
+}
+
+async function applyCoupon() {
+    const input = document.getElementById('coupon-input');
+    const btn = document.getElementById('coupon-apply-btn');
+    const coupon = (input.value || '').trim();
+    if (!coupon) {
+        document.getElementById('coupon-code-hidden').value = '';
+        document.getElementById('summary-original-wrap').classList.add('hidden');
+        document.getElementById('summary-discount-wrap').classList.add('hidden');
+        document.getElementById('header-price').textContent = `$${"{{ original_price }}"}`;
+        document.getElementById('mobile-price').textContent = `$${"{{ original_price }}"}`;
+        document.getElementById('summary-price').textContent = `$${"{{ original_price }}"}`;
+        document.getElementById('summary-original-price').textContent = "{{ original_price }}";
+        document.getElementById('summary-discount').textContent = "0.00";
+        const msg = document.getElementById('coupon-message');
+        msg.textContent = "{{ _('Введите промокод после выбора способа оплаты.') }}";
+        msg.classList.remove('text-green-400', 'text-red-400');
+        msg.classList.add('text-gray-500');
+        return;
+    }
+
+    btn.disabled = true;
+    try {
+        const form = new FormData();
+        form.append('csrf_token', "{{ csrf_token() }}");
+        form.append('plan', String(checkoutPlan));
+        form.append('coupon_code', coupon);
+        const resp = await fetch(couponPreviewUrl, {
+            method: 'POST',
+            body: form,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) {
+            throw new Error(data.error || "{{ _('Не удалось применить промокод.') }}");
+        }
+        document.getElementById('coupon-code-hidden').value = data.coupon_code || '';
+        input.value = data.coupon_code || coupon;
+        document.getElementById('header-price').textContent = `$${data.final_price}`;
+        document.getElementById('mobile-price').textContent = `$${data.final_price}`;
+        document.getElementById('summary-price').textContent = `$${data.final_price}`;
+        document.getElementById('summary-original-price').textContent = data.original_price;
+        document.getElementById('summary-discount').textContent = data.discount_amount;
+        document.getElementById('summary-original-wrap').classList.remove('hidden');
+        document.getElementById('summary-discount-wrap').classList.remove('hidden');
+        setCouponMessage(data.message || "{{ _('Промокод применён.') }}");
+    } catch (err) {
+        document.getElementById('coupon-code-hidden').value = '';
+        document.getElementById('summary-original-wrap').classList.add('hidden');
+        document.getElementById('summary-discount-wrap').classList.add('hidden');
+        document.getElementById('header-price').textContent = `$${"{{ original_price }}"}`;
+        document.getElementById('mobile-price').textContent = `$${"{{ original_price }}"}`;
+        document.getElementById('summary-price').textContent = `$${"{{ original_price }}"}`;
+        setCouponMessage(err.message || "{{ _('Не удалось применить промокод.') }}", true);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function resetSelection() {
+    document.querySelectorAll('.payment-item').forEach(item => {
+        item.classList.remove('ring-2', 'ring-purple-500');
+    });
+    const summary = document.getElementById('order-summary');
+    summary.classList.add('hidden');
+    // scroll back to methods
+    const grid = document.getElementById('payment-grid');
+    if (grid) {
+        const offset = (typeof _vexndHeaderOffsetPx === 'function') ? _vexndHeaderOffsetPx() : 92;
+        const y = grid.getBoundingClientRect().top + window.pageYOffset - offset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+}
+
+function toggleIncluded() {
+    const list = document.getElementById('included-list');
+    const chevron = document.getElementById('included-chevron');
+    const isHidden = list.classList.contains('hidden');
+    if (isHidden) {
+        list.classList.remove('hidden');
+        chevron.classList.add('rotate-180');
+    } else {
+        list.classList.add('hidden');
+        chevron.classList.remove('rotate-180');
+    }
+}
+
+document.getElementById('pay-form').addEventListener('submit', async function (ev) {
+    const input = document.getElementById('coupon-input');
+    const hidden = document.getElementById('coupon-code-hidden');
+    const current = normalizeCouponClient(input.value);
+    const applied = normalizeCouponClient(hidden.value);
+    hidden.value = current;
+    if (current !== applied) {
+        ev.preventDefault();
+        if (current) {
+            await applyCoupon();
+            const updated = normalizeCouponClient(hidden.value);
+            if (updated) {
+                this.requestSubmit();
+            }
+        } else {
+            document.getElementById('summary-original-wrap').classList.add('hidden');
+            document.getElementById('summary-discount-wrap').classList.add('hidden');
+            document.getElementById('header-price').textContent = `$${"{{ original_price }}"}`;
+            document.getElementById('mobile-price').textContent = `$${"{{ original_price }}"}`;
+            document.getElementById('summary-price').textContent = `$${"{{ original_price }}"}`;
+            const msg = document.getElementById('coupon-message');
+            msg.textContent = "{{ _('Введите промокод после выбора способа оплаты.') }}";
+            msg.classList.remove('text-green-400', 'text-red-400');
+            msg.classList.add('text-gray-500');
+            this.requestSubmit();
+        }
+    }
+});
+
+{% if coupon_applied %}
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('summary-original-wrap').classList.remove('hidden');
+    document.getElementById('summary-discount-wrap').classList.remove('hidden');
+});
+{% endif %}
+</script>
+{% endblock %}
