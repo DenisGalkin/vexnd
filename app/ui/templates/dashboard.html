@@ -374,7 +374,51 @@
     </div>
 
     <div id="tab-settings" class="hidden" role="tabpanel" aria-labelledby="tab-btn-settings">
-      <div class="grid lg:grid-cols-2 gap-6">
+      <div class="grid gap-6">
+        <section class="glass-effect rounded-2xl p-5 sm:p-6">
+          <h2 class="text-2xl font-bold">{{ _('Telegram и сайт') }}</h2>
+          {% if telegram_account %}
+            <p class="text-sm text-gray-400 mt-2">
+              {{ _('Аккаунт уже связан с Telegram. Теперь можно заходить на сайт через бота и управлять одной и той же подпиской в обоих местах.') }}
+            </p>
+            <div class="mt-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+              <div class="text-sm text-emerald-200">{{ _('Привязан Telegram') }}</div>
+              <div class="mt-2 text-white font-semibold">
+                {% if telegram_account.username %}@{{ telegram_account.username }}{% else %}ID {{ telegram_account.telegram_id }}{% endif %}
+              </div>
+            </div>
+          {% elif telegram_auth %}
+            <p class="text-sm text-gray-400 mt-2">
+              {{ _('Подтвердите привязку в Telegram-боте. Если у вас уже была подписка в боте, она станет доступна и в этом веб-аккаунте.') }}
+            </p>
+            <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+              <div class="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
+                <div class="text-xs uppercase tracking-[0.24em] text-cyan-200/70">{{ _('Код привязки') }}</div>
+                <div class="mt-2 font-mono text-base text-white break-all">{{ telegram_auth.code }}</div>
+                <div id="tg-link-status"
+                     class="mt-3 text-sm text-cyan-100/90"
+                     data-status-url="{{ telegram_auth.status_url }}">
+                  {{ _('Ожидаем подтверждение в боте…') }}
+                </div>
+              </div>
+              <div class="grid gap-2">
+                {% if telegram_auth.bot_url %}
+                <a href="{{ telegram_auth.bot_url }}" target="_blank" rel="noopener noreferrer"
+                   class="inline-flex items-center justify-center rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-4 py-3 transition">
+                  {{ _('Открыть бота') }}
+                </a>
+                {% endif %}
+                <button type="button"
+                        class="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-semibold transition hover:bg-white/10"
+                        onclick="copyText('{{ telegram_auth.command|e }}', this)">
+                  {{ _('Скопировать команду') }}
+                </button>
+              </div>
+            </div>
+          {% endif %}
+        </section>
+
+        <div class="grid lg:grid-cols-2 gap-6">
         <section class="glass-effect rounded-2xl p-5 sm:p-6">
           <h2 class="text-2xl font-bold">{{ _('Смена пароля') }}</h2>
           <p class="text-gray-400 text-sm mt-1">{{ _('Рекомендуем обновлять пароль регулярно') }}</p>
@@ -434,6 +478,7 @@
             </button>
           </form>
         </section>
+        </div>
       </div>
     </div>
   </div>
@@ -516,5 +561,37 @@
       else if (saved === 'ref') setTab('ref');
     }
   } catch(e) {}
+
+  (function pollTelegramLink(){
+    const node = document.getElementById('tg-link-status');
+    if (!node) return;
+    let attempts = 0;
+
+    async function tick(){
+      attempts += 1;
+      try{
+        const resp = await fetch(node.dataset.statusUrl, {credentials: 'same-origin', headers: {'Accept': 'application/json'}});
+        const data = await resp.json();
+        if (data.status === 'ok'){
+          node.textContent = "{{ _('Привязка подтверждена. Обновляем кабинет…') }}";
+          window.location.href = data.redirect || "{{ url_for('dashboard') }}?tab=settings";
+          return;
+        }
+        if (data.status === 'expired'){
+          node.textContent = "{{ _('Код истёк. Обновите страницу настроек и получите новый.') }}";
+          return;
+        }
+        if (data.status === 'merge_requires_support'){
+          node.textContent = "{{ _('Этот Telegram уже привязан к другому полноценному аккаунту. Напишите в поддержку для безопасного объединения.') }}";
+          return;
+        }
+      }catch(e){}
+      if (attempts < 120) {
+        setTimeout(tick, 3000);
+      }
+    }
+
+    setTimeout(tick, 2500);
+  })();
 </script>
 {% endblock %}

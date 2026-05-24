@@ -72,6 +72,13 @@ TEXTS = {
         "referral_invalid": "⚠️ Реферальная ссылка недействительна.",
         "referral_already_used": "ℹ️ Рефералка уже привязана к вашему аккаунту.",
         "referral_too_late": "ℹ️ Рефералка действует только до первой оплаты.",
+        "telegram_login_ok": "✅ Подтверждение получено. Вернитесь на сайт: вход или привязка аккаунта уже готовы.",
+        "telegram_login_challenge_not_found": "⚠️ Код входа не найден или уже истёк. Откройте сайт и получите новый код.",
+        "telegram_login_telegram_not_linked": "⚠️ Не удалось подтвердить вход: Telegram-аккаунт не связан с внутренним профилем.",
+        "telegram_login_challenge_invalid": "⚠️ Код подтверждения повреждён. Запросите новый код на сайте.",
+        "telegram_login_merge_requires_support": "⚠️ Этот Telegram уже связан с другим полноценным аккаунтом. Для безопасного объединения напишите в поддержку.",
+        "telegram_login_merge_failed": "⚠️ Не удалось объединить аккаунты автоматически. Напишите в поддержку, и мы поможем.",
+        "telegram_login_user_not_found": "⚠️ Профиль для входа не найден. Попробуйте ещё раз позже.",
     },
     "en": {
         "buy": "🚀 Buy VPN",
@@ -143,6 +150,13 @@ TEXTS = {
         "referral_invalid": "⚠️ Referral link is invalid.",
         "referral_already_used": "ℹ️ A referral is already attached to your account.",
         "referral_too_late": "ℹ️ Referral links work only before the first payment.",
+        "telegram_login_ok": "✅ Confirmed. Return to the website: your sign-in or account link is ready.",
+        "telegram_login_challenge_not_found": "⚠️ The sign-in code was not found or has expired. Open the website and request a new one.",
+        "telegram_login_telegram_not_linked": "⚠️ Could not confirm sign-in: this Telegram account is not linked to an internal profile.",
+        "telegram_login_challenge_invalid": "⚠️ The confirmation code is invalid. Request a new one on the website.",
+        "telegram_login_merge_requires_support": "⚠️ This Telegram account is already linked to another full account. Please contact support for a safe merge.",
+        "telegram_login_merge_failed": "⚠️ Could not merge accounts automatically. Contact support and we will help.",
+        "telegram_login_user_not_found": "⚠️ The profile for sign-in was not found. Please try again later.",
     },
 }
 

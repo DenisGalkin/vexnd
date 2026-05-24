@@ -7,10 +7,11 @@ import os
 from datetime import datetime, timedelta
 
 import qrcode
-from flask import flash, jsonify, redirect, render_template, request, url_for
+from flask import flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import func
 
+from app.bot.models import TelegramAccount
 from app.core.extensions import db
 from app.domain.models import ReferralSignup, Subscription, User
 from app.domain.plans import format_usd_amount, plan_details
@@ -18,6 +19,8 @@ from app.services.coupons import coupon_pricing, normalize_coupon_code
 from app.services.referrals import get_or_create_referral_code, mask_email
 from app.services.security import require_csrf, rotate_csrf_token
 from app.services.subscriptions import ensure_remnawave_subscription_url
+from app.services.telegram_auth import CHALLENGE_TTL_MINUTES, create_telegram_auth_challenge, get_active_challenge
+from app.services.telegram_links import telegram_bot_deeplink
 from app.http.helpers import public_url, translate
 
 
@@ -78,6 +81,26 @@ def dashboard():
     except Exception:
         referrals_total = 0
         referrals_paid = 0
+    telegram_account = TelegramAccount.query.filter_by(user_id=current_user.id).first()
+    telegram_auth = None
+    if not telegram_account:
+        session_key = "tg_auth_code:link"
+        challenge = get_active_challenge(request.args.get("tg_link") or "", purpose="link")
+        if not challenge or challenge.target_user_id != current_user.id:
+            challenge = get_active_challenge(session.get(session_key), purpose="link")
+        if challenge and challenge.target_user_id != current_user.id:
+            challenge = None
+        if not challenge:
+            challenge = create_telegram_auth_challenge(purpose="link", target_user_id=current_user.id)
+            session[session_key] = challenge.code
+        start_value = f"link_{challenge.code}"
+        telegram_auth = {
+            "code": challenge.code,
+            "minutes": CHALLENGE_TTL_MINUTES,
+            "bot_url": telegram_bot_deeplink(start_value),
+            "status_url": url_for("telegram_auth_status", code=challenge.code),
+            "command": f"/start {start_value}",
+        }
     return render_template(
         "dashboard.html",
         subscription=subscription,
@@ -90,6 +113,8 @@ def dashboard():
         referrals_list=referrals_list,
         now=now,
         remaining_days=remaining_days,
+        telegram_account=telegram_account,
+        telegram_auth=telegram_auth,
     )
 
 

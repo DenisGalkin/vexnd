@@ -21,6 +21,7 @@ from app.bot.keyboards import (
 from app.bot.subscriptions import capture_bot_referral, format_subscription, schedule_subscription_message_refresh, user_has_local_subscription_data
 from app.services.coupons import bot_coupon_benefits, normalize_coupon_code, record_coupon_redemption
 from app.services.subscriptions import create_remnawave_subscription
+from app.services.telegram_auth import approve_telegram_auth_challenge
 
 
 def handle_promo_code(chat_id: int, user, state, raw_code: str) -> None:
@@ -70,6 +71,11 @@ def handle_message(message: dict[str, object]) -> None:
             result_key = capture_bot_referral(user, start_arg.removeprefix("ref_"))
             if result_key:
                 send_message(chat_id, t(state, result_key))
+        elif start_arg.startswith("login_") or start_arg.startswith("link_"):
+            ok, reason, _challenge = approve_telegram_auth_challenge(start_arg.split("_", 1)[1], account.telegram_id)
+            key = "telegram_login_ok" if ok else f"telegram_login_{reason}"
+            send_message(chat_id, t(state, key), main_menu(state, user))
+            return
 
         if state.pending_action == "choose_language":
             send_message(chat_id, t(state, "choose_language"), first_language_keyboard())
@@ -77,6 +83,12 @@ def handle_message(message: dict[str, object]) -> None:
 
         if state.pending_action == "promo" and text and not text.startswith("/"):
             handle_promo_code(chat_id, user, state, text)
+            return
+
+        if text.startswith("/login "):
+            ok, reason, _challenge = approve_telegram_auth_challenge(text.split(maxsplit=1)[1], account.telegram_id)
+            key = "telegram_login_ok" if ok else f"telegram_login_{reason}"
+            send_message(chat_id, t(state, key), main_menu(state, user))
             return
 
         if text.startswith("/start"):

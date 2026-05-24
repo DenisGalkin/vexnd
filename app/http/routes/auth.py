@@ -2,14 +2,38 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from flask import current_app, flash, redirect, render_template, request, session, url_for
+from flask import current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app.core.extensions import db
 from app.domain.models import PaymentIntent, ReferralCode, ReferralFingerprint, ReferralSignup, Subscription, User, UserSecurity
 from app.services.referrals import mask_email
 from app.services.security import client_ip, device_fingerprint, rotate_csrf_token, throttle_is_locked, throttle_register_fail, throttle_reset, validate_password_strength
+from app.services.telegram_auth import CHALLENGE_TTL_MINUTES, consume_approved_challenge, create_telegram_auth_challenge, get_active_challenge
+from app.services.telegram_links import telegram_bot_deeplink
 from app.http.helpers import get_locale, localized_url, redirect_localized, translate
+
+
+def _telegram_session_key(purpose: str) -> str:
+    return f"tg_auth_code:{purpose}"
+
+
+def _telegram_challenge_context(*, purpose: str, target_user_id: int | None = None) -> dict[str, str | int | None]:
+    session_key = _telegram_session_key(purpose)
+    challenge = get_active_challenge(session.get(session_key), purpose=purpose)
+    if challenge and target_user_id is not None and challenge.target_user_id != target_user_id:
+        challenge = None
+    if not challenge:
+        challenge = create_telegram_auth_challenge(purpose=purpose, target_user_id=target_user_id)
+        session[session_key] = challenge.code
+    start_value = f"{purpose}_{challenge.code}"
+    return {
+        "code": challenge.code,
+        "minutes": CHALLENGE_TTL_MINUTES,
+        "bot_url": telegram_bot_deeplink(start_value),
+        "status_url": url_for("telegram_auth_status", code=challenge.code),
+        "command": f"/start {start_value}",
+    }
 
 
 def login():
@@ -50,7 +74,7 @@ def login():
         if email:
             throttle_register_fail("login", f"email:{email.lower().strip()}", window_seconds=15 * 60, max_fails=6, lock_seconds=15 * 60)
         throttle_register_fail("login", f"ip:{ip}", window_seconds=15 * 60, max_fails=12, lock_seconds=15 * 60)
-    return render_template("auth/login.html")
+    return render_template("auth/login.html", telegram_auth=_telegram_challenge_context(purpose="login"))
 
 
 def referral(code):
@@ -203,6 +227,46 @@ def logout():
     return redirect(url_for("index"))
 
 
+def telegram_auth_status(code: str):
+    purpose = None
+    for candidate in ("login", "link"):
+        if session.get(_telegram_session_key(candidate)) == code:
+            purpose = candidate
+            break
+    if not purpose:
+        return jsonify({"status": "not_found"}), 404
+    challenge = get_active_challenge(code, purpose=purpose)
+    if not challenge:
+        session.pop(_telegram_session_key(purpose), None)
+        return jsonify({"status": "expired"}), 410
+    if challenge.status_reason:
+        return jsonify({"status": challenge.status_reason}), 409
+    if challenge.approved_at is None:
+        return jsonify({"status": "pending"})
+    if purpose == "login":
+        ok, reason, user = consume_approved_challenge(code, purpose="login")
+        if not ok or not user:
+            return jsonify({"status": reason}), 400
+        rotate_csrf_token()
+        login_user(user, remember=True)
+        chosen = session.get("lang") or get_locale()
+        session["lang"] = chosen if chosen in ("ru", "en") else "en"
+        session.pop(_telegram_session_key("login"), None)
+        return jsonify({"status": "ok", "redirect": localized_url("dashboard")})
+    if not current_user.is_authenticated or challenge.target_user_id != current_user.id:
+        return jsonify({"status": "forbidden"}), 403
+    session.pop(_telegram_session_key("link"), None)
+    return jsonify({"status": "ok", "redirect": localized_url("dashboard", tab="settings")})
+
+
+def telegram_auth_link():
+    if not current_user.is_authenticated:
+        return redirect_localized("login")
+    challenge = _telegram_challenge_context(purpose="link", target_user_id=current_user.id)
+    flash(translate("Откройте Telegram-бота и подтвердите привязку аккаунта."), "info")
+    return redirect(f"{localized_url('dashboard')}?tab=settings&tg_link={challenge['code']}")
+
+
 @login_required
 def account_change_password():
     ip = client_ip()
@@ -270,6 +334,8 @@ def account_delete():
 def register(app) -> None:
     app.add_url_rule("/login", endpoint="login", view_func=login, methods=["GET", "POST"])
     app.add_url_rule("/en/login", endpoint="login_en", view_func=login, methods=["GET", "POST"])
+    app.add_url_rule("/auth/telegram/status/<code>", endpoint="telegram_auth_status", view_func=telegram_auth_status, methods=["GET"])
+    app.add_url_rule("/account/telegram/link", endpoint="telegram_auth_link", view_func=telegram_auth_link, methods=["GET"])
     app.add_url_rule("/r/<code>", endpoint="referral", view_func=referral, methods=["GET"])
     app.add_url_rule("/en/r/<code>", endpoint="referral_en", view_func=referral, methods=["GET"])
     app.add_url_rule("/register", endpoint="register", view_func=register_user, methods=["GET", "POST"])

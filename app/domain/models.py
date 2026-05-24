@@ -161,3 +161,23 @@ class UserCouponRedemption(db.Model):
     __table_args__ = (
         db.UniqueConstraint("user_id", "coupon_code", name="uq_user_coupon_redemption_user_coupon"),
     )
+
+
+class TelegramAuthChallenge(db.Model):
+    __tablename__ = "telegram_auth_challenge"
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    purpose = db.Column(db.String(16), nullable=False, default="login", index=True)
+    target_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    telegram_id = db.Column(db.Integer, nullable=True, index=True)
+    approved_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    status_reason = db.Column(db.String(64), nullable=True)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    approved_at = db.Column(db.DateTime, nullable=True)
+    consumed_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    __table_args__ = (
+        db.Index("ix_telegram_auth_challenge_purpose_expires", "purpose", "expires_at"),
+    )
