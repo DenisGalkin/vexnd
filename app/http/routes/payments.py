@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
-import secrets
 
 from flask import flash, jsonify, redirect, request, url_for
 from flask_login import current_user, login_required
@@ -13,7 +12,6 @@ from app.domain.models import PaymentIntent
 from app.http.security.webhooks import provider_error_id, secrets_match
 from app.services.coupons import coupon_pricing, create_intent_pricing
 from app.services.payment_intents import create_intent_with_pricing
-from app.services.payments.apays import apays_credentials, apays_md5, apays_process_approved, create_apays_order
 from app.services.payments.crystalpay import create_crystal_invoice, crystal_invoice_info, crystalpay_process_paid_invoice, crystalpay_webhook_impl
 from app.services.payments.cryptobot import create_crypto_invoice, cryptobot_process_paid_invoice, cryptobot_verify_webhook_signature
 from app.services.payments.heleket import create_heleket_invoice, heleket_process_paid, heleket_webhook_impl
@@ -21,7 +19,7 @@ from app.services.payments.platega import create_platega_transaction, platega_pr
 from app.http.helpers import return_intent_visible, return_redirect_target, translate
 
 
-SUPPORTED_PAYMENT_METHODS = frozenset({"cryptobot", "crystalpay", "apays", "platega", "heleket"})
+SUPPORTED_PAYMENT_METHODS = frozenset({"cryptobot", "crystalpay", "platega", "heleket"})
 
 
 def normalize_payment_method(raw_method: str | None) -> str:
@@ -56,11 +54,6 @@ def start_payment(method):
             inv_id = str(invoice.get("id") or "").strip()
             create_intent_with_pricing(db_session=db.session, intent_model=PaymentIntent, create_pricing_fn=create_intent_pricing, provider="crystalpay", token=intent_token, user_id=current_user.id, plan_months=plan_int, external_id=inv_id or None, pricing=pricing)
             return redirect(invoice.get("url"))
-        if method == "apays":
-            order_data, order_id = create_apays_order(current_user.id, plan_int, amount_usd=amount_usd)
-            intent_token = secrets.token_urlsafe(24)
-            create_intent_with_pricing(db_session=db.session, intent_model=PaymentIntent, create_pricing_fn=create_intent_pricing, provider="apays", token=intent_token, user_id=current_user.id, plan_months=plan_int, external_id=order_id, pricing=pricing)
-            return redirect((order_data.get("url") or "").strip())
         if method == "platega":
             invoice, intent_token = create_platega_transaction(current_user.id, plan_int, amount_usd=amount_usd)
             tx_id = str(invoice.get("transactionId") or invoice.get("transaction_id") or invoice.get("id") or "").strip()
@@ -126,64 +119,6 @@ def cryptobot_return():
 
 def crystalpay_return():
     return _return_by_provider("crystalpay", lambda ext_id, token: crystalpay_process_paid_invoice(ext_id, token))
-
-
-@login_required
-def apays_success():
-    order_id = (request.args.get("order_id") or request.args.get("order") or "").strip()
-    if order_id:
-        try:
-            ok, _msg = apays_process_approved(order_id)
-            if ok:
-                flash(translate("Оплата подтверждена. Подписка активирована."), "success")
-                return redirect(url_for("dashboard"))
-        except Exception as exc:
-            print(f"APAYS success verify failed: {exc}")
-    flash(translate("Спасибо! Мы проверяем оплату. Если статус не обновился, подождите пару минут и обновите страницу."), "info")
-    return redirect(url_for("dashboard"))
-
-
-@login_required
-def apays_decline():
-    flash(translate("Оплата не прошла или была отменена."), "error")
-    return redirect(url_for("checkout", plan=request.args.get("plan", "1")))
-
-
-def apays_webhook():
-    expected = os.environ.get("APAYS_WEBHOOK_PATH_SECRET", "").strip()
-    if expected:
-        return jsonify({"ok": False, "error": "not found"}), 404
-    return _apays_webhook_impl()
-
-
-def apays_webhook_secret(secret: str):
-    expected = os.environ.get("APAYS_WEBHOOK_PATH_SECRET", "").strip()
-    if not secrets_match(secret, expected):
-        return jsonify({"ok": False, "error": "not found"}), 404
-    return _apays_webhook_impl()
-
-
-def _apays_webhook_impl():
-    try:
-        content = request.get_json(silent=True)
-        if not isinstance(content, dict):
-            return jsonify({"ok": False, "error": "bad json"}), 400
-        order_id = str(content.get("order_id") or "").strip()
-        status = str(content.get("status") or "").strip()
-        sign = str(content.get("sign") or "").strip()
-        if not order_id or not status or not sign:
-            return jsonify({"ok": False, "error": "missing fields"}), 400
-        _client_id, secret_key = apays_credentials()
-        expected_sign = apays_md5(f"{order_id}:{status}:{secret_key}")
-        if not hmac.compare_digest(expected_sign, sign):
-            return jsonify({"ok": False, "error": "invalid signature"}), 403
-        if status != "approved":
-            return jsonify({"ok": True, "ignored": True}), 200
-        ok, msg = apays_process_approved(order_id)
-        return jsonify({"ok": ok, "message": msg}), 200
-    except Exception as exc:
-        print(f"APAYS webhook error: {exc}")
-        return jsonify({"ok": False, "error": "temporary"}), 429
 
 
 def cryptobot_webhook():
@@ -326,10 +261,6 @@ def register(app) -> None:
     app.add_url_rule("/payment_callback", endpoint="payment_callback", view_func=payment_callback, methods=["GET"])
     app.add_url_rule("/cryptobot/return", endpoint="cryptobot_return", view_func=cryptobot_return, methods=["GET"])
     app.add_url_rule("/crystalpay/return", endpoint="crystalpay_return", view_func=crystalpay_return, methods=["GET"])
-    app.add_url_rule("/apays/success", endpoint="apays_success", view_func=apays_success, methods=["GET"])
-    app.add_url_rule("/apays/decline", endpoint="apays_decline", view_func=apays_decline, methods=["GET"])
-    app.add_url_rule("/apays/webhook", endpoint="apays_webhook", view_func=apays_webhook, methods=["POST"])
-    app.add_url_rule("/apays/webhook/<secret>", endpoint="apays_webhook_secret", view_func=apays_webhook_secret, methods=["POST"])
     app.add_url_rule("/cryptobot/webhook", endpoint="cryptobot_webhook", view_func=cryptobot_webhook, methods=["POST"])
     app.add_url_rule("/cryptobot/webhook/<secret>", endpoint="cryptobot_webhook_secret", view_func=cryptobot_webhook_secret, methods=["POST"])
     app.add_url_rule("/heleket/return", endpoint="heleket_return", view_func=heleket_return, methods=["GET"])

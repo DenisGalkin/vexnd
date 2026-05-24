@@ -1,17 +1,12 @@
 from __future__ import annotations
 
 from app.bot.common import (
-    BotPromoCode,
-    BotPromoRedemption,
     app,
     db,
     get_or_create_account,
     get_or_create_state,
-    parse_topup_amount_cents,
     send_message,
     t,
-    topup_amount_selected_text,
-    topup_invalid_amount_text,
     utc_now,
 )
 from app.bot.keyboards import (
@@ -22,37 +17,35 @@ from app.bot.keyboards import (
     plans_keyboard,
     profile_keyboard,
     subscription_keyboard,
-    topup_payment_methods_keyboard,
 )
 from app.bot.subscriptions import capture_bot_referral, format_subscription, schedule_subscription_message_refresh, user_has_local_subscription_data
+from app.services.coupons import bot_coupon_benefits, normalize_coupon_code, record_coupon_redemption
 from app.services.subscriptions import create_remnawave_subscription
 
 
 def handle_promo_code(chat_id: int, user, state, raw_code: str) -> None:
-    code = raw_code.strip().upper()
+    code = normalize_coupon_code(raw_code)
     state.pending_action = None
     state.updated_at = utc_now()
-    promo = BotPromoCode.query.filter_by(code=code, is_active=True).first()
-    if not promo or (promo.max_uses is not None and promo.used_count >= promo.max_uses):
+    benefit = bot_coupon_benefits(code, user.id if user else None)
+    if benefit["error"] in {"not_found", "exhausted"}:
         db.session.commit()
         send_message(chat_id, t(state, "promo_not_found"), profile_keyboard(state))
         return
-    if BotPromoRedemption.query.filter_by(promo_id=promo.id, telegram_id=state.telegram_id).first():
+    if benefit["error"] == "already_used":
         db.session.commit()
         send_message(chat_id, t(state, "promo_used"), profile_keyboard(state))
         return
+    if benefit["error"] == "checkout_only":
+        db.session.commit()
+        send_message(chat_id, t(state, "promo_checkout_only"), profile_keyboard(state))
+        return
 
-    db.session.add(BotPromoRedemption(promo_id=promo.id, telegram_id=state.telegram_id))
-    promo.used_count += 1
+    record_coupon_redemption(user.id if user else None, code)
     messages: list[str] = []
-    if promo.balance_cents > 0:
-        state.balance_cents += promo.balance_cents
-        from app.bot.common import money
-
-        messages.append(t(state, "promo_ok_balance", amount=money(promo.balance_cents)))
-    if promo.plan_months:
-        create_remnawave_subscription(user, int(promo.plan_months), strict=True)
-        messages.append(t(state, "promo_ok_plan", months=promo.plan_months))
+    if benefit["bot_plan_months"]:
+        create_remnawave_subscription(user, int(benefit["bot_plan_months"]), strict=True)
+        messages.append(t(state, "promo_ok_plan", months=benefit["bot_plan_months"]))
     state.updated_at = utc_now()
     db.session.commit()
     send_message(chat_id, "\n\n".join(messages) if messages else t(state, "promo_not_found"), profile_keyboard(state))
@@ -84,17 +77,6 @@ def handle_message(message: dict[str, object]) -> None:
 
         if state.pending_action == "promo" and text and not text.startswith("/"):
             handle_promo_code(chat_id, user, state, text)
-            return
-
-        if state.pending_action == "topup_custom" and text and not text.startswith("/"):
-            amount_cents = parse_topup_amount_cents(text)
-            if amount_cents is None:
-                send_message(chat_id, topup_invalid_amount_text(state), keyboard([[(t(state, "back"), "topup")]]))
-                return
-            state.pending_action = None
-            state.updated_at = utc_now()
-            db.session.commit()
-            send_message(chat_id, topup_amount_selected_text(state, amount_cents), topup_payment_methods_keyboard(amount_cents, state))
             return
 
         if text.startswith("/start"):

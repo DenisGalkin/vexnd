@@ -120,7 +120,7 @@ def crystalpay_process_paid_invoice(invoice_id: str, payload_token: str | None =
         user_obj = User.query.get(intent.user_id)
         if not user_obj:
             return False, "user not found"
-        create_remnawave_subscription(user_obj, int(intent.plan_months))
+        create_remnawave_subscription(user_obj, int(intent.plan_months), strict=True)
         apply_coupon_redemption_for_intent(intent)
         apply_referral_bonus_if_eligible(user_obj)
         mark_processed_payment(

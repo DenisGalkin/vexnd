@@ -409,7 +409,6 @@ Disallow: /start_payment/
 Disallow: /payment_callback
 Disallow: /cryptobot/
 Disallow: /crystalpay/
-Disallow: /apays/
 Disallow: /platega/
 
 Sitemap: https://vexnd.com/sitemap.xml

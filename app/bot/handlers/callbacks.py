@@ -16,7 +16,6 @@ from app.bot.common import (
     send_message,
     show_loading,
     t,
-    topup_amount_selected_text,
     utc_now,
     get_or_create_account,
     get_or_create_state,
@@ -34,15 +33,10 @@ from app.bot.keyboards import (
     qr_keyboard,
     referral_keyboard,
     subscription_keyboard,
-    topup_amounts_keyboard,
-    topup_payment_methods_keyboard,
 )
 from app.bot.payments import (
-    handle_balance_purchase,
     handle_payment_check,
     handle_payment_method,
-    handle_topup_check,
-    handle_topup_payment_method,
 )
 from app.bot.subscriptions import (
     build_bot_referral_link,
@@ -237,45 +231,6 @@ def handle_callback(callback: dict[str, object]) -> None:
         if data.startswith("pm_"):
             answer_callback(callback_id)
             handle_payment_method(chat_id, message_id, user, state, data)
-            return
-        if data.startswith("balance_buy_"):
-            answer_callback(callback_id)
-            handle_balance_purchase(chat_id, message_id, user, state, data)
-            return
-        if data == "topup":
-            answer_callback(callback_id)
-            state.pending_action = None
-            state.updated_at = utc_now()
-            db.session.commit()
-            edit_message(chat_id, message_id, t(state, "topup_title"), topup_amounts_keyboard(state))
-            return
-        if data == "topup_custom":
-            answer_callback(callback_id, t(state, "topup_custom_hint"))
-            state.pending_action = "topup_custom"
-            state.updated_at = utc_now()
-            db.session.commit()
-            markup = keyboard([[(t(state, "back"), "topup")]])
-            try:
-                edit_message(chat_id, message_id, t(state, "topup_custom_prompt"), markup)
-            except Exception as exc:
-                print(f"Top-up custom prompt edit failed: {exc}")
-                send_message(chat_id, t(state, "topup_custom_prompt"), markup)
-            return
-        if data.startswith("topup_amount_"):
-            answer_callback(callback_id)
-            amount_cents = int(data.removeprefix("topup_amount_"))
-            state.pending_action = None
-            state.updated_at = utc_now()
-            db.session.commit()
-            edit_message(chat_id, message_id, topup_amount_selected_text(state, amount_cents), topup_payment_methods_keyboard(amount_cents, state))
-            return
-        if data.startswith("topup_pm_"):
-            answer_callback(callback_id)
-            handle_topup_payment_method(chat_id, message_id, user, state, data)
-            return
-        if data.startswith("checktopup_"):
-            answer_callback(callback_id)
-            handle_topup_check(chat_id, message_id, user, state, data)
             return
         if data == "promo_start":
             answer_callback(callback_id)

@@ -309,7 +309,7 @@ def format_referral_text(user: User, state: BotUserState) -> str:
     invited_by = referral_inviter_label(user, state)
     if invited_by:
         text += f"\n🤝 {t(state, 'referral_invited_by')}: <b>{h(invited_by)}</b>\n"
-    text += f"\n{t(state, 'referral_bonus_note')}\n{t(state, 'referral_share_hint')}"
+    text += f"\n{t(state, 'referral_bonus_note')}"
     return text
 
 

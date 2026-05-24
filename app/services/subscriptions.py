@@ -86,6 +86,15 @@ def ensure_remnawave_subscription_url(user: User, subscription: Subscription) ->
         return (subscription.subscription_url or "").strip()
     try:
         remote_user = remnawave_find_user(cfg, user, include_email=include_email)
+        if (
+            not remote_user
+            and subscription.is_active
+            and subscription.expiry_date
+            and subscription.expiry_date > datetime.utcnow()
+        ):
+            remote_user = remnawave_create_user(cfg, user, subscription.expiry_date, include_email=include_email)
+            if remote_user.get("uuid"):
+                remnawave_update_user_traffic(cfg, remote_user["uuid"])
         remote_url = remnawave_subscription_url_from_user(remote_user)
         if remote_url and remote_url != (subscription.subscription_url or "").strip():
             subscription.subscription_url = remote_url

@@ -60,8 +60,6 @@
                     {% set target = url_for('start_payment', method='cryptobot', plan=plan) %}
                 {% elif method.slug == 'crystalpay' %}
                     {% set target = url_for('start_payment', method='crystalpay', plan=plan) %}
-                {% elif method.slug == 'apays' %}
-                    {% set target = url_for('start_payment', method='apays', plan=plan) %}
                 {% elif method.slug == 'platega' %}
                     {% set target = url_for('start_payment', method='platega', plan=plan) %}
                 {% elif method.slug == 'heleket' %}
@@ -85,8 +83,6 @@
                                 {% set subtitle = _('СБП (QR)') %}
                             {% elif m == 'crystalpay' %}
                                 {% set subtitle = _('Криптовалюты + LOLZ') %}
-                            {% elif m == 'apays' %}
-                                {% set subtitle = _('Карты РФ') %}
                             {% else %}
                                 {% set subtitle = _('Мгновенно • Без комиссии') %}
                             {% endif %}

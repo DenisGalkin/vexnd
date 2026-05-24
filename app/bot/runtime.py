@@ -15,7 +15,6 @@ from app.bot.common import (
     SUBSCRIPTION_REMINDER_CHECK_INTERVAL_SECONDS,
     app,
     db,
-    seed_promo_codes,
 )
 from app.bot.handlers.callbacks import handle_callback
 from app.bot.handlers.messages import handle_message
@@ -77,7 +76,6 @@ def main() -> None:
         raise RuntimeError("Set TELEGRAM_BOT_TOKEN in .env")
     with app.app_context():
         ensure_bot_schema()
-        seed_promo_codes()
     poll_updates()
 
 

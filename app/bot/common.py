@@ -5,7 +5,7 @@ import io
 import json
 import os
 import secrets
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 from urllib.parse import quote
 
@@ -25,8 +25,8 @@ from app.services.remnawave import (
     rw_username_from_telegram,
     telegram_local_placeholder_email,
 )
-from app.bot.content import BALANCE_PROVIDERS, BOT_PLAN_CATALOG, CONNECT_CLIENTS, PAYMENT_METHODS, TEXTS
-from app.bot.models import BotBalanceTopup, BotPromoCode, BotPromoRedemption, BotUserState, TelegramAccount, utc_now
+from app.bot.content import BOT_PLAN_CATALOG, CONNECT_CLIENTS, PAYMENT_METHODS, TEXTS
+from app.bot.models import BotUserState, TelegramAccount, utc_now
 
 
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
@@ -37,8 +37,6 @@ BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
 BOT_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 SUPPORT_USERNAME = (os.environ.get("TELEGRAM_SUPPORT_USERNAME") or "vexndsupport").strip().lstrip("@")
 BOT_USERNAME = (os.environ.get("TELEGRAM_BOT_USERNAME") or "").strip().lstrip("@")
-MIN_TOPUP_CENTS = int(os.environ.get("BOT_MIN_TOPUP_CENTS", "100"))
-MAX_TOPUP_CENTS = int(os.environ.get("BOT_MAX_TOPUP_CENTS", "50000"))
 SUBSCRIPTION_REMINDER_CHECK_INTERVAL_SECONDS = int(os.environ.get("BOT_SUBSCRIPTION_REMINDER_CHECK_INTERVAL_SECONDS", "600"))
 
 
@@ -138,7 +136,7 @@ def create_bot_intent_pricing(token: str, amount_usd: Decimal | float | int | st
     )
 
 
-def ensure_bot_intent_pricing(intent, topup: BotBalanceTopup | None = None) -> None:
+def ensure_bot_intent_pricing(intent) -> None:
     if not intent or not intent.token:
         return
     if PaymentIntentPricing.query.filter_by(intent_token=intent.token).first():
@@ -146,8 +144,6 @@ def ensure_bot_intent_pricing(intent, topup: BotBalanceTopup | None = None) -> N
     amount_usd: Decimal | None = None
     if intent.provider in {"cryptobot", "crystalpay", "platega", "heleket"} and intent.plan_months in BOT_PLAN_CATALOG:
         amount_usd = bot_plan_price_usd(intent.plan_months)
-    elif topup is not None:
-        amount_usd = Decimal(topup.amount_cents) / Decimal("100")
     if amount_usd is None:
         return
     db.session.add(create_bot_intent_pricing(intent.token, amount_usd))
@@ -202,30 +198,6 @@ def coerce_int(value: Any) -> int | None:
             return int(float(value))
         except Exception:
             return None
-
-
-def parse_topup_amount_cents(text: str) -> int | None:
-    normalized = text.strip().replace(" ", "").replace("$", "").replace(",", ".")
-    try:
-        amount = Decimal(normalized)
-    except InvalidOperation:
-        return None
-    cents = int((amount * Decimal("100")).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
-    if not is_valid_topup_amount(cents):
-        return None
-    return cents
-
-
-def is_valid_topup_amount(amount_cents: int) -> bool:
-    return MIN_TOPUP_CENTS <= int(amount_cents) <= MAX_TOPUP_CENTS
-
-
-def topup_invalid_amount_text(state: BotUserState) -> str:
-    return t(state, "topup_invalid_amount", min_amount=f"{MIN_TOPUP_CENTS / 100:g}", max_amount=f"{MAX_TOPUP_CENTS / 100:g}")
-
-
-def topup_amount_selected_text(state: BotUserState, amount_cents: int) -> str:
-    return t(state, "topup_amount_selected", amount=money(amount_cents), choose_payment=t(state, "choose_payment"))
 
 
 def clear_pending_action(state: BotUserState) -> None:
@@ -411,25 +383,3 @@ def make_qr_png(text: str) -> bytes:
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
-
-
-def seed_promo_codes() -> None:
-    raw = (os.environ.get("BOT_PROMO_CODES") or "").strip()
-    if not raw:
-        return
-    for item in [x.strip() for x in raw.split(",") if x.strip()]:
-        parts = [p.strip() for p in item.split(":")]
-        if len(parts) < 2:
-            continue
-        code = parts[0].upper()
-        if BotPromoCode.query.filter_by(code=code).first():
-            continue
-        value = parts[1].lower()
-        max_uses = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else None
-        promo = BotPromoCode(code=code, max_uses=max_uses)
-        if value.startswith("plan"):
-            promo.plan_months = int(value.removeprefix("plan") or "1")
-        else:
-            promo.balance_cents = int(float(value) * 100)
-        db.session.add(promo)
-    db.session.commit()

@@ -120,8 +120,6 @@ def checkout():
         payment_methods.append({"slug": "platega", "name": "Platega.io", "icon": "🌍", "class": "ru preferred", "preferred": True})
     if (os.environ.get("CRYSTALPAY_AUTH_LOGIN") or "").strip() and (os.environ.get("CRYSTALPAY_AUTH_SECRET") or "").strip():
         payment_methods.append({"slug": "crystalpay", "name": "Crystal Pay", "icon": "💎", "class": "crypto", "preferred": False})
-    if (os.environ.get("APAYS_CLIENT_ID") or "").strip() and (os.environ.get("APAYS_SECRET_KEY") or "").strip():
-        payment_methods.append({"slug": "apays", "name": "Apays", "icon": "💳", "class": "ru", "preferred": False})
     return render_template(
         "checkout.html",
         plan=plan_months,

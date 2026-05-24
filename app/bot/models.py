@@ -28,23 +28,9 @@ class BotUserState(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     telegram_id = db.Column(db.Integer, unique=True, nullable=False, index=True)
     lang = db.Column(db.String(2), nullable=False, default="ru")
-    balance_cents = db.Column(db.Integer, nullable=False, default=0)
     pending_action = db.Column(db.String(32), nullable=True)
     created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
     updated_at = db.Column(db.DateTime, default=utc_now, nullable=False)
-
-
-class BotBalanceTopup(db.Model):
-    __tablename__ = "bot_balance_topup"
-
-    id = db.Column(db.Integer, primary_key=True)
-    telegram_id = db.Column(db.Integer, nullable=False, index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
-    payment_intent_id = db.Column(db.Integer, db.ForeignKey("payment_intent.id"), nullable=False, unique=True, index=True)
-    amount_cents = db.Column(db.Integer, nullable=False)
-    status = db.Column(db.String(32), nullable=False, default="pending", index=True)
-    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
-    processed_at = db.Column(db.DateTime, nullable=True)
 
 
 class BotPromoCode(db.Model):
@@ -52,7 +38,6 @@ class BotPromoCode(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(64), unique=True, nullable=False, index=True)
-    balance_cents = db.Column(db.Integer, nullable=False, default=0)
     plan_months = db.Column(db.Integer, nullable=True)
     max_uses = db.Column(db.Integer, nullable=True)
     used_count = db.Column(db.Integer, nullable=False, default=0)

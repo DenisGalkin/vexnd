@@ -12,7 +12,6 @@ from app.bot.common import (
     client_download_url,
     device_title,
     h,
-    money,
     money_amount,
     site_url,
     t,
@@ -55,9 +54,6 @@ def is_payment_method_enabled(method: str) -> bool:
 
 def payment_methods_keyboard(plan_months: int, state: BotUserState) -> dict[str, object]:
     rows: list[list[tuple[str, str]]] = []
-    price_cents = int(bot_plan_price_usd(plan_months) * 100)
-    if state.balance_cents >= price_cents:
-        rows.append([(f"{t(state, 'pay_from_balance')} ({money(state.balance_cents)})", f"balance_buy_{plan_months}")])
     enabled_methods = [(PAYMENT_METHODS[code]["label"], f"pm_{code}_{plan_months}") for code in ("platega", "cryptobot", "heleket", "crystal") if is_payment_method_enabled(code)]
     for item in enabled_methods:
         rows.append([item])
@@ -118,20 +114,6 @@ def language_keyboard(state: BotUserState) -> dict[str, object]:
 def first_language_keyboard() -> dict[str, object]:
     return keyboard([[("🇷🇺 Русский", "lang_ru"), ("🇺🇸 English", "lang_en")]])
 
-
-def topup_amounts_keyboard(state: BotUserState) -> dict[str, object]:
-    return keyboard([[("$5", "topup_amount_500"), ("$10", "topup_amount_1000")], [("$25", "topup_amount_2500"), ("$50", "topup_amount_5000")], [(t(state, "topup_custom"), "topup_custom")], [(t(state, "back"), "profile")]])
-
-
-def topup_payment_methods_keyboard(amount_cents: int, state: BotUserState) -> dict[str, object]:
-    rows: list[list[tuple[str, str]]] = []
-    enabled_methods = [(PAYMENT_METHODS[code]["label"], f"topup_pm_{code}_{amount_cents}") for code in ("cryptobot", "heleket", "platega", "crystal") if is_payment_method_enabled(code)]
-    for idx in range(0, len(enabled_methods), 2):
-        rows.append(enabled_methods[idx : idx + 2])
-    rows.append([(t(state, "back"), "topup")])
-    return keyboard(rows)
-
-
 def connect_device_keyboard(state: BotUserState) -> dict[str, object]:
     return keyboard([[(t(state, "device_ios"), "connect_device_ios"), (t(state, "device_android"), "connect_device_android")], [(t(state, "device_windows"), "connect_device_windows"), (t(state, "device_macos"), "connect_device_macos")], [(t(state, "back_menu"), "menu")]])
 
@@ -168,6 +150,10 @@ def connect_install_keyboard(device_code: str, client_code: str, state: BotUserS
 
 
 def referral_keyboard(link: str, state: BotUserState) -> dict[str, object]:
-    share_text = "Join me on VEXND VPN" if state.lang == "en" else "Подключайся ко мне в VEXND VPN"
+    share_text = (
+        "⚡ Join me on fast and reliable Vexnd VPN using my link and get +3 free days!"
+        if state.lang == "en"
+        else "⚡ Подключайся к быстрому и надежному Vexnd VPN по моей ссылке и получи +3 бесплатных дня использования!"
+    )
     share_url = f"https://t.me/share/url?url={quote(link, safe='')}&text={quote(share_text, safe='')}"
     return {"inline_keyboard": [[{"text": t(state, "share_link"), "url": share_url}], [{"text": t(state, "back_menu"), "callback_data": "menu"}]]}

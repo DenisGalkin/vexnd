@@ -16,7 +16,7 @@ from app.http.helpers import favicon, get_locale, robots_txt, sitemap_xml, trans
 
 POLICY_DATE_RU = "30 марта 2026"
 POLICY_DATE_EN = "March 30, 2026"
-POLICY_SOURCES_DIR = Path(__file__).resolve().parents[1] / "ui" / "templates" / "legal_sources"
+POLICY_SOURCES_DIR = Path(__file__).resolve().parents[2] / "ui" / "templates" / "legal_sources"
 
 
 def load_policy_parts(filename: str, date_text: str) -> tuple[str, str, str]:
