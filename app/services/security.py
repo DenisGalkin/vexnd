@@ -85,6 +85,13 @@ def rotate_csrf_token() -> str:
     return token
 
 
+def renew_session(*, preserve_keys: tuple[str, ...] = ()) -> str:
+    preserved = {key: session[key] for key in preserve_keys if key in session}
+    session.clear()
+    session.update(preserved)
+    return rotate_csrf_token()
+
+
 def require_csrf() -> None:
     sent = request.headers.get("X-CSRF-Token") or request.form.get("csrf_token")
     expected = session.get("_csrf_token")
@@ -178,6 +185,7 @@ __all__ = [
     "ensure_db_schema",
     "get_webhook_secret",
     "require_csrf",
+    "renew_session",
     "rotate_csrf_token",
     "throttle_get",
     "throttle_is_locked",

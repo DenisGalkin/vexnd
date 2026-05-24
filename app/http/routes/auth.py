@@ -9,10 +9,15 @@ from app.core.extensions import db
 from app.services.account_deletion import delete_user_account
 from app.domain.models import ReferralCode, ReferralFingerprint, ReferralSignup, User, UserSecurity
 from app.services.referrals import mask_email
-from app.services.security import client_ip, device_fingerprint, rotate_csrf_token, throttle_is_locked, throttle_register_fail, throttle_reset, validate_password_strength
+from app.services.security import client_ip, device_fingerprint, renew_session, throttle_is_locked, throttle_register_fail, throttle_reset, validate_password_strength
 from app.services.telegram_auth import CHALLENGE_TTL_MINUTES, consume_approved_challenge, create_telegram_auth_challenge, get_active_challenge
 from app.services.telegram_links import telegram_bot_deeplink
 from app.http.helpers import get_locale, localized_url, redirect_localized, translate
+
+
+def _normalized_lang() -> str:
+    chosen = session.get("lang") or get_locale()
+    return chosen if chosen in ("ru", "en") else "en"
 
 
 def _telegram_session_key(purpose: str) -> str:
@@ -57,11 +62,9 @@ def login():
             return render_template("auth/login.html", telegram_auth=telegram_auth), 429
         user = User.query.filter_by(email=email.lower().strip() if email else email).first()
         if user and user.check_password(password):
-            rotate_csrf_token()
+            chosen = _normalized_lang()
+            renew_session(preserve_keys=("lang",))
             login_user(user, remember=remember)
-            chosen = session.get("lang") or get_locale()
-            if chosen not in ("ru", "en"):
-                chosen = "en"
             session["lang"] = chosen
             try:
                 user.lang = chosen
@@ -213,7 +216,7 @@ def register_user():
         finally:
             session.pop("ref_code", None)
             session.pop("ref_code_set_at", None)
-        rotate_csrf_token()
+        renew_session(preserve_keys=("lang",))
         login_user(user, remember=True)
         session["lang"] = chosen_lang
         flash(translate("Регистрация успешна! Добро пожаловать."), "success")
@@ -224,8 +227,10 @@ def register_user():
 
 @login_required
 def logout():
-    rotate_csrf_token()
+    chosen = _normalized_lang()
     logout_user()
+    renew_session()
+    session["lang"] = chosen
     return redirect(url_for("index"))
 
 
@@ -249,11 +254,10 @@ def telegram_auth_status(code: str):
         ok, reason, user = consume_approved_challenge(code, purpose="login")
         if not ok or not user:
             return jsonify({"status": reason}), 400
-        rotate_csrf_token()
-        login_user(user, remember=True)
-        chosen = session.get("lang") or get_locale()
-        session["lang"] = chosen if chosen in ("ru", "en") else "en"
-        session.pop(_telegram_session_key("login"), None)
+        chosen = _normalized_lang()
+        renew_session(preserve_keys=("lang",))
+        login_user(user, remember=False)
+        session["lang"] = chosen
         return jsonify({"status": "ok", "redirect": localized_url("dashboard")})
     if not current_user.is_authenticated or challenge.target_user_id != current_user.id:
         return jsonify({"status": "forbidden"}), 403

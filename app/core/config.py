@@ -4,6 +4,7 @@ import os
 import secrets
 from dataclasses import dataclass
 from datetime import timedelta
+from urllib.parse import urlparse
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -32,6 +33,13 @@ def build_http_session() -> requests.Session:
 
 
 HTTP = build_http_session()
+
+
+def _default_cookie_secure() -> bool:
+    try:
+        return urlparse(SITE_ORIGIN).scheme.lower() == "https"
+    except Exception:
+        return False
 
 
 @dataclass(frozen=True)
@@ -66,10 +74,14 @@ def apply_flask_config(app) -> None:
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = int(os.environ.get("SEND_FILE_MAX_AGE_DEFAULT", "31536000"))
     app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_CONTENT_LENGTH", str(512 * 1024)))
     app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_NAME"] = os.environ.get("SESSION_COOKIE_NAME", "vexnd_session")
     app.config["SESSION_COOKIE_SAMESITE"] = os.environ.get("SESSION_COOKIE_SAMESITE", "Lax")
-    app.config["SESSION_COOKIE_SECURE"] = _env_bool("SESSION_COOKIE_SECURE", False)
+    app.config["SESSION_COOKIE_SECURE"] = _env_bool("SESSION_COOKIE_SECURE", _default_cookie_secure())
     app.config["REMEMBER_COOKIE_HTTPONLY"] = True
+    app.config["REMEMBER_COOKIE_NAME"] = os.environ.get("REMEMBER_COOKIE_NAME", "vexnd_remember_v2")
     app.config["REMEMBER_COOKIE_SAMESITE"] = app.config["SESSION_COOKIE_SAMESITE"]
     app.config["REMEMBER_COOKIE_SECURE"] = app.config["SESSION_COOKIE_SECURE"]
+    app.config["REMEMBER_COOKIE_REFRESH_EACH_REQUEST"] = False
+    app.config["REMEMBER_COOKIE_DURATION"] = timedelta(days=int(os.environ.get("REMEMBER_COOKIE_DAYS", "30")))
     app.config["LANGUAGES"] = {"en": "English", "ru": "Русский"}
     app.permanent_session_lifetime = timedelta(days=30)
