@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: gunicorn -b 0.0.0.0:5000 --workers 1 --threads 4 --timeout 120 app:app
+    command: gunicorn -b 0.0.0.0:5000 --workers 1 --threads 4 --timeout 120 web:app
     env_file:
       - ./.env
     environment:
@@ -39,7 +39,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
