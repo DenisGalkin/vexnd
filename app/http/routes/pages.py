@@ -11,7 +11,7 @@ from flask_login import current_user
 from app.core.extensions import db
 from app.domain.plans import format_usd_amount, plan_catalog, plan_details
 from app.services.coupons import coupon_pricing, normalize_coupon_code
-from app.http.helpers import favicon, get_locale, robots_txt, sitemap_xml, translate
+from app.http.helpers import favicon_ico, favicon_png, get_locale, robots_txt, sitemap_xml, translate
 
 
 POLICY_DATE_RU = "30 марта 2026"
@@ -146,7 +146,7 @@ def register(app) -> None:
     app.add_url_rule("/en/faq", endpoint="faq_page_en", view_func=faq_page, methods=["GET"])
     app.add_url_rule("/soon", endpoint="coming_soon", view_func=coming_soon, methods=["GET"])
     app.add_url_rule("/en/soon", endpoint="coming_soon_en", view_func=coming_soon, methods=["GET"])
-    app.add_url_rule("/favicon.ico", endpoint="favicon", view_func=favicon, methods=["GET"])
-    app.add_url_rule("/favicon.png", endpoint="favicon_png", view_func=favicon, methods=["GET"])
+    app.add_url_rule("/favicon.ico", endpoint="favicon", view_func=favicon_ico, methods=["GET"])
+    app.add_url_rule("/favicon.png", endpoint="favicon_png", view_func=favicon_png, methods=["GET"])
     app.add_url_rule("/robots.txt", endpoint="robots_txt", view_func=robots_txt, methods=["GET"])
     app.add_url_rule("/sitemap.xml", endpoint="sitemap_xml", view_func=sitemap_xml, methods=["GET"])

@@ -1,14 +1,19 @@
 <!DOCTYPE html>
-<html lang="{{ get_locale() }}">
+<html lang="{{ html_lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#000000">
     <meta name="color-scheme" content="dark">
-    <title>VEXND - {% block title %}{% endblock %}</title>
+    {% set page_title = self.title()|striptags|trim %}
+    <title>{{ (page_title ~ " | ") if page_title else "" }}{{ site_name }}</title>
 
     {# SEO basics #}
-    <link rel="canonical" href="https://vexnd.com{{ request.path }}">
+    <meta http-equiv="content-language" content="{{ content_language }}">
+    <link rel="canonical" href="{{ canonical_url }}">
+    <link rel="alternate" hreflang="ru-RU" href="{{ alternate_ru_url }}">
+    <link rel="alternate" hreflang="en-US" href="{{ alternate_en_url }}">
+    <link rel="alternate" hreflang="x-default" href="{{ alternate_en_url }}">
     {% block meta_robots %}
         <meta name="robots" content="index,follow">
     {% endblock %}
@@ -23,14 +28,19 @@
     {% endif %}
 
     {# Social previews (OpenGraph) #}
-    <meta property="og:title" content="VEXND">
+    <meta property="og:title" content="{{ page_title if page_title else site_name }}">
     <meta property="og:description" content="{% block og_description %}{{ default_meta_description }}{% endblock %}">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://vexnd.com{{ request.path }}">
+    <meta property="og:url" content="{{ canonical_url }}">
+    <meta property="og:locale" content="{{ og_locale }}">
+    <meta property="og:locale:alternate" content="{{ og_locale_alternate }}">
+    <meta property="og:site_name" content="{{ site_name }}">
     <meta property="og:image" content="{{ og_image_url }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('favicon') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('favicon') }}">
+    <link rel="icon" href="{{ url_for('favicon') }}" sizes="any">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('favicon_png') }}">
+    <link rel="shortcut icon" href="{{ url_for('favicon') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('favicon_png') }}">
     <!-- Include the consolidated stylesheet. See static/css/styles.css. -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 

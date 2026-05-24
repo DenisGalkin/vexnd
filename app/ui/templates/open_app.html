@@ -1,10 +1,13 @@
 <!DOCTYPE html>
-<html lang="{{ get_locale() }}">
+<html lang="{{ html_lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VEXND</title>
+    <meta http-equiv="content-language" content="{{ content_language }}">
+    <title>Open App | {{ site_name }}</title>
     <meta name="robots" content="noindex,nofollow">
+    <link rel="icon" href="{{ url_for('favicon') }}" sizes="any">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('favicon_png') }}">
     <meta http-equiv="refresh" content="0;url={{ target }}">
     <style>
         body {

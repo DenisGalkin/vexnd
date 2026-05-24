@@ -54,6 +54,11 @@ LOCALIZED_ENDPOINTS = {
     "pricing",
 }
 
+LANGUAGE_REGION_MAP = {
+    "ru": "ru-RU",
+    "en": "en-US",
+}
+
 
 def is_local_http_request() -> bool:
     try:
@@ -118,6 +123,19 @@ def localized_url(endpoint: str, **values) -> str:
     return strip_en_prefix(url)
 
 
+def localized_path(path: str, lang: str) -> str:
+    if not path.startswith("/") or path.startswith("/static") or path.startswith("/set_language"):
+        return path
+    base_path = strip_en_prefix(path)
+    if lang == "en":
+        return "/en" if base_path == "/" else "/en" + base_path
+    return base_path
+
+
+def locale_region(locale: str | None = None) -> str:
+    return LANGUAGE_REGION_MAP.get(locale or get_locale(), "en-US")
+
+
 def redirect_localized(endpoint: str, **values):
     return redirect(localized_url(endpoint, **values))
 
@@ -150,13 +168,30 @@ def _inject_locale():
 
 
 def _inject_seo_defaults():
+    locale = get_locale()
+    site_name = "VEXND VPN"
+    canonical_path = localized_path(request.path, locale)
+    alternate_ru_path = localized_path(request.path, "ru")
+    alternate_en_path = localized_path(request.path, "en")
     return dict(
+        site_name=site_name,
+        html_lang=locale_region(locale),
+        content_language=locale,
+        canonical_url=SITE_ORIGIN + canonical_path,
+        alternate_ru_url=SITE_ORIGIN + alternate_ru_path,
+        alternate_en_url=SITE_ORIGIN + alternate_en_path,
+        og_locale=locale_region(locale).replace("-", "_"),
+        og_locale_alternate=locale_region("ru" if locale == "en" else "en").replace("-", "_"),
         site_origin=SITE_ORIGIN,
         google_site_verification=(os.environ.get("GOOGLE_SITE_VERIFICATION") or "").strip(),
         bing_site_verification=(os.environ.get("BING_SITE_VERIFICATION") or "").strip(),
         default_meta_description=(
             (os.environ.get("META_DESCRIPTION") or "").strip()
-            or "VEXND — безопасный VPN с быстрым подключением и удобной оплатой."
+            or (
+                "VEXND VPN - secure high-speed VPN with stable connection and easy setup."
+                if locale == "en"
+                else "VEXND VPN - быстрый и безопасный VPN с высокой скоростью и простой настройкой."
+            )
         ),
         og_image_url=((os.environ.get("OG_IMAGE_URL") or "").strip() or (SITE_ORIGIN + "/static/images/logo.png")),
     )
@@ -382,7 +417,11 @@ def init_app(app) -> None:
         ensure_db_schema()
 
 
-def favicon():
+def favicon_ico():
+    return send_from_directory(Path(current_app.static_folder, "images"), "favicon.ico", mimetype="image/x-icon")
+
+
+def favicon_png():
     return send_from_directory(Path(current_app.static_folder, "images"), "vexnd.png", mimetype="image/png")
 
 
@@ -432,10 +471,18 @@ def sitemap_xml():
         ("/soon", "monthly", "0.2"),
         ("/en/soon", "monthly", "0.2"),
     ]
-    xml = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    xml = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',
+    ]
     for path, freq, priority in pages:
+        ru_path = localized_path(path, "ru")
+        en_path = localized_path(path, "en")
         xml.append("<url>")
         xml.append(f"<loc>{SITE_ORIGIN}{path}</loc>")
+        xml.append(f'<xhtml:link rel="alternate" hreflang="ru-RU" href="{SITE_ORIGIN}{ru_path}" />')
+        xml.append(f'<xhtml:link rel="alternate" hreflang="en-US" href="{SITE_ORIGIN}{en_path}" />')
+        xml.append(f'<xhtml:link rel="alternate" hreflang="x-default" href="{SITE_ORIGIN}{en_path}" />')
         xml.append(f"<lastmod>{today}</lastmod>")
         xml.append(f"<changefreq>{freq}</changefreq>")
         xml.append(f"<priority>{priority}</priority>")
