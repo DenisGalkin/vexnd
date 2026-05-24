@@ -15,41 +15,26 @@
 
 <div class="dashboard-shell max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
   <div class="dashboard-surface space-y-6">
-    <section class="glass-effect rounded-[1.75rem] p-5 sm:p-7 overflow-hidden">
-      <div class="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-        <div class="max-w-2xl">
+    <section class="glass-effect dashboard-banner rounded-[1.75rem] p-5 sm:p-6 overflow-hidden">
+      <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div class="min-w-0 max-w-3xl">
           <div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-300">
             <span class="inline-block h-2 w-2 rounded-full {{ 'bg-emerald-400' if is_active else 'bg-amber-400' }}"></span>
             {{ _('VEXND Account') }}
           </div>
-          <h1 class="mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">{{ _('Личный кабинет') }}</h1>
-          <p class="mt-3 text-sm sm:text-base text-gray-400">
-            {{ _('Аккаунт:') }}
-            <span class="text-gray-100 font-semibold break-anywhere">{{ current_user.email }}</span>
-          </p>
-          <p class="mt-2 max-w-xl text-sm sm:text-base text-gray-400">
-            {{ _('Здесь собраны подписка, импорт конфигурации, реферальная ссылка и настройки безопасности в одном месте.') }}
-          </p>
+          <div class="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div class="min-w-0">
+              <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">{{ _('Личный кабинет') }}</h1>
+              <p class="mt-2 text-sm sm:text-base text-gray-400">
+                {{ _('Аккаунт:') }}
+                <span class="text-gray-100 font-semibold break-anywhere">{{ current_user.email }}</span>
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div class="grid gap-3 sm:grid-cols-3 xl:min-w-[33rem]">
-          <div class="dashboard-card dashboard-card-compact rounded-2xl p-4">
-            <div class="dashboard-label">{{ _('Статус') }}</div>
-            <div class="mt-2 text-base font-semibold {{ 'text-emerald-300' if is_active else 'text-amber-300' }}">
-              {{ _('Активна') if is_active else _('Нужна оплата') }}
-            </div>
-          </div>
-          <div class="dashboard-card dashboard-card-compact rounded-2xl p-4">
-            <div class="dashboard-label">{{ _('Осталось') }}</div>
-            <div class="mt-2 text-base font-semibold text-white">
-              {{ days_left if is_active else 0 }} {{ _('дн.') }}
-            </div>
-          </div>
-          <a href="{{ url_lang('setup') }}"
-             class="dashboard-card dashboard-card-compact rounded-2xl p-4 hover:bg-white/10 transition-all">
-            <div class="dashboard-label">{{ _('Быстрый старт') }}</div>
-            <div class="mt-2 text-base font-semibold text-white">{{ _('Открыть инструкции') }}</div>
-          </a>
+        <div class="dashboard-status-pill {{ 'is-active' if is_active else 'is-inactive' }}">
+          {{ _('Подписка активна') if is_active else _('Ожидает оплаты') }}
         </div>
       </div>
     </section>
@@ -72,152 +57,208 @@
     </div>
 
     <div id="tab-sub" role="tabpanel" aria-labelledby="tab-btn-sub" class="space-y-6">
-      {% if is_active %}
-        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.75fr)]">
-          <section class="glass-effect rounded-2xl p-5 sm:p-6 space-y-6">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div class="min-w-0">
+      <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1.85fr)_minmax(18rem,1fr)]">
+        <section class="glass-effect rounded-[1.75rem] p-5 sm:p-6">
+          {% if is_active %}
+            <div class="space-y-6">
+              <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div class="min-w-0">
+                  <div class="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+                    <span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>
+                    {{ _('Подписка активна') }}
+                  </div>
+                  <h2 class="mt-4 text-2xl sm:text-3xl font-bold">{{ _('Подключение доступно') }}</h2>
+                  <p class="mt-2 max-w-2xl text-sm text-gray-400">
+                    {{ _('Откройте конфиг на телефоне или импортируйте его через QR‑код. Все детали подписки собраны здесь без дублирования.') }}
+                  </p>
+                </div>
+                <a href="{{ url_lang('index') }}#pricing"
+                   class="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-semibold transition hover:bg-white/10 tap-target">
+                  {{ _('Продлить / сменить тариф') }}
+                </a>
+              </div>
+
+              <div class="dashboard-meter">
+                <div class="dashboard-label">{{ _('Осталось времени') }}</div>
+                <div class="mt-4 flex items-end gap-3">
+                  <span class="dashboard-meter-number">{{ days_left }}</span>
+                  <span class="pb-2 text-lg font-semibold text-gray-300">{{ _('дней') }}</span>
+                </div>
+                <p class="mt-3 text-sm text-gray-400">{{ _('Подписка действует до') }} <span class="font-semibold text-gray-100">{{ expiry_date }}</span></p>
+              </div>
+
+              <div class="dashboard-detail-list">
+                <div class="dashboard-detail-row">
+                  <span class="dashboard-label">{{ _('Платформа') }}</span>
+                  <span class="text-sm font-semibold text-white">VLESS Reality</span>
+                </div>
+                <div class="dashboard-detail-row">
+                  <span class="dashboard-label">{{ _('Статус') }}</span>
+                  <span class="text-sm font-semibold text-emerald-300">{{ _('Активна') }}</span>
+                </div>
+              </div>
+
+              {% if subscription_url %}
+                <div class="space-y-3">
+                  <label class="block text-sm text-gray-400">{{ _('Конфиг подписки') }}</label>
+                  <a href="{{ subscription_url }}"
+                     class="dashboard-link block rounded-2xl px-4 py-4 text-sm font-mono text-purple-200 break-anywhere transition"
+                     title="{{ _('Открыть ссылку') }}"
+                     target="_blank" rel="noopener noreferrer">
+                    {{ subscription_url }}
+                  </a>
+                  <div class="grid gap-2 sm:grid-cols-2">
+                    <button type="button"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 px-4 py-3 font-semibold text-white transition hover:brightness-110 tap-target"
+                            onclick="copyText('{{ subscription_url|e }}', this)">
+                      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      <span>{{ _('Скопировать конфиг') }}</span>
+                    </button>
+                    <a href="{{ subscription_url }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-semibold transition hover:bg-white/10 tap-target"
+                       target="_blank" rel="noopener noreferrer">
+                      <span>{{ _('Открыть импорт') }}</span>
+                    </a>
+                  </div>
+                </div>
+              {% else %}
+                <div class="pill-muted rounded-2xl p-4 text-sm text-gray-300">
+                  {{ _('Конфиг появится сразу после завершения активации подписки.') }}
+                </div>
+              {% endif %}
+
+              <div class="grid gap-3 sm:grid-cols-3">
+                <a href="{{ url_lang('setup') }}" class="dashboard-action rounded-2xl p-4 transition">
+                  <div class="text-lg font-semibold text-white">{{ _('Инструкции') }}</div>
+                  <div class="mt-1 text-sm text-gray-400">{{ _('iOS • Android • Windows') }}</div>
+                </a>
+                <a href="{{ url_lang('faq_page') }}" class="dashboard-action rounded-2xl p-4 transition">
+                  <div class="text-lg font-semibold text-white">{{ _('FAQ') }}</div>
+                  <div class="mt-1 text-sm text-gray-400">{{ _('Частые вопросы') }}</div>
+                </a>
+                <a href="{{ url_lang('index') }}#pricing" class="dashboard-action rounded-2xl p-4 transition">
+                  <div class="text-lg font-semibold text-white">{{ _('Продлить') }}</div>
+                  <div class="mt-1 text-sm text-gray-400">{{ _('Выбор тарифа') }}</div>
+                </a>
+              </div>
+            </div>
+          {% else %}
+            <div class="space-y-5">
+              <div class="flex items-start gap-3.5">
+                <span class="dashboard-expired-icon shrink-0">!</span>
+                <div>
+                  <h2 class="text-2xl sm:text-3xl font-bold text-red-100">{{ _('Подписка истекла') }}</h2>
+                  <p class="mt-2 max-w-2xl text-sm leading-6 text-gray-400">{{ _('Доступ к серверам временно ограничен.') }}</p>
+                </div>
+              </div>
+
+              <div class="dashboard-expired-meta">
+                <div class="dashboard-detail-row">
+                  <span class="dashboard-label">{{ _('Платформа') }}</span>
+                  <span class="text-sm font-semibold text-white">VLESS Reality</span>
+                </div>
+                <div class="dashboard-detail-row">
+                  <span class="dashboard-label">{{ _('Активация') }}</span>
+                  <span class="text-sm font-semibold text-white">{{ _('Мгновенно после оплаты') }}</span>
+                </div>
+              </div>
+
+              <a href="{{ url_lang('index') }}#pricing"
+                 class="dashboard-expired-cta tap-target">
+                {{ _('Выбрать тариф') }}
+              </a>
+            </div>
+          {% endif %}
+        </section>
+
+        <aside class="glass-effect rounded-[1.75rem] p-5 sm:p-6 overflow-hidden">
+          {% if is_active %}
+            <div class="space-y-5">
+              <div>
                 <div class="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
                   <span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>
-                  {{ _('Подписка активна') }}
+                  {{ _('Онбординг активен') }}
                 </div>
-                <h2 class="mt-4 text-2xl font-bold">{{ _('Подключение') }}</h2>
-                <p class="mt-2 max-w-2xl text-sm text-gray-400">
-                  {{ _('Откройте ссылку на телефоне для импорта или используйте QR‑код.') }}
+                <h2 class="mt-4 text-2xl font-bold">{{ _('QR и быстрый импорт') }}</h2>
+                <p class="mt-2 text-sm leading-6 text-gray-400">
+                  {{ _('Отсканируйте QR‑код или скопируйте конфиг для ручного импорта в приложение.') }}
                 </p>
               </div>
-              <a href="{{ url_lang('index') }}#pricing"
-                 class="inline-flex items-center justify-center px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition font-semibold tap-target">
-                {{ _('Продлить / сменить тариф') }}
-              </a>
-            </div>
 
-            <div class="grid gap-3 sm:grid-cols-3">
-              <div class="dashboard-card rounded-2xl p-4">
-                <div class="dashboard-label">{{ _('Статус') }}</div>
-                <div class="mt-2 text-base font-semibold text-emerald-300">{{ _('Активна') }}</div>
-              </div>
-              <div class="dashboard-card rounded-2xl p-4">
-                <div class="dashboard-label">{{ _('Действует до:') }}</div>
-                <div class="mt-2 text-base font-semibold text-white">{{ expiry_date }}</div>
-              </div>
-              <div class="dashboard-card rounded-2xl p-4">
-                <div class="dashboard-label">{{ _('Платформа') }}</div>
-                <div class="mt-2 text-base font-semibold text-white">VLESS Reality</div>
-              </div>
-            </div>
-
-            {% if subscription_url %}
-              <div class="space-y-3">
-                <label class="block text-sm text-gray-400">{{ _('Ссылка на подписку') }}</label>
-                <a href="{{ subscription_url }}"
-                   class="dashboard-link block rounded-2xl px-4 py-4 text-sm font-mono text-purple-200 break-anywhere transition"
-                   title="{{ _('Открыть ссылку') }}"
-                   target="_blank" rel="noopener noreferrer">
-                  {{ subscription_url }}
-                </a>
-                <div class="grid gap-2 sm:grid-cols-2">
-                  <button type="button"
-                          class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 transition font-semibold tap-target"
-                          onclick="copyText('{{ subscription_url|e }}', this)">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                    <span>{{ _('Копировать ссылку') }}</span>
-                  </button>
-                  <a href="{{ subscription_url }}"
-                     class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition font-semibold tap-target"
-                     target="_blank" rel="noopener noreferrer">
-                    <span>{{ _('Открыть импорт') }}</span>
-                  </a>
+              {% if qr_code %}
+                <div class="dashboard-qr-shell">
+                  <div class="rounded-[1.6rem] bg-white p-4 shadow-[0_18px_45px_rgba(255,255,255,0.08)]">
+                    <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="w-full rounded-2xl">
+                  </div>
                 </div>
-              </div>
-            {% else %}
-              <div class="dashboard-card rounded-2xl p-5">
-                <div class="font-semibold text-white">{{ _('Ссылка ещё не создана') }}</div>
-                <div class="mt-1 text-sm text-gray-400">{{ _('Пожалуйста, дождитесь активации подписки.') }}</div>
-              </div>
-            {% endif %}
+              {% else %}
+                <div class="pill-muted rounded-2xl p-4 text-sm text-gray-300">
+                  {{ _('QR-код появится, как только система завершит генерацию конфига.') }}
+                </div>
+              {% endif %}
 
-            <div class="grid gap-3 sm:grid-cols-3">
-              <a href="{{ url_lang('setup') }}" class="dashboard-action rounded-2xl p-4 transition">
-                <div class="text-lg font-semibold text-white">{{ _('Инструкции') }}</div>
-                <div class="mt-1 text-sm text-gray-400">{{ _('iOS • Android • Windows') }}</div>
-              </a>
-              <a href="{{ url_lang('faq_page') }}" class="dashboard-action rounded-2xl p-4 transition">
-                <div class="text-lg font-semibold text-white">{{ _('FAQ') }}</div>
-                <div class="mt-1 text-sm text-gray-400">{{ _('Частые вопросы') }}</div>
-              </a>
-              <a href="{{ url_lang('index') }}#pricing" class="dashboard-action rounded-2xl p-4 transition">
-                <div class="text-lg font-semibold text-white">{{ _('Продлить') }}</div>
-                <div class="mt-1 text-sm text-gray-400">{{ _('Выбор тарифа') }}</div>
-              </a>
-            </div>
-          </section>
+              {% if subscription_url %}
+                <button type="button"
+                        class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-500 px-4 py-3 font-semibold text-white transition hover:brightness-110 tap-target"
+                        onclick="copyText('{{ subscription_url|e }}', this)">
+                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span>{{ _('Скопировать конфиг') }}</span>
+                </button>
+              {% endif %}
 
-          <aside class="glass-effect rounded-2xl p-5 sm:p-6 space-y-5">
-            <div>
-              <h2 class="text-2xl font-bold">{{ _('QR‑код') }}</h2>
-              <p class="mt-1 text-sm text-gray-400">{{ _('Откройте приложение и отсканируйте.') }}</p>
-            </div>
-
-            {% if qr_code %}
-              <div class="rounded-[1.75rem] bg-white p-4 shadow-[0_18px_45px_rgba(255,255,255,0.08)]">
-                <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="w-full rounded-2xl">
-              </div>
               <div class="pill-muted rounded-2xl p-4 text-sm text-gray-300">
-                {{ _('Если импорт не открылся автоматически, откройте приложение VPN и добавьте конфигурацию через QR или ссылку вручную.') }}
+                {{ _('Если импорт не сработал автоматически, откройте VPN-приложение и добавьте конфигурацию вручную по QR или ссылке.') }}
               </div>
-            {% else %}
-              <div class="dashboard-card rounded-2xl p-5 text-sm text-gray-400">
-                {{ _('QR-код появится после активации подписки.') }}
-              </div>
-            {% endif %}
-          </aside>
-        </div>
-      {% else %}
-        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
-          <section class="glass-effect rounded-2xl p-5 sm:p-6 space-y-6">
-            <div class="flex items-start gap-3">
-              <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-red-500/15 text-red-400 border border-red-500/25 shrink-0">!</span>
+            </div>
+          {% else %}
+            <div class="space-y-5">
               <div>
-                <h2 class="text-2xl font-bold text-red-200">{{ _('Подписка истекла') }}</h2>
-                <p class="mt-2 text-sm text-gray-400">{{ _('Оформите подписку, чтобы получить доступ к сервису.') }}</p>
+                <h2 class="text-2xl font-bold">{{ _('Доступ после оплаты') }}</h2>
+                <p class="mt-2 text-sm leading-6 text-gray-400">
+                  {{ _('После оплаты здесь появятся QR‑код, ссылка для импорта и кнопка копирования конфига.') }}
+                </p>
+              </div>
+
+              <div class="grid gap-3">
+                <a href="{{ url_lang('setup') }}" class="group dashboard-action dashboard-action-card rounded-2xl p-4 transition">
+                  <span class="dashboard-action-icon" aria-hidden="true">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 3v18"></path>
+                      <path d="M5 8h14"></path>
+                      <path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path>
+                    </svg>
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-lg font-semibold text-white">{{ _('Инструкции') }}</span>
+                    <span class="mt-1 block text-sm text-gray-400">{{ _('iOS • Android • Windows') }}</span>
+                  </span>
+                  <span class="text-gray-500 transition group-hover:text-white" aria-hidden="true">→</span>
+                </a>
+                <a href="{{ url_lang('faq_page') }}" class="group dashboard-action dashboard-action-card rounded-2xl p-4 transition">
+                  <span class="dashboard-action-icon" aria-hidden="true">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="9"></circle>
+                      <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4"></path>
+                      <path d="M12 17h.01"></path>
+                    </svg>
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-lg font-semibold text-white">{{ _('FAQ') }}</span>
+                    <span class="mt-1 block text-sm text-gray-400">{{ _('Частые вопросы') }}</span>
+                  </span>
+                  <span class="text-gray-500 transition group-hover:text-white" aria-hidden="true">→</span>
+                </a>
               </div>
             </div>
-
-            <div class="grid gap-3 sm:grid-cols-2">
-              <div class="dashboard-card rounded-2xl p-4">
-                <div class="dashboard-label">{{ _('Статус') }}</div>
-                <div class="mt-2 text-base font-semibold text-amber-300">{{ _('Нужна оплата') }}</div>
-              </div>
-              <div class="dashboard-card rounded-2xl p-4">
-                <div class="dashboard-label">{{ _('Осталось') }}</div>
-                <div class="mt-2 text-base font-semibold text-white">0 {{ _('дн.') }}</div>
-              </div>
-            </div>
-
-            <a href="{{ url_lang('index') }}#pricing"
-               class="inline-flex w-full items-center justify-center px-5 py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 transition font-semibold tap-target">
-              {{ _('Выбрать тариф') }}
-            </a>
-          </section>
-
-          <aside class="glass-effect rounded-2xl p-5 sm:p-6 space-y-3">
-            <h2 class="text-2xl font-bold">{{ _('Быстрый старт') }}</h2>
-            <p class="text-sm text-gray-400">{{ _('После оплаты здесь появятся ссылка для импорта и QR‑код для быстрого подключения.') }}</p>
-            <a href="{{ url_lang('setup') }}" class="dashboard-action rounded-2xl p-4 transition">
-              <div class="text-lg font-semibold text-white">{{ _('Инструкции') }}</div>
-              <div class="mt-1 text-sm text-gray-400">{{ _('Открыть инструкции') }}</div>
-            </a>
-            <a href="{{ url_lang('faq_page') }}" class="dashboard-action rounded-2xl p-4 transition">
-              <div class="text-lg font-semibold text-white">{{ _('FAQ') }}</div>
-              <div class="mt-1 text-sm text-gray-400">{{ _('Частые вопросы') }}</div>
-            </a>
-          </aside>
-        </div>
-      {% endif %}
+          {% endif %}
+        </aside>
+      </div>
     </div>
 
     <div id="tab-ref" class="hidden space-y-6" role="tabpanel" aria-labelledby="tab-btn-ref">
