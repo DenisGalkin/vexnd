@@ -50,6 +50,7 @@ from app.bot.subscriptions import (
     user_has_local_subscription_data,
 )
 from app.services.subscriptions import activate_trial_subscription, is_trial_eligible
+from app.services.telegram_auth import approve_telegram_auth_challenge, decline_telegram_auth_challenge
 
 
 def handle_buy(chat_id: int, message_id: int, user, state, data: str) -> None:
@@ -223,6 +224,20 @@ def handle_callback(callback: dict[str, object]) -> None:
                 send_photo(chat_id, make_qr_png(sub_url), t(state, "qr_caption"), qr_keyboard(state))
             else:
                 edit_message(chat_id, message_id, t(state, "qr_unavailable"), keyboard([[(t(state, "back"), "subscription")]]))
+            return
+        if data.startswith("tg_auth_confirm_"):
+            answer_callback(callback_id)
+            code = data.removeprefix("tg_auth_confirm_")
+            ok, reason, _challenge = approve_telegram_auth_challenge(code, account.telegram_id)
+            key = "telegram_login_ok" if ok else f"telegram_login_{reason}"
+            edit_message(chat_id, message_id, t(state, key), main_menu(state, user))
+            return
+        if data.startswith("tg_auth_decline_"):
+            answer_callback(callback_id)
+            code = data.removeprefix("tg_auth_decline_")
+            ok, reason, _challenge = decline_telegram_auth_challenge(code)
+            key = "telegram_auth_declined" if ok else f"telegram_login_{reason}"
+            edit_message(chat_id, message_id, t(state, key), main_menu(state, user))
             return
         if data.startswith("buy_"):
             answer_callback(callback_id)

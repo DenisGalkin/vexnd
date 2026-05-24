@@ -157,3 +157,13 @@ def referral_keyboard(link: str, state: BotUserState) -> dict[str, object]:
     )
     share_url = f"https://t.me/share/url?url={quote(link, safe='')}&text={quote(share_text, safe='')}"
     return {"inline_keyboard": [[{"text": t(state, "share_link"), "url": share_url}], [{"text": t(state, "back_menu"), "callback_data": "menu"}]]}
+
+
+def telegram_auth_confirm_keyboard(code: str, state: BotUserState) -> dict[str, object]:
+    return keyboard(
+        [
+            [(t(state, "telegram_auth_confirm"), f"tg_auth_confirm_{code}")],
+            [(t(state, "telegram_auth_decline"), f"tg_auth_decline_{code}")],
+            [(t(state, "back_menu"), "menu")],
+        ]
+    )

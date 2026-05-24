@@ -40,6 +40,7 @@ def _telegram_challenge_context(*, purpose: str, target_user_id: int | None = No
 def login():
     if current_user.is_authenticated:
         return redirect_localized("dashboard")
+    telegram_auth = _telegram_challenge_context(purpose="login")
     if request.method == "POST":
         ip = client_ip()
         email = request.form.get("email")
@@ -49,11 +50,11 @@ def login():
             locked, _ = throttle_is_locked("login", f"email:{email.lower().strip()}")
             if locked:
                 flash(translate("Слишком много попыток входа. Попробуйте позже."), "error")
-                return render_template("auth/login.html"), 429
+                return render_template("auth/login.html", telegram_auth=telegram_auth), 429
         locked, _ = throttle_is_locked("login", f"ip:{ip}")
         if locked:
             flash(translate("Слишком много попыток входа. Попробуйте позже."), "error")
-            return render_template("auth/login.html"), 429
+            return render_template("auth/login.html", telegram_auth=telegram_auth), 429
         user = User.query.filter_by(email=email.lower().strip() if email else email).first()
         if user and user.check_password(password):
             rotate_csrf_token()
@@ -75,7 +76,7 @@ def login():
         if email:
             throttle_register_fail("login", f"email:{email.lower().strip()}", window_seconds=15 * 60, max_fails=6, lock_seconds=15 * 60)
         throttle_register_fail("login", f"ip:{ip}", window_seconds=15 * 60, max_fails=12, lock_seconds=15 * 60)
-    return render_template("auth/login.html", telegram_auth=_telegram_challenge_context(purpose="login"))
+    return render_template("auth/login.html", telegram_auth=telegram_auth)
 
 
 def referral(code):

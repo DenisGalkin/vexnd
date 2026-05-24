@@ -391,29 +391,43 @@
             <p class="text-sm text-gray-400 mt-2">
               {{ _('Подтвердите привязку в Telegram-боте. Если у вас уже была подписка в боте, она станет доступна и в этом веб-аккаунте.') }}
             </p>
-            <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
-              <div class="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
-                <div class="text-xs uppercase tracking-[0.24em] text-cyan-200/70">{{ _('Код привязки') }}</div>
-                <div class="mt-2 font-mono text-base text-white break-all">{{ telegram_auth.code }}</div>
-                <div id="tg-link-status"
-                     class="mt-3 text-sm text-cyan-100/90"
-                     data-status-url="{{ telegram_auth.status_url }}">
-                  {{ _('Ожидаем подтверждение в боте…') }}
-                </div>
+            <div class="mt-5 overflow-hidden rounded-3xl border border-cyan-400/20 bg-[linear-gradient(145deg,rgba(34,211,238,0.16),rgba(14,116,144,0.06))] shadow-[0_16px_50px_rgba(8,145,178,0.14)]">
+              <div class="border-b border-white/10 bg-black/10 px-5 py-4">
+                <div class="text-lg font-semibold text-cyan-100">{{ _('Привязка через Telegram') }}</div>
+                <p class="mt-1 text-sm text-cyan-50/80">
+                  {{ _('Откроем бота с готовым запросом, а в Telegram останется только подтвердить или отклонить привязку.') }}
+                </p>
               </div>
-              <div class="grid gap-2">
+
+              <div class="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_auto]">
+                <div>
+                  <div id="tg-link-status"
+                       class="rounded-2xl border border-cyan-400/15 bg-slate-950/30 px-4 py-3 text-sm text-cyan-100/90"
+                       data-status-url="{{ telegram_auth.status_url }}">
+                    {{ _('Ожидаем подтверждение в боте…') }}
+                  </div>
+                  <div class="mt-4 rounded-2xl border border-white/10 bg-black/15 p-4">
+                    <div class="text-xs uppercase tracking-[0.24em] text-cyan-200/70">{{ _('Запасной вариант') }}</div>
+                    <p class="mt-1 text-sm text-gray-300">
+                      {{ _('Если кнопка не открыла Telegram, скопируйте команду и отправьте её боту вручную.') }}
+                    </p>
+                    <div class="mt-3 rounded-xl bg-slate-950/45 px-4 py-3 font-mono text-sm text-cyan-100 break-all">{{ telegram_auth.command }}</div>
+                  </div>
+                </div>
+                <div class="grid gap-2">
                 {% if telegram_auth.bot_url %}
                 <a href="{{ telegram_auth.bot_url }}" target="_blank" rel="noopener noreferrer"
-                   class="inline-flex items-center justify-center rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-4 py-3 transition">
-                  {{ _('Открыть бота') }}
+                   class="inline-flex items-center justify-center rounded-2xl bg-[#27A7E7] hover:bg-[#229ED9] text-white font-semibold px-5 py-4 transition shadow-lg shadow-cyan-950/25">
+                  {{ _('Открыть Telegram и подтвердить') }}
                 </a>
                 {% endif %}
                 <button type="button"
-                        class="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-semibold transition hover:bg-white/10"
+                        class="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-semibold transition hover:bg-white/10"
                         onclick="copyText('{{ telegram_auth.command|e }}', this)">
                   {{ _('Скопировать команду') }}
                 </button>
               </div>
+            </div>
             </div>
           {% endif %}
         </section>
@@ -581,8 +595,16 @@
           node.textContent = "{{ _('Код истёк. Обновите страницу настроек и получите новый.') }}";
           return;
         }
+        if (data.status === 'declined'){
+          node.textContent = "{{ _('Привязка отклонена в Telegram. Обновите страницу настроек, если хотите создать новый запрос.') }}";
+          return;
+        }
         if (data.status === 'merge_requires_support'){
           node.textContent = "{{ _('Этот Telegram уже привязан к другому полноценному аккаунту. Напишите в поддержку для безопасного объединения.') }}";
+          return;
+        }
+        if (data.status === 'merge_failed'){
+          node.textContent = "{{ _('Не удалось автоматически объединить аккаунты. Попробуйте ещё раз позже или напишите в поддержку.') }}";
           return;
         }
       }catch(e){}

@@ -58,6 +58,9 @@ def approve_telegram_auth_challenge(code: str | None, telegram_id: int) -> tuple
     challenge = get_active_challenge(code)
     if not challenge:
         return False, "challenge_not_found", None
+    if challenge.status_reason == "declined":
+        challenge.status_reason = None
+        db.session.commit()
     account = TelegramAccount.query.filter_by(telegram_id=int(telegram_id)).first()
     if not account:
         return False, "telegram_not_linked", None
@@ -86,6 +89,18 @@ def approve_telegram_auth_challenge(code: str | None, telegram_id: int) -> tuple
     except Exception:
         pass
     return True, "ok", challenge
+
+
+def decline_telegram_auth_challenge(code: str | None) -> tuple[bool, str, TelegramAuthChallenge | None]:
+    challenge = get_active_challenge(code)
+    if not challenge:
+        return False, "challenge_not_found", None
+    challenge.status_reason = "declined"
+    challenge.approved_at = None
+    challenge.approved_user_id = None
+    challenge.telegram_id = None
+    db.session.commit()
+    return True, "declined", challenge
 
 
 def consume_approved_challenge(code: str | None, *, purpose: str | None = None) -> tuple[bool, str, User | None]:

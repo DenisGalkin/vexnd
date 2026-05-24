@@ -3021,3 +3021,27 @@ translations = {'ru': {'Global Cards': 'Global Cards',
                                                                                                              'the '
                                                                                                              'page.',
         'Ссылка возврата недействительна или больше недоступна.': 'The return link is invalid or no longer available.'}}
+
+translations['en'].update({
+    'или': 'or',
+    'Откроем бота, передадим запрос на вход и попросим вас подтвердить его кнопкой в Telegram.': 'We will open the bot, pass the sign-in request, and ask you to confirm it with a button in Telegram.',
+    'Продолжить через Telegram': 'Continue with Telegram',
+    'Бот откроется сразу с готовым запросом на вход': 'The bot will open with a ready sign-in request',
+    'Запасной вариант': 'Backup option',
+    'Если кнопка не открыла Telegram, можно скопировать команду ниже и отправить её боту вручную.': 'If the button did not open Telegram, you can copy the command below and send it to the bot manually.',
+    'Ожидаем подтверждение в боте…': 'Waiting for confirmation in the bot…',
+    'Вход подтверждён. Перенаправляем…': 'Sign-in confirmed. Redirecting…',
+    'Код истёк. Обновите страницу и получите новый.': 'The code has expired. Refresh the page to get a new one.',
+    'Подтверждение отклонено в Telegram. Обновите страницу, если хотите создать новый запрос.': 'Confirmation was declined in Telegram. Refresh the page if you want to create a new request.',
+    'Этот Telegram пока не привязан к аккаунту с подпиской. Сначала используйте существующий аккаунт в боте.': 'This Telegram account is not linked to a subscription account yet. First use the existing account in the bot.',
+    'Код больше недействителен. Обновите страницу и попробуйте снова.': 'This code is no longer valid. Refresh the page and try again.',
+    'Откроем бота с готовым запросом, а в Telegram останется только подтвердить или отклонить привязку.': 'We will open the bot with a ready request, and in Telegram you will only need to confirm or decline the link.',
+    'Если кнопка не открыла Telegram, скопируйте команду и отправьте её боту вручную.': 'If the button did not open Telegram, copy the command and send it to the bot manually.',
+    'Открыть Telegram и подтвердить': 'Open Telegram and confirm',
+    'Привязка через Telegram': 'Link via Telegram',
+    'Привязка подтверждена. Обновляем кабинет…': 'Link confirmed. Refreshing the dashboard…',
+    'Код истёк. Обновите страницу настроек и получите новый.': 'The code has expired. Refresh the settings page to get a new one.',
+    'Привязка отклонена в Telegram. Обновите страницу настроек, если хотите создать новый запрос.': 'Linking was declined in Telegram. Refresh the settings page if you want to create a new request.',
+    'Этот Telegram уже привязан к другому полноценному аккаунту. Напишите в поддержку для безопасного объединения.': 'This Telegram account is already linked to another full account. Contact support for a safe merge.',
+    'Не удалось автоматически объединить аккаунты. Попробуйте ещё раз позже или напишите в поддержку.': 'Could not merge the accounts automatically. Try again later or contact support.',
+})

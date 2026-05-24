@@ -17,6 +17,7 @@ from app.bot.keyboards import (
     plans_keyboard,
     profile_keyboard,
     subscription_keyboard,
+    telegram_auth_confirm_keyboard,
 )
 from app.bot.subscriptions import capture_bot_referral, format_subscription, schedule_subscription_message_refresh, user_has_local_subscription_data
 from app.services.coupons import bot_coupon_benefits, normalize_coupon_code, record_coupon_redemption
@@ -72,9 +73,9 @@ def handle_message(message: dict[str, object]) -> None:
             if result_key:
                 send_message(chat_id, t(state, result_key))
         elif start_arg.startswith("login_") or start_arg.startswith("link_"):
-            ok, reason, _challenge = approve_telegram_auth_challenge(start_arg.split("_", 1)[1], account.telegram_id)
-            key = "telegram_login_ok" if ok else f"telegram_login_{reason}"
-            send_message(chat_id, t(state, key), main_menu(state, user))
+            purpose, code = start_arg.split("_", 1)
+            prompt_key = "telegram_auth_request_login" if purpose == "login" else "telegram_auth_request_link"
+            send_message(chat_id, t(state, prompt_key), telegram_auth_confirm_keyboard(code, state))
             return
 
         if state.pending_action == "choose_language":
