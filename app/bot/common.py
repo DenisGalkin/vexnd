@@ -13,8 +13,8 @@ import qrcode
 import requests
 from dotenv import load_dotenv
 from requests.adapters import HTTPAdapter
+from werkzeug.local import LocalProxy
 
-from app import create_app
 from app.core.config import SITE_ORIGIN
 from app.core.extensions import db
 from app.domain.models import PaymentIntentPricing, User
@@ -31,7 +31,19 @@ from app.bot.models import BotUserState, TelegramAccount, utc_now
 
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
-app = create_app()
+_bot_app = None
+
+
+def get_app():
+    global _bot_app
+    if _bot_app is None:
+        from app import create_app
+
+        _bot_app = create_app()
+    return _bot_app
+
+
+app = LocalProxy(get_app)
 
 BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
 BOT_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
