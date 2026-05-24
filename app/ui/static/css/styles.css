@@ -164,6 +164,23 @@
     min-height: 100%;
 }
 
+.subscription-panel {
+    position: relative;
+    min-height: 100%;
+}
+
+.subscription-panel--info {
+    background:
+        radial-gradient(circle at top left, rgba(16, 185, 129, 0.08), transparent 32%),
+        linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02));
+}
+
+.subscription-panel--action {
+    background:
+        radial-gradient(circle at top center, rgba(139, 92, 246, 0.16), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025));
+}
+
 .dashboard-label {
     font-size: 0.6875rem;
     line-height: 1rem;
@@ -233,6 +250,16 @@
         linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
 }
 
+.subscription-info-card {
+    padding: 1.6rem;
+    border-radius: 1.6rem;
+    border: 1px solid rgba(255,255,255,0.08);
+    background:
+        radial-gradient(circle at top right, rgba(16, 185, 129, 0.14), transparent 36%),
+        linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.03));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
 .dashboard-meter-expired {
     background:
         radial-gradient(circle at top right, rgba(236, 72, 153, 0.14), transparent 40%),
@@ -297,6 +324,10 @@
 
 .dashboard-detail-list {
     border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.subscription-detail-list {
+    margin-top: -0.25rem;
 }
 
 .dashboard-detail-row {
