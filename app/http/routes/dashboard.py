@@ -11,7 +11,9 @@ from flask import flash, jsonify, redirect, render_template, request, session, u
 from flask_login import current_user, login_required
 from sqlalchemy import func
 
+from app.bot.common import format_bytes
 from app.bot.models import TelegramAccount
+from app.bot.subscriptions import remnawave_subscription_snapshot
 from app.core.extensions import db
 from app.domain.models import PaymentIntent, ReferralSignup, Subscription, User
 from app.domain.plans import format_usd_amount, plan_details
@@ -53,6 +55,7 @@ def dashboard():
     subscription_url = subscription.subscription_url if subscription else None
     now = datetime.utcnow()
     remaining_days = None
+    subscription_snapshot = {"used_bytes": None, "limit_bytes": None}
     if subscription and subscription.expiry_date:
         try:
             delta = (subscription.expiry_date - now).total_seconds()
@@ -61,6 +64,16 @@ def dashboard():
             remaining_days = None
     if subscription and subscription.is_active and subscription.expiry_date and subscription.expiry_date > datetime.utcnow() and not subscription_url:
         subscription_url = ensure_remnawave_subscription_url(current_user, subscription) or None
+    if subscription:
+        try:
+            subscription_snapshot = remnawave_subscription_snapshot(current_user, schedule_async_refresh=False)
+        except Exception:
+            subscription_snapshot = {"used_bytes": None, "limit_bytes": None}
+    used_bytes = subscription_snapshot.get("used_bytes")
+    limit_bytes = subscription_snapshot.get("limit_bytes")
+    traffic_progress = None
+    if isinstance(limit_bytes, int) and limit_bytes > 0 and isinstance(used_bytes, int) and used_bytes >= 0:
+        traffic_progress = max(0, min(100, round((used_bytes / limit_bytes) * 100, 1)))
     qr_code = None
     if subscription_url:
         qr = qrcode.QRCode(version=1, box_size=10, border=4)
@@ -136,6 +149,11 @@ def dashboard():
         referrals_list=referrals_list,
         now=now,
         remaining_days=remaining_days,
+        used_bytes=used_bytes,
+        limit_bytes=limit_bytes,
+        used_bytes_text=format_bytes(used_bytes),
+        limit_bytes_text=format_bytes(limit_bytes),
+        traffic_progress=traffic_progress,
         telegram_account=telegram_account,
         telegram_auth=telegram_auth,
     )
