@@ -79,15 +79,19 @@ def remnawave_response_user(data: object) -> Optional[dict]:
 
 
 def rw_username_from_email(email: str) -> str:
-    value = re.sub(r"[^a-zA-Z0-9._-]+", "-", (email or "").strip().lower())
-    value = value.strip(".-_")
-    return value[:48] or "user"
+    value = re.sub(r"[^a-zA-Z0-9_-]+", "-", (email or "").strip().lower())
+    value = value.strip("-_")
+    if len(value) < 3:
+        value = f"user-{value}" if value else "user"
+    return value[:36]
 
 
 def rw_username_from_telegram(telegram_id: int | None, username: str | None = None) -> str:
-    preferred = re.sub(r"[^a-zA-Z0-9._-]+", "-", (username or "").strip().lower()).strip(".-_")
+    preferred = re.sub(r"[^a-zA-Z0-9_-]+", "-", (username or "").strip().lower()).strip("-_")
     if preferred:
-        return preferred[:48]
+        if len(preferred) < 3 and telegram_id:
+            return f"tg-{int(telegram_id)}"[:36]
+        return preferred[:36]
     if telegram_id:
         return f"tg-{int(telegram_id)}"
     return "telegram-user"
@@ -123,33 +127,49 @@ def remnawave_uses_telegram_identity(user_or_email: User | str | None) -> bool:
     return bool(telegram_id)
 
 
-def remnawave_identity_candidates(user_or_email: User | str | None, *, include_email: bool = True) -> tuple[list[int], list[str], list[str]]:
+def remnawave_primary_email(user_or_email: User | str | None) -> str | None:
+    if isinstance(user_or_email, str):
+        email = (user_or_email or "").strip().lower()
+        return email or None
+    if not user_or_email:
+        return None
+    email = (user_or_email.email or "").strip().lower()
+    if not email or is_telegram_placeholder_email(email):
+        return None
+    return email
+
+
+def remnawave_identity_candidates(
+    user_or_email: User | str | None,
+    *,
+    include_email: bool = True,
+    include_legacy_placeholder: bool = False,
+) -> tuple[list[int], list[str], list[str], list[str]]:
     telegram_ids: list[int] = []
     emails: list[str] = []
+    legacy_emails: list[str] = []
     usernames: list[str] = []
     if isinstance(user_or_email, str):
         email = (user_or_email or "").strip().lower()
         if email:
             emails.append(email)
             usernames.append(rw_username_from_email(email))
-        return telegram_ids, emails, usernames
+        return telegram_ids, emails, legacy_emails, usernames
     user = user_or_email
     if not user:
-        return telegram_ids, emails, usernames
+        return telegram_ids, emails, legacy_emails, usernames
+    if include_email:
+        email = remnawave_primary_email(user)
+        if email:
+            emails.append(email)
+            usernames.append(rw_username_from_email(email))
     tg_id, tg_username = telegram_account_identity(user.id)
     if tg_id:
         telegram_ids.append(int(tg_id))
         usernames.append(rw_username_from_telegram(tg_id, tg_username))
-        if include_email:
+        if include_legacy_placeholder:
             placeholder = telegram_local_placeholder_email(tg_id).lower()
-            if placeholder not in emails:
-                emails.append(placeholder)
-    if include_email:
-        email = (user.email or "").strip().lower()
-        if email:
-            emails.append(email)
-            if not is_telegram_placeholder_email(email):
-                usernames.append(rw_username_from_email(email))
+            legacy_emails.append(placeholder)
     seen: set[str] = set()
     unique_usernames: list[str] = []
     for candidate in usernames:
@@ -157,7 +177,12 @@ def remnawave_identity_candidates(user_or_email: User | str | None, *, include_e
         if normalized and normalized not in seen:
             seen.add(normalized)
             unique_usernames.append(normalized)
-    return telegram_ids, list(dict.fromkeys(emails)), unique_usernames
+    return (
+        telegram_ids,
+        list(dict.fromkeys(emails)),
+        list(dict.fromkeys(legacy_emails)),
+        unique_usernames,
+    )
 
 
 def remnawave_get_user_by_telegram_id(cfg: RemnawaveConfig, telegram_id: int) -> Optional[dict]:
@@ -193,7 +218,11 @@ def remnawave_get_user_by_uuid(cfg: RemnawaveConfig, user_uuid: str) -> Optional
 
 
 def remnawave_find_user(cfg: RemnawaveConfig, user_or_email: User | str | None, *, include_email: bool = True):
-    telegram_ids, emails, usernames = remnawave_identity_candidates(user_or_email, include_email=include_email)
+    telegram_ids, emails, legacy_emails, usernames = remnawave_identity_candidates(
+        user_or_email,
+        include_email=include_email,
+        include_legacy_placeholder=True,
+    )
     for telegram_id in telegram_ids:
         try:
             user = remnawave_get_user_by_telegram_id(cfg, telegram_id)
@@ -202,6 +231,13 @@ def remnawave_find_user(cfg: RemnawaveConfig, user_or_email: User | str | None, 
         except Exception:
             pass
     for email in emails:
+        try:
+            user = remnawave_get_user_by_email(cfg, email)
+            if user:
+                return user
+        except Exception:
+            pass
+    for email in legacy_emails:
         try:
             user = remnawave_get_user_by_email(cfg, email)
             if user:
@@ -219,7 +255,10 @@ def remnawave_find_user(cfg: RemnawaveConfig, user_or_email: User | str | None, 
 
 
 def remnawave_create_user(cfg: RemnawaveConfig, user_or_email: User | str | None, expiry_date: datetime, *, include_email: bool = True) -> dict:
-    telegram_ids, emails, usernames = remnawave_identity_candidates(user_or_email, include_email=include_email)
+    telegram_ids, emails, _legacy_emails, usernames = remnawave_identity_candidates(
+        user_or_email,
+        include_email=include_email,
+    )
     payload = {
         "email": emails[0] if emails else None,
         "username": usernames[0] if usernames else None,
@@ -239,6 +278,56 @@ def remnawave_create_user(cfg: RemnawaveConfig, user_or_email: User | str | None
     if not isinstance(result, dict):
         raise RuntimeError("Invalid Remnawave create-user response")
     return result
+
+
+def remnawave_sync_user_identity(
+    cfg: RemnawaveConfig,
+    user: User,
+    *,
+    remote_user: dict | None = None,
+) -> dict | None:
+    remote_user = remote_user or remnawave_find_user(cfg, user)
+    if not isinstance(remote_user, dict):
+        return None
+    remote_uuid = str(remote_user.get("uuid") or "").strip()
+    if not remote_uuid:
+        return remote_user
+
+    email = remnawave_primary_email(user)
+    telegram_id, telegram_username = telegram_account_identity(user.id)
+    desired_username = rw_username_from_email(email) if email else rw_username_from_telegram(telegram_id, telegram_username)
+
+    current_email = str(remote_user.get("email") or "").strip().lower()
+    current_username = str(remote_user.get("username") or "").strip()
+    current_telegram_id = remote_user.get("telegramId")
+    if current_telegram_id is None:
+        current_telegram_id = remote_user.get("telegram_id")
+    try:
+        current_telegram_id = int(current_telegram_id) if current_telegram_id not in (None, "") else None
+    except Exception:
+        current_telegram_id = None
+
+    payload: dict[str, object] = {"uuid": remote_uuid}
+    changed = False
+    if email and current_email != email:
+        payload["email"] = email
+        changed = True
+    elif not email and is_telegram_placeholder_email(current_email):
+        payload["email"] = None
+        changed = True
+    if telegram_id and current_telegram_id != int(telegram_id):
+        payload["telegramId"] = int(telegram_id)
+        changed = True
+    if desired_username and current_username != desired_username:
+        payload["username"] = desired_username
+        changed = True
+    if not changed:
+        return remote_user
+
+    resp = HTTP.patch(f"{cfg.base_url}/api/users", headers=remnawave_headers(cfg), json=payload, timeout=30)
+    remnawave_raise_for_status(resp)
+    result = remnawave_response_user(resp.json() or {})
+    return result or remnawave_get_user_by_uuid(cfg, remote_uuid) or remote_user
 
 
 def remnawave_extend_user(cfg: RemnawaveConfig, user_uuid: str, extend_days: int) -> None:
@@ -291,6 +380,7 @@ __all__ = [
     "remnawave_get_user_by_uuid",
     "remnawave_headers",
     "remnawave_subscription_url_from_user",
+    "remnawave_sync_user_identity",
     "remnawave_update_user_traffic",
     "rw_username_from_email",
     "rw_username_from_telegram",

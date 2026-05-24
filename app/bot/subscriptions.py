@@ -31,7 +31,6 @@ from app.services.remnawave import (
     is_telegram_placeholder_email,
     parse_rw_datetime,
     remnawave_find_user,
-    remnawave_uses_telegram_identity,
     rw_username_from_email,
     rw_username_from_telegram,
 )
@@ -172,8 +171,7 @@ def refresh_remnawave_snapshot_async(
                 if not (cfg.base_url and cfg.token):
                     return
                 _subscription, local_snapshot = local_subscription_snapshot(user)
-                include_email = not remnawave_uses_telegram_identity(user)
-                remote_user = remnawave_find_user(cfg, user, include_email=include_email)
+                remote_user = remnawave_find_user(cfg, user)
                 if not isinstance(remote_user, dict):
                     return
                 restore_local_subscription_state(user, remote_user)
@@ -219,9 +217,8 @@ def remnawave_subscription_snapshot(user: User, *, force_refresh: bool = False, 
     if not force_refresh and schedule_async_refresh and has_local_subscription_data(snapshot):
         refresh_remnawave_snapshot_async(user.id, signature)
         return snapshot
-    include_email = not remnawave_uses_telegram_identity(user)
     try:
-        remote_user = remnawave_find_user(cfg, user, include_email=include_email)
+        remote_user = remnawave_find_user(cfg, user)
     except Exception as exc:
         print(f"Remnawave snapshot lookup failed: {exc}")
         return snapshot

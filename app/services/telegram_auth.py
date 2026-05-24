@@ -7,6 +7,7 @@ from app.bot.models import TelegramAccount
 from app.core.extensions import db
 from app.domain.models import PaymentIntent, ReferralCode, ReferralFingerprint, ReferralSignup, Subscription, SubscriptionNotificationLog, TelegramAuthChallenge, TrialGrant, User, UserCouponRedemption, UserSecurity
 from app.services.remnawave import is_telegram_placeholder_email
+from app.services.subscriptions import ensure_remnawave_subscription_url
 
 
 CHALLENGE_TTL_MINUTES = 10
@@ -77,6 +78,13 @@ def approve_telegram_auth_challenge(code: str | None, telegram_id: int) -> tuple
     challenge.status_reason = None
     challenge.approved_at = _utcnow()
     db.session.commit()
+    try:
+        user = db.session.get(User, int(account.user_id))
+        subscription = Subscription.query.filter_by(user_id=account.user_id).first()
+        if user and subscription and subscription.is_active and subscription.expiry_date and subscription.expiry_date > _utcnow():
+            ensure_remnawave_subscription_url(user, subscription)
+    except Exception:
+        pass
     return True, "ok", challenge
 
 

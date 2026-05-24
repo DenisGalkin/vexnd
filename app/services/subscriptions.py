@@ -11,8 +11,8 @@ from app.services.remnawave import (
     remnawave_extend_user,
     remnawave_find_user,
     remnawave_subscription_url_from_user,
+    remnawave_sync_user_identity,
     remnawave_update_user_traffic,
-    remnawave_uses_telegram_identity,
 )
 
 
@@ -40,7 +40,6 @@ def create_remnawave_subscription(user: User, plan_months: int, *, strict: bool 
 def create_remnawave_subscription_days(user: User, days: int, *, strict: bool = False) -> str:
     expiry_date = datetime.utcnow() + timedelta(days=max(int(days), 1))
     cfg = get_remnawave_config()
-    include_email = not remnawave_uses_telegram_identity(user)
     if not (cfg.base_url and cfg.token):
         subscription = Subscription.query.filter_by(user_id=user.id).first()
         if subscription and subscription.expiry_date and subscription.expiry_date > datetime.utcnow():
@@ -54,14 +53,15 @@ def create_remnawave_subscription_days(user: User, days: int, *, strict: bool = 
         db.session.commit()
         return subscription.subscription_url or ""
     try:
-        remote_user = remnawave_find_user(cfg, user, include_email=include_email)
+        remote_user = remnawave_find_user(cfg, user)
         if remote_user and remote_user.get("uuid"):
+            remote_user = remnawave_sync_user_identity(cfg, user, remote_user=remote_user) or remote_user
             remnawave_extend_user(cfg, remote_user["uuid"], max(int(days), 1))
         else:
-            remote_user = remnawave_create_user(cfg, user, expiry_date, include_email=include_email)
+            remote_user = remnawave_create_user(cfg, user, expiry_date)
             if remote_user.get("uuid"):
                 remnawave_update_user_traffic(cfg, remote_user["uuid"])
-        subscription = restore_local_subscription_state(user, remnawave_find_user(cfg, user, include_email=include_email) or remote_user)
+        subscription = restore_local_subscription_state(user, remnawave_find_user(cfg, user) or remote_user)
         return subscription.subscription_url or ""
     except Exception:
         if strict:
@@ -81,18 +81,19 @@ def create_remnawave_subscription_days(user: User, days: int, *, strict: bool = 
 
 def ensure_remnawave_subscription_url(user: User, subscription: Subscription) -> str:
     cfg = get_remnawave_config()
-    include_email = not remnawave_uses_telegram_identity(user)
     if not (cfg.base_url and cfg.token):
         return (subscription.subscription_url or "").strip()
     try:
-        remote_user = remnawave_find_user(cfg, user, include_email=include_email)
+        remote_user = remnawave_find_user(cfg, user)
+        if remote_user and remote_user.get("uuid"):
+            remote_user = remnawave_sync_user_identity(cfg, user, remote_user=remote_user) or remote_user
         if (
             not remote_user
             and subscription.is_active
             and subscription.expiry_date
             and subscription.expiry_date > datetime.utcnow()
         ):
-            remote_user = remnawave_create_user(cfg, user, subscription.expiry_date, include_email=include_email)
+            remote_user = remnawave_create_user(cfg, user, subscription.expiry_date)
             if remote_user.get("uuid"):
                 remnawave_update_user_traffic(cfg, remote_user["uuid"])
         remote_url = remnawave_subscription_url_from_user(remote_user)
@@ -146,16 +147,16 @@ def extend_remnawave_subscription_days(user: User, days: int) -> None:
         return
     extend_subscription_days_local(user, days)
     cfg = get_remnawave_config()
-    include_email = not remnawave_uses_telegram_identity(user)
     if not (cfg.base_url and cfg.token):
         return
     try:
-        remote_user = remnawave_find_user(cfg, user, include_email=include_email)
+        remote_user = remnawave_find_user(cfg, user)
         if remote_user and remote_user.get("uuid"):
+            remote_user = remnawave_sync_user_identity(cfg, user, remote_user=remote_user) or remote_user
             remnawave_extend_user(cfg, remote_user["uuid"], days)
             subscription = Subscription.query.filter_by(user_id=user.id).first()
             if subscription and not subscription.subscription_url:
-                remote_user2 = remnawave_find_user(cfg, user, include_email=include_email) or {}
+                remote_user2 = remnawave_find_user(cfg, user) or {}
                 subscription.subscription_url = remote_user2.get("subscriptionUrl") or subscription.subscription_url
                 db.session.commit()
     except Exception as exc:

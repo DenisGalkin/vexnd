@@ -13,9 +13,10 @@ from sqlalchemy import func
 
 from app.bot.models import TelegramAccount
 from app.core.extensions import db
-from app.domain.models import ReferralSignup, Subscription, User
+from app.domain.models import PaymentIntent, ReferralSignup, Subscription, User
 from app.domain.plans import format_usd_amount, plan_details
 from app.services.coupons import coupon_pricing, normalize_coupon_code
+from app.services.payments.reconcile import process_payment_intent
 from app.services.referrals import get_or_create_referral_code, mask_email
 from app.services.security import require_csrf, rotate_csrf_token
 from app.services.subscriptions import ensure_remnawave_subscription_url
@@ -26,6 +27,28 @@ from app.http.helpers import public_url, translate
 
 @login_required
 def dashboard():
+    pending_intents = (
+        db.session.query(PaymentIntent)
+        .filter(
+            PaymentIntent.user_id == current_user.id,
+            PaymentIntent.plan_months > 0,
+            PaymentIntent.processed_at.is_(None),
+        )
+        .order_by(PaymentIntent.created_at.desc())
+        .limit(3)
+        .all()
+    )
+    for intent in pending_intents:
+        try:
+            processed, _msg = process_payment_intent(intent)
+            if processed:
+                break
+        except Exception as exc:
+            print(f"Dashboard payment reconcile failed for intent {intent.id}: {exc}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
     subscription = Subscription.query.filter_by(user_id=current_user.id).first()
     subscription_url = subscription.subscription_url if subscription else None
     now = datetime.utcnow()
