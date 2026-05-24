@@ -354,6 +354,44 @@ def remnawave_update_user_traffic(cfg: RemnawaveConfig, user_uuid: str, limit_by
     remnawave_raise_for_status(resp)
 
 
+def remnawave_delete_user(cfg: RemnawaveConfig, user_uuid: str) -> bool:
+    normalized_uuid = str(user_uuid or "").strip()
+    if not normalized_uuid:
+        return False
+
+    resp = HTTP.delete(f"{cfg.base_url}/api/users/{normalized_uuid}", headers=remnawave_headers(cfg), timeout=30)
+    if resp.status_code == 404:
+        return False
+    if resp.ok:
+        return True
+
+    bulk_resp = HTTP.post(
+        f"{cfg.base_url}/api/users/bulk/delete",
+        headers=remnawave_headers(cfg),
+        json={"uuids": [normalized_uuid]},
+        timeout=30,
+    )
+    if bulk_resp.status_code == 404:
+        return False
+    remnawave_raise_for_status(bulk_resp)
+    return True
+
+
+def delete_remnawave_user_for_local_user(user: User | None) -> bool:
+    if not user:
+        return False
+
+    cfg = get_remnawave_config()
+    if not (cfg.base_url and cfg.token):
+        return False
+
+    remote_user = remnawave_find_user(cfg, user)
+    remote_uuid = str((remote_user or {}).get("uuid") or "").strip()
+    if not remote_uuid:
+        return False
+    return remnawave_delete_user(cfg, remote_uuid)
+
+
 def remnawave_subscription_url_from_user(remote_user: dict | None) -> str:
     if not isinstance(remote_user, dict):
         return ""
@@ -375,6 +413,7 @@ __all__ = [
     "remnawave_uses_telegram_identity",
     "parse_rw_datetime",
     "remnawave_create_user",
+    "remnawave_delete_user",
     "remnawave_extend_user",
     "remnawave_find_user",
     "remnawave_get_user_by_uuid",
@@ -384,6 +423,7 @@ __all__ = [
     "remnawave_update_user_traffic",
     "rw_username_from_email",
     "rw_username_from_telegram",
+    "delete_remnawave_user_for_local_user",
     "telegram_account_identity",
     "telegram_local_placeholder_email",
 ]

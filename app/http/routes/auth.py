@@ -6,7 +6,8 @@ from flask import current_app, flash, jsonify, redirect, render_template, reques
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app.core.extensions import db
-from app.domain.models import PaymentIntent, ReferralCode, ReferralFingerprint, ReferralSignup, Subscription, User, UserSecurity
+from app.services.account_deletion import delete_user_account
+from app.domain.models import ReferralCode, ReferralFingerprint, ReferralSignup, User, UserSecurity
 from app.services.referrals import mask_email
 from app.services.security import client_ip, device_fingerprint, rotate_csrf_token, throttle_is_locked, throttle_register_fail, throttle_reset, validate_password_strength
 from app.services.telegram_auth import CHALLENGE_TTL_MINUTES, consume_approved_challenge, create_telegram_auth_challenge, get_active_challenge
@@ -316,13 +317,8 @@ def account_delete():
         return redirect(url_for("dashboard"))
     uid = current_user.id
     try:
-        Subscription.query.filter_by(user_id=uid).delete()
-        PaymentIntent.query.filter_by(user_id=uid).delete()
-        user = User.query.get(uid)
+        delete_user_account(uid)
         logout_user()
-        if user:
-            db.session.delete(user)
-        db.session.commit()
         flash(translate("Аккаунт удалён"), "success")
         return redirect(url_for("index"))
     except Exception:
