@@ -469,49 +469,54 @@
             </div>
           </div>
 
+          <div class="settings-stack">
           {% if current_email_missing %}
             {% if telegram_account and password_reset_telegram_auth %}
-          <div class="settings-note settings-note--telegram-reset rounded-2xl px-4 py-3 text-sm text-gray-300">
-            <div class="font-semibold text-white">{{ _('Сброс пароля через Telegram') }}</div>
-            {% if password_reset_telegram_approved %}
-            <div class="mt-1">{{ _('Подтверждение получено. Теперь задайте новый пароль ниже.') }}</div>
-            {% else %}
-            <div class="mt-1">{{ _('Подтвердите сброс пароля в Telegram, после чего здесь появится форма для нового пароля.') }}</div>
-            {% endif %}
-          </div>
+          <div class="settings-form settings-security-panel">
+            <div class="settings-note settings-note--telegram-reset rounded-2xl px-4 py-3 text-sm text-gray-300">
+              <div class="font-semibold text-white">{{ _('Сброс пароля через Telegram') }}</div>
+              {% if password_reset_telegram_approved %}
+              <div class="mt-1">{{ _('Подтверждение получено. Теперь задайте новый пароль ниже.') }}</div>
+              {% else %}
+              <div class="mt-1">{{ _('Подтвердите сброс пароля в Telegram, после чего здесь появится форма для нового пароля.') }}</div>
+              {% endif %}
+            </div>
 
-            {% if not password_reset_telegram_approved %}
-          <div class="settings-security-actions">
-            <a href="{{ password_reset_telegram_auth.bot_url }}" target="_blank" rel="noopener noreferrer" class="settings-action settings-action-primary">
-              {{ _('Открыть Telegram и подтвердить') }}
-            </a>
-            <form method="POST" action="{{ url_for('account_password_reset_cancel') }}" class="settings-security-cancel">
+              {% if not password_reset_telegram_approved %}
+            <div class="settings-action-row">
+              <div class="settings-action-group">
+                <a href="{{ password_reset_telegram_auth.bot_url }}" target="_blank" rel="noopener noreferrer" class="settings-action settings-action-primary">
+                  {{ _('Открыть Telegram и подтвердить') }}
+                </a>
+                <form method="POST" action="{{ url_for('account_password_reset_cancel') }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="settings-action settings-action-muted">{{ _('Отмена') }}</button>
+                </form>
+              </div>
+              <div id="tg-password-reset-status" class="settings-status-inline" data-status-url="{{ password_reset_telegram_auth.status_url }}">
+                {{ _('Статус подтверждения обновляется автоматически.') }}
+              </div>
+            </div>
+              {% else %}
+            <form class="settings-form settings-form--nested space-y-4" method="POST" action="{{ url_for('account_password_reset_verify') }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit" class="settings-action settings-action-muted">{{ _('Отмена') }}</button>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <label class="settings-field">
+                  <span>{{ _('Новый пароль') }}</span>
+                  <input type="password" name="new_password" autocomplete="new-password" required>
+                </label>
+                <label class="settings-field">
+                  <span>{{ _('Повторите пароль') }}</span>
+                  <input type="password" name="new_password2" autocomplete="new-password" required>
+                </label>
+              </div>
+              <div class="settings-action-row">
+                <p class="text-sm text-gray-500">{{ _('После сохранения новый пароль начнёт действовать сразу для входа на сайте.') }}</p>
+                <button type="submit" class="settings-action settings-action-primary">{{ _('Сохранить новый пароль') }}</button>
+              </div>
             </form>
-            <div id="tg-password-reset-status" class="settings-status-inline settings-status-inline--telegram" data-status-url="{{ password_reset_telegram_auth.status_url }}">
-              {{ _('Статус подтверждения обновляется автоматически.') }}
-            </div>
+              {% endif %}
           </div>
-            {% else %}
-          <form class="settings-form space-y-4" method="POST" action="{{ url_for('account_password_reset_verify') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="grid gap-3 sm:grid-cols-2">
-              <label class="settings-field">
-                <span>{{ _('Новый пароль') }}</span>
-                <input type="password" name="new_password" autocomplete="new-password" required>
-              </label>
-              <label class="settings-field">
-                <span>{{ _('Повторите пароль') }}</span>
-                <input type="password" name="new_password2" autocomplete="new-password" required>
-              </label>
-            </div>
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p class="text-sm text-gray-500">{{ _('После сохранения новый пароль начнёт действовать сразу для входа на сайте.') }}</p>
-              <button type="submit" class="settings-action settings-action-primary">{{ _('Сохранить новый пароль') }}</button>
-            </div>
-          </form>
-            {% endif %}
             {% else %}
           <div class="settings-note rounded-2xl px-4 py-3 text-sm text-gray-400">
             {{ _('Для сброса пароля нужен связанный Telegram или привязанный email.') }}
@@ -542,13 +547,13 @@
                 <input type="password" name="new_password2" autocomplete="new-password" required>
               </label>
             </div>
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="settings-action-row">
               <p class="text-sm text-gray-500">{{ _('Если письма нет, проверьте папку Спам и подождите минуту перед повторной отправкой.') }}</p>
               <button type="submit" class="settings-action settings-action-primary">{{ _('Сохранить новый пароль') }}</button>
             </div>
           </form>
 
-          <div class="flex flex-col gap-3 sm:flex-row">
+          <div class="settings-action-group">
             <form method="POST" action="{{ url_for('account_password_reset_resend') }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="settings-action settings-action-muted">{{ _('Отправить код повторно') }}</button>
@@ -561,12 +566,13 @@
           {% else %}
           <form class="settings-form space-y-4" method="POST" action="{{ url_for('account_password_reset_start') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="settings-action-row">
               <p class="text-sm text-gray-500">{{ _('Мы отправим код подтверждения на ваш текущий email, после чего можно будет задать новый пароль.') }}</p>
               <button type="submit" class="settings-action settings-action-primary">{{ _('Сбросить пароль через email') }}</button>
             </div>
           </form>
           {% endif %}
+          </div>
         </section>
 
         <section class="settings-section settings-section--danger mt-2">
@@ -715,6 +721,10 @@
     padding: 1rem;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
   }
+  .settings-form--nested {
+    border-radius: 1.25rem;
+    background: rgba(255,255,255,.02);
+  }
   .settings-field {
     display: flex;
     flex-direction: column;
@@ -816,6 +826,16 @@
       linear-gradient(180deg, rgba(239,68,68,.08), rgba(239,68,68,.03)),
       linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
   }
+  .settings-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .settings-security-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
   .settings-feedback.is-success {
     border-color: rgba(16,185,129,.22);
     background: rgba(16,185,129,.08);
@@ -826,31 +846,23 @@
     background: rgba(239,68,68,.08);
     color: rgba(254,226,226,.98);
   }
-  .settings-security-actions {
-    display: grid;
-    grid-template-columns: minmax(0, max-content) auto;
-    gap: 1rem 1.25rem;
+  .settings-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .85rem 1rem;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .settings-action-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
     align-items: center;
   }
-  .settings-security-actions > a {
-    min-height: 5.25rem;
-    padding-inline: 2rem;
-    border-radius: 1.65rem;
-  }
-  .settings-security-cancel {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    justify-self: end;
-  }
-  .settings-security-cancel .settings-action {
-    min-width: 11.25rem;
-  }
   .settings-status-inline {
+    flex: 1 1 240px;
     font-size: .95rem;
     color: rgba(191,219,254,.78);
-  }
-  .settings-status-inline--telegram {
-    align-self: start;
   }
   @media (max-width: 640px) {
     .settings-section {
@@ -871,18 +883,16 @@
       padding: 1.1rem;
       border-radius: 1.5rem;
     }
-    .settings-security-actions {
-      grid-template-columns: 1fr;
-    }
-    .settings-security-actions > a,
-    .settings-security-cancel,
-    .settings-security-cancel .settings-action {
+    .settings-action-row,
+    .settings-action-group,
+    .settings-status-inline {
       width: 100%;
     }
-    .settings-security-cancel {
-      grid-column: auto;
-      grid-row: auto;
-      justify-self: stretch;
+    .settings-action-group > a,
+    .settings-action-group form,
+    .settings-action-group .settings-action,
+    .settings-action-row .settings-action {
+      width: 100%;
     }
   }
 </style>

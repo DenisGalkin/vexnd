@@ -3170,4 +3170,9 @@ translations['en'].update({
     'Запрос истёк. Обновите страницу настроек и начните заново.': 'The request expired. Refresh the settings page and start again.',
     'Сброс пароля отклонён в Telegram. Обновите страницу, если хотите создать новый запрос.': 'Password reset was declined in Telegram. Refresh the page if you want to create a new request.',
     'Подтверждение не удалось. Убедитесь, что используете связанный Telegram-аккаунт.': 'Confirmation failed. Make sure you are using the linked Telegram account.',
+    'Удаление аккаунта необратимо. Сначала подтвердите пароль и ключевое слово.': 'Account deletion is permanent. First confirm your password and the keyword.',
+    'Кнопка активируется только после проверки текущего пароля и точного ввода слова DELETE.': 'The button becomes active only after your current password is verified and the word DELETE is entered exactly.',
+    'Не удалось выполнить запрос. Попробуйте позже.': 'Could not complete the request. Please try again later.',
+    'Проверка пройдена. Удаление станет необратимым после отправки формы.': 'Verification passed. Deletion becomes irreversible after submitting the form.',
+    'Текущий пароль пока не подтверждён.': 'The current password has not been confirmed yet.',
 })
