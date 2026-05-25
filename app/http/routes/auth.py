@@ -19,6 +19,13 @@ from app.services.email_change_otp import (
     verify_pending_email_change,
 )
 from app.services.email_otp import OTP_RESEND_COOLDOWN_SECONDS, OTP_TTL_MINUTES, EmailOtpError, delete_pending_registration, get_pending_registration, resend_pending_registration, start_pending_registration, verify_pending_registration
+from app.services.password_reset_otp import (
+    delete_pending_password_reset,
+    get_pending_password_reset,
+    resend_pending_password_reset,
+    start_pending_password_reset,
+    verify_pending_password_reset,
+)
 from app.services.referrals import mask_email
 from app.services.remnawave import get_remnawave_config, is_telegram_placeholder_email, remnawave_sync_user_identity
 from app.services.security import client_ip, device_fingerprint, renew_session, throttle_is_locked, throttle_register_fail, throttle_reset, validate_password_strength
@@ -79,6 +86,42 @@ def _pending_registration_context() -> dict[str, object]:
         "otp_ttl_minutes": OTP_TTL_MINUTES,
         "resend_cooldown_seconds": OTP_RESEND_COOLDOWN_SECONDS,
     }
+
+
+def _pending_password_reset_session_key() -> str:
+    return "pending_password_reset_email"
+
+
+def _clear_pending_password_reset_session() -> None:
+    session.pop(_pending_password_reset_session_key(), None)
+
+
+def _store_pending_password_reset_session(email: str) -> None:
+    session[_pending_password_reset_session_key()] = email.strip().lower()
+
+
+def _pending_password_reset_context() -> dict[str, object]:
+    pending_email = (session.get(_pending_password_reset_session_key()) or "").strip().lower()
+    pending = get_pending_password_reset(pending_email)
+    if not pending:
+        _clear_pending_password_reset_session()
+        return {"password_reset_pending": False}
+    return {
+        "password_reset_pending": True,
+        "password_reset_email": pending.email,
+        "password_reset_email_masked": mask_email(pending.email),
+        "otp_ttl_minutes": OTP_TTL_MINUTES,
+        "resend_cooldown_seconds": OTP_RESEND_COOLDOWN_SECONDS,
+    }
+
+
+def _active_password_reset_telegram_challenge():
+    if not current_user.is_authenticated:
+        return None
+    challenge = get_active_challenge(session.get(_telegram_session_key("password_reset")), purpose="password_reset")
+    if challenge and challenge.target_user_id == current_user.id:
+        return challenge
+    return None
 
 
 def _settings_redirect():
@@ -165,8 +208,103 @@ def login():
     if current_user.is_authenticated:
         return redirect_localized("dashboard")
     telegram_auth = _telegram_challenge_context(purpose="login")
+    template_context = {
+        "telegram_auth": telegram_auth,
+        **_pending_password_reset_context(),
+    }
     if request.method == "POST":
         ip = client_ip()
+        action = (request.form.get("action") or "login").strip().lower()
+        if action in {"forgot_password", "reset_verify", "reset_resend", "reset_cancel"}:
+            if action == "reset_cancel":
+                pending_email = (session.get(_pending_password_reset_session_key()) or "").strip().lower()
+                delete_pending_password_reset(get_pending_password_reset(pending_email))
+                _clear_pending_password_reset_session()
+                flash(translate("Сброс пароля отменён."), "info")
+                return render_template("auth/login.html", telegram_auth=telegram_auth, **_pending_password_reset_context())
+            if action == "reset_resend":
+                pending_email = (session.get(_pending_password_reset_session_key()) or "").strip().lower()
+                if not pending_email:
+                    flash(translate("Сессия сброса пароля истекла. Запросите новый код."), "error")
+                    return render_template("auth/login.html", telegram_auth=telegram_auth, **_pending_password_reset_context())
+                try:
+                    resend_pending_password_reset(pending_email)
+                except EmailOtpError as exc:
+                    if str(exc) == "cooldown":
+                        flash(translate("Код уже отправлен. Подождите немного перед повторной отправкой."), "error")
+                    elif str(exc) == "not_found":
+                        _clear_pending_password_reset_session()
+                        flash(translate("Сессия сброса пароля истекла. Запросите новый код."), "error")
+                    else:
+                        current_app.logger.exception("Resend password reset OTP failed")
+                        flash(translate("Не удалось отправить код подтверждения. Попробуйте ещё раз позже."), "error")
+                else:
+                    flash(translate("Новый код для сброса пароля отправлен на email."), "success")
+                return render_template("auth/login.html", telegram_auth=telegram_auth, **_pending_password_reset_context())
+            if action == "reset_verify":
+                pending_email = (session.get(_pending_password_reset_session_key()) or "").strip().lower()
+                otp_code = (request.form.get("otp_code") or "").strip()
+                new_password = request.form.get("new_password") or ""
+                new_password2 = request.form.get("new_password2") or ""
+                if not pending_email:
+                    flash(translate("Сессия сброса пароля истекла. Запросите новый код."), "error")
+                    return render_template("auth/login.html", telegram_auth=telegram_auth, **_pending_password_reset_context())
+                if not otp_code.isdigit() or len(otp_code) != 6:
+                    flash(translate("Введите 6-значный код из письма."), "error")
+                    return render_template("auth/login.html", telegram_auth=telegram_auth, **_pending_password_reset_context())
+                if new_password != new_password2:
+                    flash(translate("Пароли не совпадают"), "error")
+                    return render_template("auth/login.html", telegram_auth=telegram_auth, **_pending_password_reset_context())
+                if not validate_password_strength(new_password):
+                    flash(translate("Пароль слишком слабый. Используйте минимум 10 символов и комбинацию букв/цифр/символов."), "error")
+                    return render_template("auth/login.html", telegram_auth=telegram_auth, **_pending_password_reset_context())
+                ok, reason, pending = verify_pending_password_reset(pending_email, otp_code)
+                if not ok or not pending:
+                    if reason == "expired":
+                        flash(translate("Срок действия кода истёк. Отправьте новый код."), "error")
+                    elif reason == "too_many_attempts":
+                        flash(translate("Слишком много неверных попыток. Запросите новый код."), "error")
+                    elif reason == "not_found":
+                        _clear_pending_password_reset_session()
+                        flash(translate("Сессия сброса пароля истекла. Запросите новый код."), "error")
+                    else:
+                        flash(translate("Неверный код подтверждения."), "error")
+                    return render_template("auth/login.html", telegram_auth=telegram_auth, **_pending_password_reset_context())
+                user = User.query.filter_by(email=pending.email).first()
+                if not user:
+                    delete_pending_password_reset(pending)
+                    _clear_pending_password_reset_session()
+                    flash(translate("Аккаунт с таким email не найден."), "error")
+                    return render_template("auth/login.html", telegram_auth=telegram_auth, **_pending_password_reset_context())
+                try:
+                    user.set_password(new_password)
+                    db.session.commit()
+                    delete_pending_password_reset(pending)
+                    _clear_pending_password_reset_session()
+                    throttle_reset("login", f"email:{pending.email}")
+                    flash(translate("Пароль успешно обновлён. Теперь можно войти."), "success")
+                    return redirect_localized("login")
+                except Exception:
+                    db.session.rollback()
+                    flash(translate("Не удалось изменить пароль. Попробуйте позже."), "error")
+                    return render_template("auth/login.html", telegram_auth=telegram_auth, **_pending_password_reset_context())
+            email_raw = request.form.get("email")
+            try:
+                email = _normalize_email_input(email_raw)
+            except EmailNotValidError:
+                flash(translate("Введите корректный email"), "error")
+                return render_template("auth/login.html", telegram_auth=telegram_auth, **_pending_password_reset_context())
+            try:
+                start_pending_password_reset(email=email, lang=_normalized_lang())
+                _store_pending_password_reset_session(email)
+                flash(translate("Мы отправили код для сброса пароля на ваш email."), "success")
+            except EmailOtpError as exc:
+                if str(exc) == "user_not_found":
+                    flash(translate("Аккаунт с таким email не найден."), "error")
+                else:
+                    current_app.logger.exception("Start password reset failed")
+                    flash(translate("Не удалось отправить код подтверждения. Попробуйте ещё раз позже."), "error")
+            return render_template("auth/login.html", telegram_auth=telegram_auth, **_pending_password_reset_context())
         email = request.form.get("email")
         password = request.form.get("password")
         remember = True if request.form.get("remember_me") else False
@@ -174,11 +312,11 @@ def login():
             locked, _ = throttle_is_locked("login", f"email:{email.lower().strip()}")
             if locked:
                 flash(translate("Слишком много попыток входа. Попробуйте позже."), "error")
-                return render_template("auth/login.html", telegram_auth=telegram_auth), 429
+                return render_template("auth/login.html", **template_context), 429
         locked, _ = throttle_is_locked("login", f"ip:{ip}")
         if locked:
             flash(translate("Слишком много попыток входа. Попробуйте позже."), "error")
-            return render_template("auth/login.html", telegram_auth=telegram_auth), 429
+            return render_template("auth/login.html", **template_context), 429
         user = User.query.filter_by(email=email.lower().strip() if email else email).first()
         if user and user.check_password(password):
             chosen = _normalized_lang()
@@ -198,7 +336,7 @@ def login():
         if email:
             throttle_register_fail("login", f"email:{email.lower().strip()}", window_seconds=15 * 60, max_fails=6, lock_seconds=15 * 60)
         throttle_register_fail("login", f"ip:{ip}", window_seconds=15 * 60, max_fails=12, lock_seconds=15 * 60)
-    return render_template("auth/login.html", telegram_auth=telegram_auth)
+    return render_template("auth/login.html", **template_context)
 
 
 def referral(code):
@@ -411,7 +549,7 @@ def logout():
 
 def telegram_auth_status(code: str):
     purpose = None
-    for candidate in ("login", "link"):
+    for candidate in ("login", "link", "password_reset"):
         if session.get(_telegram_session_key(candidate)) == code:
             purpose = candidate
             break
@@ -434,6 +572,10 @@ def telegram_auth_status(code: str):
         login_user(user, remember=False)
         session["lang"] = chosen
         return jsonify({"status": "ok", "redirect": localized_url("dashboard")})
+    if purpose == "password_reset":
+        if not current_user.is_authenticated or challenge.target_user_id != current_user.id:
+            return jsonify({"status": "forbidden"}), 403
+        return jsonify({"status": "ok", "redirect": localized_url("dashboard", tab="settings", pw_reset_tg=challenge.code)})
     if not current_user.is_authenticated or challenge.target_user_id != current_user.id:
         return jsonify({"status": "forbidden"}), 403
     session.pop(_telegram_session_key("link"), None)
@@ -476,6 +618,121 @@ def account_change_password():
         db.session.commit()
         throttle_reset("change_password", f"ip:{ip}")
         flash(translate("Пароль успешно изменён"), "success")
+    except Exception:
+        db.session.rollback()
+        flash(translate("Не удалось изменить пароль. Попробуйте позже."), "error")
+    return _settings_redirect()
+
+
+@login_required
+def account_password_reset_start():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    current_email = (current_user.email or "").strip().lower()
+    if not current_email or is_telegram_placeholder_email(current_email):
+        flash(translate("Сначала привяжите email, чтобы сбрасывать пароль через код."), "error")
+        return _settings_redirect()
+    try:
+        start_pending_password_reset(email=current_email, lang=_normalized_lang())
+        flash(translate("Мы отправили код для сброса пароля на ваш email."), "success")
+    except EmailOtpError as exc:
+        if str(exc) == "user_not_found":
+            flash(translate("Аккаунт с таким email не найден."), "error")
+        else:
+            current_app.logger.exception("Start password reset in settings failed")
+            flash(translate("Не удалось отправить код подтверждения. Попробуйте ещё раз позже."), "error")
+    return _settings_redirect()
+
+
+@login_required
+def account_password_reset_resend():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    current_email = (current_user.email or "").strip().lower()
+    try:
+        resend_pending_password_reset(current_email)
+        flash(translate("Новый код для сброса пароля отправлен на email."), "success")
+    except EmailOtpError as exc:
+        reason = str(exc)
+        if reason == "not_found":
+            flash(translate("Запрос на сброс пароля не найден. Начните заново."), "error")
+        elif reason == "cooldown":
+            flash(translate("Код уже отправлен. Подождите немного перед повторной отправкой."), "error")
+        else:
+            current_app.logger.exception("Resend password reset in settings failed")
+            flash(translate("Не удалось отправить код подтверждения. Попробуйте ещё раз позже."), "error")
+    return _settings_redirect()
+
+
+@login_required
+def account_password_reset_cancel():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    current_email = (current_user.email or "").strip().lower()
+    if current_email and not is_telegram_placeholder_email(current_email):
+        delete_pending_password_reset(get_pending_password_reset(current_email))
+    else:
+        session.pop(_telegram_session_key("password_reset"), None)
+    flash(translate("Сброс пароля отменён."), "info")
+    return _settings_redirect()
+
+
+@login_required
+def account_password_reset_verify():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    current_email = (current_user.email or "").strip().lower()
+    new_password = request.form.get("new_password") or ""
+    new_password2 = request.form.get("new_password2") or ""
+    if new_password != new_password2:
+        flash(translate("Пароли не совпадают"), "error")
+        return _settings_redirect()
+    if not validate_password_strength(new_password):
+        flash(translate("Пароль слишком слабый. Используйте минимум 10 символов и комбинацию букв/цифр/символов."), "error")
+        return _settings_redirect()
+
+    pending = None
+    if current_email and not is_telegram_placeholder_email(current_email):
+        otp_code = (request.form.get("otp_code") or "").strip()
+        if not otp_code.isdigit() or len(otp_code) != 6:
+            flash(translate("Введите 6-значный код из письма."), "error")
+            return _settings_redirect()
+        ok, reason, pending = verify_pending_password_reset(current_email, otp_code)
+        if not ok or not pending:
+            if reason == "expired":
+                flash(translate("Срок действия кода истёк. Отправьте новый код."), "error")
+            elif reason == "too_many_attempts":
+                flash(translate("Слишком много неверных попыток. Запросите новый код."), "error")
+            elif reason == "not_found":
+                flash(translate("Запрос на сброс пароля не найден. Начните заново."), "error")
+            else:
+                flash(translate("Неверный код подтверждения."), "error")
+            return _settings_redirect()
+    else:
+        challenge = _active_password_reset_telegram_challenge()
+        if not challenge:
+            flash(translate("Сначала подтвердите сброс пароля через Telegram."), "error")
+            return _settings_redirect()
+        ok, reason, _user = consume_approved_challenge(challenge.code, purpose="password_reset")
+        if not ok:
+            if reason == "pending":
+                flash(translate("Подтвердите сброс пароля в Telegram, затем попробуйте снова."), "error")
+            else:
+                flash(translate("Подтверждение через Telegram недействительно. Начните заново."), "error")
+            return _settings_redirect()
+
+    try:
+        current_user.set_password(new_password)
+        db.session.commit()
+        if pending:
+            delete_pending_password_reset(pending)
+        else:
+            session.pop(_telegram_session_key("password_reset"), None)
+        flash(translate("Пароль успешно обновлён."), "success")
     except Exception:
         db.session.rollback()
         flash(translate("Не удалось изменить пароль. Попробуйте позже."), "error")
@@ -758,6 +1015,10 @@ def register(app) -> None:
     app.add_url_rule("/account/change-email/cancel", endpoint="account_change_email_cancel", view_func=account_change_email_cancel, methods=["POST"])
     app.add_url_rule("/account/change-email/verify", endpoint="account_change_email_verify", view_func=account_change_email_verify, methods=["POST"])
     app.add_url_rule("/account/change-password", endpoint="account_change_password", view_func=account_change_password, methods=["POST"])
+    app.add_url_rule("/account/password-reset", endpoint="account_password_reset_start", view_func=account_password_reset_start, methods=["POST"])
+    app.add_url_rule("/account/password-reset/resend", endpoint="account_password_reset_resend", view_func=account_password_reset_resend, methods=["POST"])
+    app.add_url_rule("/account/password-reset/cancel", endpoint="account_password_reset_cancel", view_func=account_password_reset_cancel, methods=["POST"])
+    app.add_url_rule("/account/password-reset/verify", endpoint="account_password_reset_verify", view_func=account_password_reset_verify, methods=["POST"])
     app.add_url_rule("/account/delete", endpoint="account_delete", view_func=account_delete, methods=["POST"])
     app.add_url_rule("/api/account/verify-password", endpoint="api_account_verify_password", view_func=api_account_verify_password, methods=["POST"])
     app.add_url_rule("/api/account/change-password", endpoint="api_account_change_password", view_func=api_account_change_password, methods=["POST"])

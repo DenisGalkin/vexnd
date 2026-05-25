@@ -73,9 +73,18 @@ def handle_message(message: dict[str, object]) -> None:
             result_key = capture_bot_referral(user, start_arg.removeprefix("ref_"))
             if result_key:
                 send_message(chat_id, t(state, result_key))
-        elif start_arg.startswith("login_") or start_arg.startswith("link_"):
-            purpose, code = start_arg.split("_", 1)
-            prompt_key = "telegram_auth_request_login" if purpose == "login" else "telegram_auth_request_link"
+        elif start_arg.startswith("login_") or start_arg.startswith("link_") or start_arg.startswith("password_reset_"):
+            if start_arg.startswith("password_reset_"):
+                purpose = "password_reset"
+                code = start_arg.removeprefix("password_reset_")
+            else:
+                purpose, code = start_arg.split("_", 1)
+            if purpose == "login":
+                prompt_key = "telegram_auth_request_login"
+            elif purpose == "link":
+                prompt_key = "telegram_auth_request_link"
+            else:
+                prompt_key = "telegram_auth_request_password_reset"
             send_message(chat_id, t(state, prompt_key), telegram_auth_confirm_keyboard(code, state))
             return
 

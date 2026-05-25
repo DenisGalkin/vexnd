@@ -452,7 +452,7 @@
               <div class="settings-note settings-note--info rounded-2xl px-4 py-3 text-sm text-cyan-100/90">
                 <div>{{ _('Подтвердите привязку в Telegram-боте, после чего кабинет обновится автоматически.') }}</div>
                 <div id="tg-link-status" class="mt-2 text-cyan-100/70" data-status-url="{{ telegram_auth.status_url }}">
-                  {{ _('Ожидаем подтверждение в боте…') }}
+                  {{ _('Статус привязки обновляется автоматически.') }}
                 </div>
               </div>
             {% endif %}
@@ -465,31 +465,108 @@
           <div class="settings-section-head">
             <div>
               <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Безопасность') }}</h3>
-              <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Обновите пароль для сайта и связанных входов в аккаунт.') }}</p>
+              <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Сбросьте пароль через код из письма, если хотите обновить доступ без ввода старого пароля.') }}</p>
             </div>
           </div>
 
-          <form id="password-form" class="settings-form space-y-4" data-api-form data-endpoint="{{ url_for('api_account_change_password') }}">
+          {% if current_email_missing %}
+            {% if telegram_account and password_reset_telegram_auth %}
+          <div class="settings-note rounded-2xl px-4 py-3 text-sm text-gray-300">
+            <div class="font-semibold text-white">{{ _('Сброс пароля через Telegram') }}</div>
+            {% if password_reset_telegram_approved %}
+            <div class="mt-1">{{ _('Подтверждение получено. Теперь задайте новый пароль ниже.') }}</div>
+            {% else %}
+            <div class="mt-1">{{ _('Подтвердите сброс пароля в Telegram, после чего здесь появится форма для нового пароля.') }}</div>
+            {% endif %}
+          </div>
+
+            {% if not password_reset_telegram_approved %}
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <a href="{{ password_reset_telegram_auth.bot_url }}" target="_blank" rel="noopener noreferrer" class="settings-action settings-action-primary">
+              {{ _('Открыть Telegram и подтвердить') }}
+            </a>
+            <form method="POST" action="{{ url_for('account_password_reset_cancel') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="settings-action settings-action-muted">{{ _('Отмена') }}</button>
+            </form>
+          </div>
+          <div id="tg-password-reset-status" class="text-sm text-cyan-100/70" data-status-url="{{ password_reset_telegram_auth.status_url }}">
+            {{ _('Статус подтверждения обновляется автоматически.') }}
+          </div>
+            {% else %}
+          <form class="settings-form space-y-4" method="POST" action="{{ url_for('account_password_reset_verify') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label class="settings-field">
+                <span>{{ _('Новый пароль') }}</span>
+                <input type="password" name="new_password" autocomplete="new-password" required>
+              </label>
+              <label class="settings-field">
+                <span>{{ _('Повторите пароль') }}</span>
+                <input type="password" name="new_password2" autocomplete="new-password" required>
+              </label>
+            </div>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p class="text-sm text-gray-500">{{ _('После сохранения новый пароль начнёт действовать сразу для входа на сайте.') }}</p>
+              <button type="submit" class="settings-action settings-action-primary">{{ _('Сохранить новый пароль') }}</button>
+            </div>
+          </form>
+            {% endif %}
+            {% else %}
+          <div class="settings-note rounded-2xl px-4 py-3 text-sm text-gray-400">
+            {{ _('Для сброса пароля нужен связанный Telegram или привязанный email.') }}
+          </div>
+            {% endif %}
+          {% elif pending_password_reset %}
+          <div class="settings-note rounded-2xl px-4 py-3 text-sm text-gray-300">
+            <div class="font-semibold text-white">{{ _('Подтвердите сброс пароля') }}</div>
+            <div class="mt-1">
+              {{ _('Мы отправили 6-значный код на адрес:') }} <span class="font-mono">{{ pending_password_reset_masked }}</span><br>
+              {{ _('Введите код и новый пароль. Код действует') }} {{ email_change_otp_ttl_minutes }} {{ _('минут') }}.
+            </div>
+          </div>
+
+          <form class="settings-form space-y-4" method="POST" action="{{ url_for('account_password_reset_verify') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="grid gap-3 sm:grid-cols-3">
               <label class="settings-field">
-                <span>{{ _('Текущий пароль') }}</span>
-                <input type="password" name="current_password" autocomplete="current-password" required>
+                <span>{{ _('Код подтверждения') }}</span>
+                <input type="text" name="otp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required>
               </label>
               <label class="settings-field">
                 <span>{{ _('Новый пароль') }}</span>
                 <input type="password" name="new_password" autocomplete="new-password" required>
               </label>
               <label class="settings-field">
-                <span>{{ _('Повтор') }}</span>
+                <span>{{ _('Повторите пароль') }}</span>
                 <input type="password" name="new_password2" autocomplete="new-password" required>
               </label>
             </div>
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p class="text-sm text-gray-500">{{ _('Кнопка станет активной после заполнения всех трёх полей.') }}</p>
-              <button type="submit" id="password-submit" class="settings-action settings-action-primary" disabled>{{ _('Сохранить') }}</button>
+              <p class="text-sm text-gray-500">{{ _('Если письма нет, проверьте папку Спам и подождите минуту перед повторной отправкой.') }}</p>
+              <button type="submit" class="settings-action settings-action-primary">{{ _('Сохранить новый пароль') }}</button>
             </div>
-            <div class="settings-feedback hidden" data-form-status></div>
           </form>
+
+          <div class="flex flex-col gap-3 sm:flex-row">
+            <form method="POST" action="{{ url_for('account_password_reset_resend') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="settings-action settings-action-muted">{{ _('Отправить код повторно') }}</button>
+            </form>
+            <form method="POST" action="{{ url_for('account_password_reset_cancel') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="settings-action settings-action-muted">{{ _('Отмена') }}</button>
+            </form>
+          </div>
+          {% else %}
+          <form class="settings-form space-y-4" method="POST" action="{{ url_for('account_password_reset_start') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p class="text-sm text-gray-500">{{ _('Мы отправим код подтверждения на ваш текущий email, после чего можно будет задать новый пароль.') }}</p>
+              <button type="submit" class="settings-action settings-action-primary">{{ _('Сбросить пароль через email') }}</button>
+            </div>
+          </form>
+          {% endif %}
         </section>
 
         <section class="settings-section settings-section--danger mt-2">
@@ -915,37 +992,6 @@
     });
   }
 
-  const passwordForm = document.getElementById('password-form');
-  const passwordSubmit = document.getElementById('password-submit');
-  if (passwordForm && passwordSubmit) {
-    const passwordInputs = Array.from(passwordForm.querySelectorAll('input'));
-    const syncPasswordButton = () => {
-      const ready = passwordInputs.every((input) => input.value.trim().length > 0);
-      passwordSubmit.disabled = !ready;
-    };
-    passwordInputs.forEach((input) => input.addEventListener('input', syncPasswordButton));
-    syncPasswordButton();
-
-    passwordForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const statusNode = passwordForm.querySelector('[data-form-status]');
-      clearFormStatus(statusNode);
-      const formData = new FormData(passwordForm);
-      try {
-        const data = await postJson(passwordForm.dataset.endpoint, {
-          current_password: formData.get('current_password'),
-          new_password: formData.get('new_password'),
-          new_password2: formData.get('new_password2'),
-        });
-        passwordForm.reset();
-        syncPasswordButton();
-        showFormStatus(statusNode, data.message, 'success');
-      } catch (error) {
-        showFormStatus(statusNode, error.message, 'error');
-      }
-    });
-  }
-
   const deleteForm = document.getElementById('delete-form');
   const deletePassword = document.getElementById('delete-password');
   const deleteConfirmWord = document.getElementById('delete-confirm-word');
@@ -1050,6 +1096,42 @@
         }
         if (data.status === 'merge_failed'){
           node.textContent = "{{ _('Не удалось автоматически объединить аккаунты. Попробуйте ещё раз позже или напишите в поддержку.') }}";
+          return;
+        }
+      }catch(e){}
+      if (attempts < 120) {
+        setTimeout(tick, 3000);
+      }
+    }
+
+    setTimeout(tick, 2500);
+  })();
+
+  (function pollTelegramPasswordReset(){
+    const node = document.getElementById('tg-password-reset-status');
+    if (!node) return;
+    let attempts = 0;
+
+    async function tick(){
+      attempts += 1;
+      try{
+        const resp = await fetch(node.dataset.statusUrl, {credentials: 'same-origin', headers: {'Accept': 'application/json'}});
+        const data = await resp.json();
+        if (data.status === 'ok'){
+          node.textContent = "{{ _('Подтверждение получено. Обновляем настройки…') }}";
+          window.location.href = data.redirect || "{{ url_for('dashboard') }}?tab=settings";
+          return;
+        }
+        if (data.status === 'expired'){
+          node.textContent = "{{ _('Запрос истёк. Обновите страницу настроек и начните заново.') }}";
+          return;
+        }
+        if (data.status === 'declined'){
+          node.textContent = "{{ _('Сброс пароля отклонён в Telegram. Обновите страницу, если хотите создать новый запрос.') }}";
+          return;
+        }
+        if (data.status === 'challenge_invalid'){
+          node.textContent = "{{ _('Подтверждение не удалось. Убедитесь, что используете связанный Telegram-аккаунт.') }}";
           return;
         }
       }catch(e){}

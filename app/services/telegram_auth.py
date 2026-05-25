@@ -76,6 +76,11 @@ def approve_telegram_auth_challenge(code: str | None, telegram_id: int) -> tuple
                 db.session.commit()
                 return False, merge_reason, challenge
             account.user_id = challenge.target_user_id
+    if challenge.purpose == "password_reset":
+        if not challenge.target_user_id or int(account.user_id) != int(challenge.target_user_id):
+            challenge.status_reason = "challenge_invalid"
+            db.session.commit()
+            return False, "challenge_invalid", challenge
     challenge.telegram_id = int(telegram_id)
     challenge.approved_user_id = int(account.user_id)
     challenge.status_reason = None

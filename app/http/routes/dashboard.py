@@ -20,6 +20,7 @@ from app.domain.plans import format_usd_amount, plan_details
 from app.services.coupons import coupon_pricing, normalize_coupon_code
 from app.services.email_change_otp import get_pending_email_change
 from app.services.email_otp import OTP_TTL_MINUTES
+from app.services.password_reset_otp import get_pending_password_reset
 from app.services.payments.reconcile import process_payment_intent
 from app.services.referrals import get_or_create_referral_code, mask_email
 from app.services.remnawave import is_telegram_placeholder_email
@@ -123,6 +124,30 @@ def dashboard():
     telegram_account = TelegramAccount.query.filter_by(user_id=current_user.id).first()
     pending_email_change = get_pending_email_change(current_user.id)
     current_email_value = (current_user.email or "").strip().lower()
+    pending_password_reset = None
+    password_reset_telegram_auth = None
+    password_reset_telegram_approved = False
+    if current_email_value and not is_telegram_placeholder_email(current_email_value):
+        pending_password_reset = get_pending_password_reset(current_email_value)
+    elif telegram_account:
+        session_key = "tg_auth_code:password_reset"
+        challenge = get_active_challenge(request.args.get("pw_reset_tg") or "", purpose="password_reset")
+        if not challenge or challenge.target_user_id != current_user.id:
+            challenge = get_active_challenge(session.get(session_key), purpose="password_reset")
+        if challenge and challenge.target_user_id != current_user.id:
+            challenge = None
+        if not challenge:
+            challenge = create_telegram_auth_challenge(purpose="password_reset", target_user_id=current_user.id)
+            session[session_key] = challenge.code
+        start_value = f"password_reset_{challenge.code}"
+        password_reset_telegram_auth = {
+            "code": challenge.code,
+            "minutes": CHALLENGE_TTL_MINUTES,
+            "bot_url": telegram_bot_deeplink(start_value),
+            "status_url": url_for("telegram_auth_status", code=challenge.code),
+            "command": f"/start {start_value}",
+        }
+        password_reset_telegram_approved = challenge.approved_at is not None
     telegram_auth = None
     if not telegram_account:
         session_key = "tg_auth_code:link"
@@ -165,6 +190,10 @@ def dashboard():
         current_email_missing=is_telegram_placeholder_email(current_email_value),
         pending_email_change=pending_email_change,
         pending_email_change_masked=mask_email(pending_email_change.new_email) if pending_email_change else None,
+        pending_password_reset=pending_password_reset,
+        pending_password_reset_masked=mask_email(pending_password_reset.email) if pending_password_reset else None,
+        password_reset_telegram_auth=password_reset_telegram_auth,
+        password_reset_telegram_approved=password_reset_telegram_approved,
         email_change_otp_ttl_minutes=OTP_TTL_MINUTES,
     )
 

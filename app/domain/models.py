@@ -196,6 +196,20 @@ class PendingEmailChange(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 
+class PendingPasswordReset(db.Model):
+    __tablename__ = "pending_password_reset"
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), nullable=False, unique=True, index=True)
+    otp_code_hash = db.Column(db.String(64), nullable=False)
+    otp_expires_at = db.Column(db.DateTime, nullable=False, index=True)
+    otp_attempts = db.Column(db.Integer, default=0, nullable=False)
+    send_count = db.Column(db.Integer, default=1, nullable=False)
+    last_sent_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
 class TelegramAuthChallenge(db.Model):
     __tablename__ = "telegram_auth_challenge"
 
