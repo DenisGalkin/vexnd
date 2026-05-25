@@ -7,7 +7,8 @@ from flask_login import current_user, login_required, login_user, logout_user
 
 from app.core.extensions import db
 from app.services.account_deletion import delete_user_account
-from app.domain.models import ReferralCode, ReferralFingerprint, ReferralSignup, User, UserSecurity
+from app.domain.models import PendingRegistration, ReferralCode, ReferralFingerprint, ReferralSignup, User, UserSecurity
+from app.services.email_otp import OTP_RESEND_COOLDOWN_SECONDS, OTP_TTL_MINUTES, EmailOtpError, delete_pending_registration, get_pending_registration, resend_pending_registration, start_pending_registration, verify_pending_registration
 from app.services.referrals import mask_email
 from app.services.security import client_ip, device_fingerprint, renew_session, throttle_is_locked, throttle_register_fail, throttle_reset, validate_password_strength
 from app.services.telegram_auth import CHALLENGE_TTL_MINUTES, consume_approved_challenge, create_telegram_auth_challenge, get_active_challenge
@@ -40,6 +41,55 @@ def _telegram_challenge_context(*, purpose: str, target_user_id: int | None = No
         "status_url": url_for("telegram_auth_status", code=challenge.code),
         "command": f"/start {start_value}",
     }
+
+
+def _pending_registration_session_key() -> str:
+    return "pending_registration_email"
+
+
+def _clear_pending_registration_session() -> None:
+    session.pop(_pending_registration_session_key(), None)
+
+
+def _store_pending_registration_session(email: str) -> None:
+    session[_pending_registration_session_key()] = email.strip().lower()
+
+
+def _pending_registration_context() -> dict[str, object]:
+    pending_email = (session.get(_pending_registration_session_key()) or "").strip().lower()
+    pending = get_pending_registration(pending_email)
+    if not pending:
+        _clear_pending_registration_session()
+        return {"verification_pending": False}
+    return {
+        "verification_pending": True,
+        "pending_email": pending.email,
+        "masked_pending_email": mask_email(pending.email),
+        "otp_ttl_minutes": OTP_TTL_MINUTES,
+        "resend_cooldown_seconds": OTP_RESEND_COOLDOWN_SECONDS,
+    }
+
+
+def _complete_referral_signup(user: User, pending: PendingRegistration) -> None:
+    try:
+        if not pending.referral_code or not pending.referral_fingerprint:
+            return
+        rc = ReferralCode.query.filter_by(code=pending.referral_code).first()
+        if not rc or not rc.user_id or rc.user_id == user.id:
+            return
+        if ReferralSignup.query.filter_by(referred_user_id=user.id).first():
+            return
+        if ReferralFingerprint.query.filter_by(fingerprint=pending.referral_fingerprint).first():
+            return
+        db.session.add(ReferralSignup(referrer_user_id=rc.user_id, referred_user_id=user.id, code_used=pending.referral_code))
+        db.session.add(ReferralFingerprint(fingerprint=pending.referral_fingerprint, referred_user_id=user.id))
+        db.session.commit()
+    except Exception:
+        current_app.logger.exception("Referral link on register confirm failed")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
 
 
 def login():
@@ -154,8 +204,83 @@ def register_user():
                 referrer_masked = None
                 referrer_id = None
                 referral_ok = False
+    template_context = {
+        "referrer_email": referrer_masked,
+        **_pending_registration_context(),
+    }
     if request.method == "POST":
         ip = client_ip()
+        action = (request.form.get("action") or "start").strip().lower()
+        if action == "resend":
+            pending_email = (session.get(_pending_registration_session_key()) or "").strip().lower()
+            if not pending_email:
+                flash(translate("Сессия подтверждения истекла. Заполните форму регистрации ещё раз."), "error")
+                return render_template("auth/register.html", **template_context)
+            try:
+                resend_pending_registration(pending_email)
+            except EmailOtpError as exc:
+                if str(exc) == "cooldown":
+                    flash(translate("Код уже отправлен. Подождите немного перед повторной отправкой."), "error")
+                else:
+                    current_app.logger.exception("Resend OTP failed")
+                    flash(translate("Не удалось отправить код подтверждения. Попробуйте ещё раз позже."), "error")
+            else:
+                flash(translate("Новый код подтверждения отправлен на email."), "success")
+            return render_template("auth/register.html", referrer_email=referrer_masked, **_pending_registration_context())
+        if action == "verify":
+            pending_email = (session.get(_pending_registration_session_key()) or "").strip().lower()
+            otp_code = (request.form.get("otp_code") or "").strip()
+            if not pending_email:
+                flash(translate("Сессия подтверждения истекла. Заполните форму регистрации ещё раз."), "error")
+                return render_template("auth/register.html", **template_context)
+            if not otp_code or not otp_code.isdigit() or len(otp_code) != 6:
+                flash(translate("Введите 6-значный код из письма."), "error")
+                return render_template("auth/register.html", referrer_email=referrer_masked, **_pending_registration_context())
+            ok, reason, pending = verify_pending_registration(pending_email, otp_code)
+            if not ok or not pending:
+                if reason == "expired":
+                    flash(translate("Срок действия кода истёк. Отправьте новый код."), "error")
+                elif reason == "too_many_attempts":
+                    flash(translate("Слишком много неверных попыток. Запросите новый код."), "error")
+                elif reason == "not_found":
+                    _clear_pending_registration_session()
+                    flash(translate("Сессия подтверждения истекла. Заполните форму регистрации ещё раз."), "error")
+                else:
+                    flash(translate("Неверный код подтверждения."), "error")
+                return render_template("auth/register.html", referrer_email=referrer_masked, **_pending_registration_context())
+            if User.query.filter_by(email=pending.email).first():
+                delete_pending_registration(pending)
+                _clear_pending_registration_session()
+                flash(translate("Email уже зарегистрирован"), "error")
+                return render_template("auth/register.html", referrer_email=referrer_masked)
+            chosen_lang = pending.lang if pending.lang in ("ru", "en") else get_locale()
+            user = User(email=pending.email, lang=chosen_lang)
+            user.password_hash = pending.password_hash
+            try:
+                db.session.add(user)
+                db.session.commit()
+            except Exception:
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                if User.query.filter_by(email=pending.email).first():
+                    delete_pending_registration(pending)
+                    _clear_pending_registration_session()
+                    flash(translate("Email уже зарегистрирован"), "error")
+                    return render_template("auth/register.html", referrer_email=referrer_masked)
+                raise
+            _complete_referral_signup(user, pending)
+            delete_pending_registration(pending)
+            _clear_pending_registration_session()
+            session.pop("ref_code", None)
+            session.pop("ref_code_set_at", None)
+            renew_session(preserve_keys=("lang",))
+            login_user(user, remember=True)
+            session["lang"] = chosen_lang
+            flash(translate("Email подтвержден. Регистрация завершена, добро пожаловать."), "success")
+            throttle_reset("register", f"ip:{ip}")
+            return redirect_localized("dashboard")
         email_raw = request.form.get("email")
         password = request.form.get("password")
         password2 = request.form.get("password2")
@@ -181,48 +306,25 @@ def register_user():
             throttle_register_fail("register", f"ip:{ip}", window_seconds=30 * 60, max_fails=10, lock_seconds=30 * 60)
             return render_template("auth/register.html", referrer_email=referrer_masked)
         chosen_lang = get_locale()
-        user = User(email=email, lang=chosen_lang)
-        user.set_password(password)
+        referral_fp = None
+        if ref_code and referral_ok:
+            referral_fp = device_fingerprint(ip, (request.headers.get("User-Agent", "") or "")[:250])
         try:
-            db.session.add(user)
-            db.session.commit()
-        except Exception:
-            try:
-                db.session.rollback()
-            except Exception:
-                pass
-            if User.query.filter_by(email=email).first():
-                flash(translate("Email уже зарегистрирован"), "error")
-                return render_template("auth/register.html", referrer_email=referrer_masked)
-            raise
-        ref_code = (session.get("ref_code") or "").strip().upper()
-        try:
-            if ref_code and referral_ok:
-                rc = ReferralCode.query.filter_by(code=ref_code).first()
-                if rc and rc.user_id and rc.user_id != user.id and not ReferralSignup.query.filter_by(referred_user_id=user.id).first():
-                    db.session.add(ReferralSignup(referrer_user_id=rc.user_id, referred_user_id=user.id, code_used=ref_code))
-                    ip2 = request.headers.get("X-Forwarded-For", request.remote_addr) or request.remote_addr
-                    ua2 = request.headers.get("User-Agent", "")[:250]
-                    fp2 = device_fingerprint(ip2, ua2)
-                    if fp2 and not ReferralFingerprint.query.filter_by(fingerprint=fp2).first():
-                        db.session.add(ReferralFingerprint(fingerprint=fp2, referred_user_id=user.id))
-                    db.session.commit()
-        except Exception:
-            current_app.logger.exception("Referral link on register failed")
-            try:
-                db.session.rollback()
-            except Exception:
-                pass
-        finally:
-            session.pop("ref_code", None)
-            session.pop("ref_code_set_at", None)
-        renew_session(preserve_keys=("lang",))
-        login_user(user, remember=True)
-        session["lang"] = chosen_lang
-        flash(translate("Регистрация успешна! Добро пожаловать."), "success")
-        throttle_reset("register", f"ip:{ip}")
-        return redirect_localized("dashboard")
-    return render_template("auth/register.html", referrer_email=referrer_masked)
+            start_pending_registration(
+                email=email,
+                password=password,
+                lang=chosen_lang,
+                referral_code=ref_code if referral_ok else None,
+                referral_fingerprint=referral_fp,
+            )
+        except EmailOtpError:
+            current_app.logger.exception("Start pending registration failed")
+            flash(translate("Не удалось отправить код подтверждения. Попробуйте ещё раз позже."), "error")
+            return render_template("auth/register.html", referrer_email=referrer_masked)
+        _store_pending_registration_session(email)
+        flash(translate("Мы отправили 6-значный код подтверждения на ваш email."), "success")
+        return render_template("auth/register.html", referrer_email=referrer_masked, **_pending_registration_context())
+    return render_template("auth/register.html", **template_context)
 
 
 @login_required

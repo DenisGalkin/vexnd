@@ -31,8 +31,48 @@
         </div>
         {% endif %}
 
+        {% if verification_pending %}
+        <div class="mb-6 rounded-xl border border-cyan-500/25 bg-cyan-500/10 p-4">
+            <div class="font-semibold text-cyan-100">{{ _('Подтвердите email') }}</div>
+            <div class="text-sm text-gray-300 mt-1">
+                {{ _('Мы отправили 6-значный код на адрес:') }} <span class="font-mono">{{ masked_pending_email }}</span><br>
+                {{ _('Введите код ниже. Он действует') }} {{ otp_ttl_minutes }} {{ _('минут') }}.
+            </div>
+        </div>
+
+        <form method="POST" action="{{ request.path }}" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="verify">
+            <div>
+                <label for="otp_code" class="block text-sm font-medium text-gray-300 mb-2">
+                    {{ _('Код подтверждения') }}
+                </label>
+                <input type="text" id="otp_code" name="otp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required
+                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white tracking-[0.35em] text-center focus:outline-none focus:ring-2 focus:ring-cyan-600"
+                       placeholder="123456">
+            </div>
+
+            <button type="submit"
+                    class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-3 px-4 rounded-lg transition-all hover-glow">
+                {{ _('Подтвердить email') }}
+            </button>
+        </form>
+
+        <form method="POST" action="{{ request.path }}" class="mt-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="resend">
+            <button type="submit"
+                    class="w-full border border-gray-700 bg-gray-900/60 hover:bg-gray-800 text-gray-200 font-semibold py-3 px-4 rounded-lg transition-all">
+                {{ _('Отправить код повторно') }}
+            </button>
+        </form>
+        <div class="text-center mt-4 text-sm text-gray-400">
+            {{ _('Если письма нет, проверьте папку Спам и подождите') }} {{ resend_cooldown_seconds }} {{ _('секунд перед повторной отправкой.') }}
+        </div>
+        {% else %}
 <form method="POST" action="{{ request.path }}" class="space-y-6">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="start">
             <div>
                 <label for="email" class="block text-sm font-medium text-gray-300 mb-2">
                     Email
@@ -63,6 +103,7 @@
                 {{ _('Зарегистрироваться') }}
             </button>
         </form>
+        {% endif %}
         
         <div class="text-center mt-6">
             <p class="text-gray-400">
