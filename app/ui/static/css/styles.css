@@ -232,16 +232,7 @@
 }
 
 .dashboard-shell::before {
-    content: "";
-    position: absolute;
-    inset: 0 auto auto 50%;
-    width: min(88vw, 40rem);
-    height: 18rem;
-    transform: translateX(-50%);
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.18), transparent 68%);
-    filter: blur(24px);
-    pointer-events: none;
-    z-index: 0;
+    content: none;
 }
 
 .dashboard-surface {
@@ -251,10 +242,7 @@
 
 .dashboard-banner {
     position: relative;
-    background:
-        radial-gradient(circle at top right, rgba(236, 72, 153, 0.16), transparent 34%),
-        radial-gradient(circle at left center, rgba(139, 92, 246, 0.18), transparent 42%),
-        rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.045);
 }
 
 .dashboard-status-pill {
@@ -264,7 +252,7 @@
     min-height: 2.75rem;
     padding: 0.75rem 1rem;
     border-radius: 1rem;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.09);
     background: rgba(255,255,255,0.04);
     color: #f9fafb;
     font-size: 0.875rem;
@@ -290,13 +278,9 @@
 }
 
 .dashboard-card {
-    background:
-        radial-gradient(circle at top right, rgba(139, 92, 246, 0.1), transparent 36%),
-        linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.025));
-    border: 1px solid rgba(255,255,255,0.1);
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.05),
-        0 14px 34px rgba(3, 7, 18, 0.14);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: none;
 }
 
 .dashboard-card-compact {
@@ -314,16 +298,9 @@
     flex-direction: column;
 }
 
-.subscription-panel--info {
-    background:
-        radial-gradient(circle at top left, rgba(16, 185, 129, 0.08), transparent 32%),
-        linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02));
-}
-
+.subscription-panel--info,
 .subscription-panel--action {
-    background:
-        radial-gradient(circle at top center, rgba(139, 92, 246, 0.16), transparent 34%),
-        linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025));
+    background: rgba(255,255,255,0.035);
 }
 
 .dashboard-label {
@@ -349,8 +326,8 @@
 }
 
 .dashboard-action:hover {
-    border-color: rgba(139, 92, 246, 0.4);
-    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,255,255,0.14);
+    background: rgba(255,255,255,0.065);
 }
 
 .dashboard-action-card {
@@ -363,8 +340,8 @@
 }
 
 .dashboard-action-card:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18);
+    transform: none;
+    box-shadow: none;
 }
 
 .dashboard-action-icon {
@@ -375,9 +352,9 @@
     height: 2.75rem;
     border-radius: 0.95rem;
     color: rgb(196 181 253);
-    background: linear-gradient(180deg, rgba(139, 92, 246, 0.2), rgba(255,255,255,0.06));
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+    background: rgba(139, 92, 246, 0.12);
+    border: 1px solid rgba(139, 92, 246, 0.16);
+    box-shadow: none;
     flex-shrink: 0;
 }
 
@@ -500,11 +477,9 @@
     display: flex;
     justify-content: center;
     padding: 1rem;
-    border-radius: 1.75rem;
+    border-radius: 1.5rem;
     border: 1px solid rgba(255,255,255,0.08);
-    background:
-        radial-gradient(circle at top, rgba(236, 72, 153, 0.12), transparent 36%),
-        rgba(255,255,255,0.03);
+    background: rgba(255,255,255,0.03);
 }
 
 .dashboard-action-column {
@@ -554,15 +529,11 @@
 }
 
 .dashboard-table-wrap {
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: 1.25rem;
     overflow: hidden;
-    background:
-        radial-gradient(circle at top right, rgba(139, 92, 246, 0.08), transparent 38%),
-        linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.04),
-        0 16px 36px rgba(3, 7, 18, 0.14);
+    background: rgba(255,255,255,0.035);
+    box-shadow: none;
 }
 
 .hover\:scale-105,
@@ -933,29 +904,25 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     gap: 0.5rem;
     padding: var(--padding-sm) var(--padding-md);
     border-radius: var(--radius-base);
-    background:
-        radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 34%),
-        linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.024));
+    background: rgba(255,255,255,0.035);
     border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    box-shadow: none;
     color: rgba(229, 231, 235, 0.9);
     font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color var(--transition-duration) ease, color var(--transition-duration) ease, box-shadow var(--transition-duration) ease, border-color var(--transition-duration) ease;
+    transition: background-color var(--transition-duration) ease, color var(--transition-duration) ease, border-color var(--transition-duration) ease;
     white-space: nowrap;
 }
 .settings-nav-button:hover {
-    background:
-        radial-gradient(circle at top left, rgba(139, 92, 246, 0.1), transparent 34%),
-        linear-gradient(180deg, rgba(255,255,255,0.065), rgba(255,255,255,0.03));
+    background: rgba(255,255,255,0.055);
     border-color: rgba(255,255,255,0.12);
 }
 .settings-nav-button.active {
-    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    background: rgba(139, 92, 246, 0.16);
     color: #fff;
-    border-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 12px 30px rgba(139, 92, 246, 0.22);
+    border-color: rgba(139, 92, 246, 0.28);
+    box-shadow: none;
 }
 
 .settings-content-section {
@@ -963,4 +930,49 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .settings-content-section.active {
     display: block;
+}
+
+/* Dashboard visual cleanup: strict, calmer surfaces without decorative glow. */
+.dashboard-shell::before,
+.dashboard-locked-orb {
+    content: none;
+    display: none;
+}
+.dashboard-banner,
+.dashboard-card,
+.stat-tile,
+.pill-muted,
+.dashboard-meter,
+.subscription-info-card,
+.dashboard-meter-expired,
+.dashboard-locked,
+.dashboard-expired-meta,
+.dashboard-table-wrap,
+.dashboard-link,
+.dashboard-action,
+.subscription-panel--info,
+.subscription-panel--action {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+}
+.dashboard-action:hover,
+.dashboard-link:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.14);
+}
+.dashboard-expired-icon {
+    background: rgba(248, 113, 113, 0.12);
+    box-shadow: none;
+}
+.dashboard-expired-cta {
+    background: rgba(139, 92, 246, 0.92);
+    box-shadow: none;
+}
+.dashboard-expired-cta:hover {
+    box-shadow: none;
+    filter: none;
+}
+.dashboard-qr-shell {
+    background: rgba(255, 255, 255, 0.03);
 }
