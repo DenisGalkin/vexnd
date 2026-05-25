@@ -882,3 +882,64 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
         background: rgba(3, 7, 18, 0.9);
     }
 }
+
+/* ------------------------------------------------------------------
+ * Settings navigation enhancements
+ *
+ * The settings view now features a side navigation with multiple
+ * sub‑sections (Аккаунт, Безопасность, Оплата, Устройства, Уведомления и
+ * Опасная зона).  These classes style the nav buttons and hide/show
+ * the corresponding sections.  The active item uses a vibrant
+ * gradient pulled from the primary/secondary design tokens, while
+ * inactive items blend into the glass background.  Section panels
+ * are hidden by default and toggled via JavaScript by adding the
+ * .active class.
+ */
+.settings-side-nav {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.settings-side-nav::-webkit-scrollbar {
+    display: none;
+}
+@media (min-width: 1024px) {
+    .settings-side-nav {
+        flex-direction: column;
+        width: 14rem;
+    }
+}
+
+.settings-nav-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: var(--padding-sm) var(--padding-md);
+    border-radius: var(--radius-base);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: rgba(229, 231, 235, 0.9);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition-duration) ease, color var(--transition-duration) ease, box-shadow var(--transition-duration) ease;
+    white-space: nowrap;
+}
+.settings-nav-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+.settings-nav-button.active {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 12px 30px rgba(139, 92, 246, 0.22);
+}
+
+.settings-content-section {
+    display: none;
+}
+.settings-content-section.active {
+    display: block;
+}
