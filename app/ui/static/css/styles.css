@@ -7,6 +7,141 @@
  * reusable classes as the project grows.
  */
 
+/*
+ * ------------------------------------------------------------------
+ * Design tokens and utility classes
+ *
+ * To achieve a cohesive, premium look and feel across all pages of the
+ * application we define a handful of CSS custom properties.  These
+ * variables capture the core colour palette, sizing and motion values
+ * used throughout the site.  Centralising tokens makes it trivial to
+ * adjust colours or spacing in one place without hunting through
+ * scattered styles, and helps ensure a unified visual language across
+ * the dashboard, checkout and informational pages.
+ *
+ * Variables follow the naming conventions of modern design systems:
+ * --color-primary    – the brand’s primary accent (purple)
+ * --color-secondary  – a complementary accent (pink)
+ * --color-success    – success/confirmation (green)
+ * --color-warning    – warning/attention (amber)
+ * --color-error      – error/destructive (red)
+ * --color-surface    – semi‑transparent surface used on cards/panels
+ * --color-border     – subtle border colour for glass and card edges
+ * --radius-base      – default border radius for rounded elements
+ * --padding-sm/md/lg – consistent spacing scale for components
+ * --transition-duration – base duration for subtle animations
+ */
+
+:root {
+    --color-primary: #8b5cf6;
+    --color-secondary: #ec4899;
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-error: #ef4444;
+    --color-surface: rgba(255, 255, 255, 0.05);
+    --color-border: rgba(255, 255, 255, 0.08);
+    --radius-base: 1rem;
+    --padding-sm: 0.75rem;
+    --padding-md: 1.25rem;
+    --padding-lg: 2rem;
+    --transition-duration: 150ms;
+}
+
+/*
+ * Reusable button patterns.  These classes provide a consistent
+ * foundation for call‑to‑action elements such as “Продлить”, “Открыть
+ * импорт” and other interactive affordances.  Buttons make use of the
+ * defined colour variables and include smooth hover and active states
+ * implemented purely via GPU‑friendly transforms and opacity changes.
+ */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--padding-sm) var(--padding-md);
+    border-radius: var(--radius-base);
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background-color var(--transition-duration) ease, color var(--transition-duration) ease, box-shadow var(--transition-duration) ease, transform var(--transition-duration) ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    color: #fff;
+    box-shadow: 0 12px 30px rgba(139, 92, 246, 0.18);
+}
+
+.btn-primary:hover {
+    filter: brightness(1.06);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: #f3f4f6;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/*
+ * Basic input styling.  Forms across the site (login/register,
+ * referral link boxes, settings forms) share a common look to avoid
+ * jarring differences between pages.  Inputs respect the dark theme
+ * while still offering clear focus rings for keyboard users.
+ */
+.form-input {
+    width: 100%;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-base);
+    padding: var(--padding-sm) var(--padding-md);
+    color: inherit;
+    font-size: 0.875rem;
+    line-height: 1.25;
+    transition: border-color var(--transition-duration) ease, box-shadow var(--transition-duration) ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.4);
+}
+
+/*
+ * Animation helpers.  Use .fade-in on elements that should gently
+ * appear on page load (e.g. cards within the dashboard).  Keeping
+ * animations simple and GPU‑accelerated avoids layout thrashing and
+ * preserves smoothness even on mobile devices.
+ */
+.fade-in {
+    animation: fadeIn var(--transition-duration) ease-out both;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/*
+ * Utility class for consistent rounded corners.  Rather than
+ * scattering arbitrary border-radius values, use .rounded-base to
+ * automatically apply the system radius.  It pairs nicely with the
+ * design tokens defined above.
+ */
+.rounded-base {
+    border-radius: var(--radius-base);
+}
+
 /* A subtle glass‑like background used throughout cards and panels. */
 .glass-effect {
     background: rgba(255, 255, 255, 0.05);

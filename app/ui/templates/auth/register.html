@@ -48,12 +48,12 @@
                     {{ _('Код подтверждения') }}
                 </label>
                 <input type="text" id="otp_code" name="otp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required
-                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white tracking-[0.35em] text-center focus:outline-none focus:ring-2 focus:ring-purple-600"
+                       class="form-input tracking-[0.35em] text-center"
                        placeholder="123456">
             </div>
 
             <button type="submit"
-                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-all hover-glow">
+                    class="btn btn-primary w-full hover-glow">
                 {{ _('Подтвердить email') }}
             </button>
         </form>
@@ -62,7 +62,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="resend">
             <button type="submit"
-                    class="w-full border border-gray-700 bg-gray-900/60 hover:bg-gray-800 text-gray-200 font-semibold py-3 px-4 rounded-lg transition-all">
+                    class="btn btn-secondary w-full">
                 {{ _('Отправить код повторно') }}
             </button>
         </form>
@@ -78,7 +78,7 @@
                     Email
                 </label>
                 <input type="email" id="email" name="email" required
-                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-600"
+                       class="form-input"
                        placeholder="your@email.com">
             </div>
             
@@ -87,7 +87,7 @@
                     {{ _('Пароль') }}
                 </label>
                 <input type="password" id="password" name="password" required
-                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-600">
+                       class="form-input">
             </div>
             
             <div>
@@ -95,11 +95,11 @@
                     {{ _('Повторите пароль') }}
                 </label>
                 <input type="password" id="password2" name="password2" required
-                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-600">
+                       class="form-input">
             </div>
             
             <button type="submit" 
-                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-all hover-glow">
+                    class="btn btn-primary w-full hover-glow">
                 {{ _('Зарегистрироваться') }}
             </button>
         </form>

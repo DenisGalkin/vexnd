@@ -44,8 +44,11 @@
     <!-- Include the consolidated stylesheet. See static/css/styles.css. -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 
-    {# Tailwind CDN (loaded synchronously to avoid unstyled flashes) #}
-    <script src="https://cdn.tailwindcss.com"></script>
+    {# Optimise external resource loading #}
+    <!-- Preconnect to Tailwind CDN to reduce handshake latency -->
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    {# Load Tailwind from CDN using defer to avoid blocking HTML parsing; it still applies before paint due to deferred execution #}
+    <script src="https://cdn.tailwindcss.com" defer></script>
 </head>
 <body class="bg-black text-gray-100 min-h-screen font-sans antialiased">
     <nav class="glass-effect fixed w-full z-50 border-b border-gray-800">
@@ -58,7 +61,7 @@
                              alt="VEXND Logo"
                              class="h-14 w-auto hover:opacity-90 transition-opacity"
                              style="max-height: 52px; width: auto;"
-                             decoding="async" fetchpriority="high">
+                             decoding="async" fetchpriority="high" loading="eager">
                     </a>
                 </div>
 
