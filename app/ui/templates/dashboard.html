@@ -57,7 +57,7 @@
     </div>
 
     <div id="tab-sub" role="tabpanel" aria-labelledby="tab-btn-sub" class="space-y-6">
-      <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)]">
+      <div class="dashboard-subscription-grid grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)]">
         <section class="glass-effect subscription-panel subscription-panel--info rounded-[1.75rem] p-5 sm:p-6">
           {% if is_active %}
             <div class="space-y-6">
@@ -104,7 +104,7 @@
                   <span class="dashboard-traffic-fill" style="width: {{ traffic_progress if traffic_progress is not none else 8 }}%;"></span>
                 </div>
                 <p class="mt-3 text-sm text-gray-500">
-                  {{ _('Лимит обновляется автоматически из Remnawave. Стандартный месячный объём: 1 TB.') }}
+                  {{ _('При достижении лимита дополнительный трафик предоставляется по запросу.') }}
                 </p>
               </div>
 
@@ -154,7 +154,7 @@
 
         <aside class="glass-effect subscription-panel subscription-panel--action rounded-[1.75rem] p-5 sm:p-6 overflow-hidden">
           {% if is_active %}
-            <div class="space-y-5">
+            <div class="dashboard-action-column space-y-5">
               <div class="dashboard-panel-card dashboard-panel-card--hero">
                 <div class="dashboard-panel-label">{{ _('Быстрое подключение') }}</div>
                 <h2 class="mt-4 text-2xl font-bold">{{ _('QR и быстрый импорт') }}</h2>
@@ -166,8 +166,8 @@
               {% if qr_code %}
                 <div class="dashboard-panel-card">
                   <div class="dashboard-qr-shell">
-                    <div class="rounded-[1.6rem] bg-white p-4 shadow-[0_18px_45px_rgba(255,255,255,0.08)]">
-                      <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="w-full rounded-2xl">
+                    <div class="dashboard-qr-frame rounded-[1.6rem] bg-white p-3 shadow-[0_18px_45px_rgba(255,255,255,0.08)]">
+                      <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="dashboard-qr-image rounded-2xl">
                     </div>
                   </div>
                 </div>
@@ -181,7 +181,7 @@
 
               {% if subscription_url %}
                 <div class="dashboard-panel-card space-y-3">
-                  <label class="block text-sm text-gray-400">{{ _('Ссылка подписки') }}</label>
+                  <label class="block text-sm text-gray-400">{{ _('Ссылка на подписку') }}</label>
                   <a href="{{ subscription_url }}"
                      class="dashboard-link block rounded-2xl px-4 py-4 text-sm font-mono text-purple-200 break-anywhere transition"
                      title="{{ _('Открыть ссылку') }}"
@@ -196,7 +196,7 @@
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                       </svg>
-                      <span>{{ _('Скопировать ссылку') }}</span>
+                      <span>{{ _('Скопировать') }}</span>
                     </button>
                     <a href="{{ subscription_url }}"
                        class="dashboard-ghost-btn inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 font-semibold transition tap-target"
