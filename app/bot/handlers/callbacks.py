@@ -80,6 +80,10 @@ def handle_trial_activation(chat_id: int, message_id: int, user, state) -> None:
     try:
         activate_trial_subscription(user, source="telegram", days=1)
         invalidate_remnawave_snapshot(user.id)
+    except ValueError:
+        db.session.rollback()
+        edit_message(chat_id, message_id, t(state, "trial_used"), main_menu(state, user))
+        return
     except Exception as exc:
         db.session.rollback()
         print(f"Trial activation failed: {exc}")

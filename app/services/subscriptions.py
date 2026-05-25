@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import threading
+import time
 from datetime import datetime, timedelta
 
 from app.core.extensions import db
@@ -14,6 +16,11 @@ from app.services.remnawave import (
     remnawave_sync_user_identity,
     remnawave_update_user_traffic,
 )
+
+
+TRIAL_REMOTE_CHECK_TTL_SECONDS = 30
+_TRIAL_REMOTE_CHECK_CACHE: dict[int, dict[str, float | bool]] = {}
+_TRIAL_REMOTE_CHECK_LOCK = threading.Lock()
 
 
 def restore_local_subscription_state(user: User, remote_user: dict | None) -> Subscription:
@@ -181,7 +188,41 @@ def get_trial_grant(user: User) -> TrialGrant | None:
     return TrialGrant.query.filter_by(user_id=user.id).first()
 
 
-def is_trial_eligible(user: User) -> bool:
+def trial_blocked_by_remote_registration(user: User, *, force_refresh: bool = False) -> bool | None:
+    if not user or not getattr(user, "id", None):
+        return False
+    cfg = get_remnawave_config()
+    if not (cfg.base_url and cfg.token):
+        return False
+
+    cache_key = int(user.id)
+    now_ts = time.time()
+    if not force_refresh:
+        with _TRIAL_REMOTE_CHECK_LOCK:
+            cached = _TRIAL_REMOTE_CHECK_CACHE.get(cache_key)
+        if cached and now_ts - float(cached.get("ts") or 0) < TRIAL_REMOTE_CHECK_TTL_SECONDS:
+            return bool(cached.get("blocked"))
+
+    try:
+        remote_user = remnawave_find_user(cfg, user)
+    except Exception as exc:
+        print(f"Trial remote eligibility check failed: {exc}")
+        return None
+
+    blocked = isinstance(remote_user, dict) and bool(remote_user)
+    if blocked:
+        try:
+            restore_local_subscription_state(user, remote_user)
+        except Exception as exc:
+            print(f"Trial local subscription restore failed: {exc}")
+            db.session.rollback()
+
+    with _TRIAL_REMOTE_CHECK_LOCK:
+        _TRIAL_REMOTE_CHECK_CACHE[cache_key] = {"ts": now_ts, "blocked": blocked}
+    return blocked
+
+
+def is_trial_eligible(user: User, *, fail_open_on_remote_error: bool = True, force_refresh: bool = False) -> bool:
     if not user or not getattr(user, "id", None):
         return False
     if get_trial_grant(user) is not None:
@@ -191,11 +232,16 @@ def is_trial_eligible(user: User) -> bool:
     subscription = Subscription.query.filter_by(user_id=user.id).first()
     if subscription and subscription.expiry_date:
         return False
+    blocked_by_remote = trial_blocked_by_remote_registration(user, force_refresh=force_refresh)
+    if blocked_by_remote is True:
+        return False
+    if blocked_by_remote is None and not fail_open_on_remote_error:
+        return False
     return True
 
 
 def activate_trial_subscription(user: User, *, source: str = "web", days: int = 1) -> Subscription:
-    if not is_trial_eligible(user):
+    if not is_trial_eligible(user, fail_open_on_remote_error=False, force_refresh=True):
         raise ValueError("trial_not_available")
     trial_days = max(int(days), 1)
     create_remnawave_subscription_days(user, trial_days, strict=True)
