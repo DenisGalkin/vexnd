@@ -19,7 +19,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: python bot.py
+    command: ["python", "bot.py"]
     env_file:
       - ./.env
     environment:

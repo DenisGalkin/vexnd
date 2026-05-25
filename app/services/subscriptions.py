@@ -230,7 +230,7 @@ def is_trial_eligible(user: User, *, fail_open_on_remote_error: bool = True, for
     if has_processed_plan_payment(user):
         return False
     subscription = Subscription.query.filter_by(user_id=user.id).first()
-    if subscription and subscription.expiry_date:
+    if subscription:
         return False
     blocked_by_remote = trial_blocked_by_remote_registration(user, force_refresh=force_refresh)
     if blocked_by_remote is True:

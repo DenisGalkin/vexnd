@@ -29,7 +29,7 @@ from app.bot.content import BOT_PLAN_CATALOG, CONNECT_CLIENTS, PAYMENT_METHODS, 
 from app.bot.models import BotUserState, TelegramAccount, utc_now
 
 
-load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"))
 
 _bot_app = None
 
