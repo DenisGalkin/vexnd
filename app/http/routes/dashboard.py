@@ -16,8 +16,8 @@ from app.bot.models import TelegramAccount
 from app.bot.subscriptions import remnawave_subscription_snapshot
 from app.core.extensions import db
 from app.domain.models import PaymentIntent, ReferralSignup, Subscription, User
-from app.domain.plans import format_usd_amount, plan_details
-from app.services.coupons import coupon_pricing, normalize_coupon_code
+from app.domain.plans import format_usd_amount, plan_details, plan_duration_label
+from app.services.coupons import coupon_pricing, intent_pricing, normalize_coupon_code
 from app.services.email_change_otp import get_pending_email_change
 from app.services.email_otp import OTP_TTL_MINUTES
 from app.services.password_reset_otp import get_pending_password_reset
@@ -28,6 +28,7 @@ from app.services.security import require_csrf, rotate_csrf_token
 from app.services.subscriptions import ensure_remnawave_subscription_url
 from app.services.telegram_auth import CHALLENGE_TTL_MINUTES, create_telegram_auth_challenge, get_active_challenge
 from app.services.telegram_links import telegram_bot_deeplink
+from app.services.web_sessions import current_web_session_token, user_web_sessions
 from app.http.helpers import public_url, translate
 
 
@@ -73,6 +74,40 @@ def dashboard():
             subscription_snapshot = remnawave_subscription_snapshot(current_user, schedule_async_refresh=False)
         except Exception:
             subscription_snapshot = {"used_bytes": None, "limit_bytes": None}
+    transactions = []
+    subscription_plan_name = None
+    try:
+        intents = (
+            db.session.query(PaymentIntent)
+            .filter(PaymentIntent.user_id == current_user.id)
+            .order_by(PaymentIntent.created_at.desc())
+            .limit(20)
+            .all()
+        )
+        for intent in intents:
+            pricing = intent_pricing(intent)
+            if subscription_plan_name is None and intent.processed_at:
+                subscription_plan_name = plan_duration_label(intent.plan_months)
+            transactions.append(
+                {
+                    "id": intent.id,
+                    "date": intent.processed_at or intent.created_at,
+                    "amount": f"{format_usd_amount(pricing['final_price'])} USD",
+                    "original_amount": format_usd_amount(pricing["original_price"]),
+                    "plan_name": plan_duration_label(intent.plan_months),
+                    "provider": (intent.provider or "").strip() or "—",
+                    "coupon_code": pricing.get("coupon_code") or None,
+                    "status": "success" if intent.processed_at else "pending",
+                }
+            )
+    except Exception:
+        transactions = []
+        subscription_plan_name = None
+    sessions = []
+    try:
+        sessions = user_web_sessions(current_user.id, current_token=current_web_session_token())
+    except Exception:
+        sessions = []
     used_bytes = subscription_snapshot.get("used_bytes")
     limit_bytes = subscription_snapshot.get("limit_bytes")
     traffic_progress = None
@@ -125,11 +160,12 @@ def dashboard():
     pending_email_change = get_pending_email_change(current_user.id)
     current_email_value = (current_user.email or "").strip().lower()
     pending_password_reset = None
-    password_reset_telegram_auth = None
-    password_reset_telegram_approved = False
     if current_email_value and not is_telegram_placeholder_email(current_email_value):
         pending_password_reset = get_pending_password_reset(current_email_value)
-    elif telegram_account:
+
+    password_reset_telegram_auth = None
+    password_reset_telegram_approved = False
+    if telegram_account:
         session_key = "tg_auth_code:password_reset"
         challenge = get_active_challenge(request.args.get("pw_reset_tg") or "", purpose="password_reset")
         if not challenge or challenge.target_user_id != current_user.id:
@@ -184,6 +220,9 @@ def dashboard():
         used_bytes_text=format_bytes(used_bytes),
         limit_bytes_text=format_bytes(limit_bytes),
         traffic_progress=traffic_progress,
+        transactions=transactions,
+        sessions=sessions,
+        subscription_plan_name=subscription_plan_name,
         telegram_account=telegram_account,
         telegram_auth=telegram_auth,
         current_email_display=current_user.email if not is_telegram_placeholder_email(current_email_value) else "",
@@ -195,6 +234,9 @@ def dashboard():
         password_reset_telegram_auth=password_reset_telegram_auth,
         password_reset_telegram_approved=password_reset_telegram_approved,
         email_change_otp_ttl_minutes=OTP_TTL_MINUTES,
+        notify_expiry=False,
+        notify_maintenance=False,
+        notify_news=False,
     )
 
 

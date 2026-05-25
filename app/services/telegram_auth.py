@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from app.bot.models import TelegramAccount
 from app.core.extensions import db
-from app.domain.models import PaymentIntent, ReferralCode, ReferralFingerprint, ReferralSignup, Subscription, SubscriptionNotificationLog, TelegramAuthChallenge, TrialGrant, User, UserCouponRedemption, UserSecurity
+from app.domain.models import PaymentIntent, ReferralCode, ReferralFingerprint, ReferralSignup, Subscription, SubscriptionNotificationLog, TelegramAuthChallenge, TrialGrant, User, UserCouponRedemption, UserSecurity, WebSession
 from app.services.remnawave import is_telegram_placeholder_email
 from app.services.subscriptions import ensure_remnawave_subscription_url
 
@@ -167,6 +167,7 @@ def merge_user_into_target(source_user_id: int, target_user_id: int) -> tuple[bo
             else:
                 source_trial.user_id = target.id
         UserSecurity.query.filter_by(user_id=source.id).delete(synchronize_session=False)
+        WebSession.query.filter_by(user_id=source.id).update({"user_id": target.id}, synchronize_session=False)
         for redemption in UserCouponRedemption.query.filter_by(user_id=source.id).all():
             duplicate = UserCouponRedemption.query.filter_by(user_id=target.id, coupon_code=redemption.coupon_code).first()
             if duplicate:

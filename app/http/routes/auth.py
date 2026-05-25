@@ -31,6 +31,7 @@ from app.services.remnawave import get_remnawave_config, is_telegram_placeholder
 from app.services.security import client_ip, device_fingerprint, renew_session, throttle_is_locked, throttle_register_fail, throttle_reset, validate_password_strength
 from app.services.telegram_auth import CHALLENGE_TTL_MINUTES, consume_approved_challenge, create_telegram_auth_challenge, get_active_challenge
 from app.services.telegram_links import telegram_bot_deeplink
+from app.services.web_sessions import current_web_session_token, revoke_current_web_session, revoke_other_web_sessions, revoke_user_web_session
 from app.http.helpers import get_locale, localized_url, redirect_localized, translate
 
 
@@ -541,6 +542,7 @@ def logout():
 
         require_csrf()
     chosen = _normalized_lang()
+    revoke_current_web_session(current_user.id)
     logout_user()
     renew_session()
     session["lang"] = chosen
@@ -671,8 +673,11 @@ def account_password_reset_cancel():
     from app.services.security import require_csrf
 
     require_csrf()
+    reset_method = (request.form.get("reset_method") or "").strip().lower()
     current_email = (current_user.email or "").strip().lower()
-    if current_email and not is_telegram_placeholder_email(current_email):
+    if reset_method == "telegram":
+        session.pop(_telegram_session_key("password_reset"), None)
+    elif current_email and not is_telegram_placeholder_email(current_email):
         delete_pending_password_reset(get_pending_password_reset(current_email))
     else:
         session.pop(_telegram_session_key("password_reset"), None)
@@ -685,6 +690,7 @@ def account_password_reset_verify():
     from app.services.security import require_csrf
 
     require_csrf()
+    reset_method = (request.form.get("reset_method") or "").strip().lower()
     current_email = (current_user.email or "").strip().lower()
     new_password = request.form.get("new_password") or ""
     new_password2 = request.form.get("new_password2") or ""
@@ -696,7 +702,11 @@ def account_password_reset_verify():
         return _settings_redirect()
 
     pending = None
-    if current_email and not is_telegram_placeholder_email(current_email):
+    use_email_reset = (
+        reset_method == "email"
+        or (reset_method != "telegram" and current_email and not is_telegram_placeholder_email(current_email))
+    )
+    if use_email_reset:
         otp_code = (request.form.get("otp_code") or "").strip()
         if not otp_code.isdigit() or len(otp_code) != 6:
             flash(translate("Введите 6-значный код из письма."), "error")
@@ -924,6 +934,37 @@ def api_account_unlink_telegram():
 
 
 @login_required
+def api_terminate_session():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    try:
+        session_id = int(request.form.get("session_id") or request.json.get("session_id")) if request.is_json else int(request.form.get("session_id") or "0")
+    except Exception:
+        flash(translate("Сессия не найдена."), "error")
+        return _settings_redirect()
+    ok = revoke_user_web_session(current_user.id, session_id, current_token=current_web_session_token())
+    if ok:
+        flash(translate("Сессия завершена."), "success")
+    else:
+        flash(translate("Не удалось завершить выбранную сессию."), "error")
+    return _settings_redirect()
+
+
+@login_required
+def api_terminate_sessions_all():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    revoked = revoke_other_web_sessions(current_user.id, current_token=current_web_session_token())
+    if revoked > 0:
+        flash(translate("Все остальные сессии завершены."), "success")
+    else:
+        flash(translate("Других активных сессий не найдено."), "info")
+    return _settings_redirect()
+
+
+@login_required
 def account_change_email_resend():
     from app.services.security import require_csrf
 
@@ -1025,3 +1066,5 @@ def register(app) -> None:
     app.add_url_rule("/api/account/link-email", endpoint="api_account_link_email", view_func=api_account_link_email, methods=["POST"])
     app.add_url_rule("/api/account/unlink-telegram", endpoint="api_account_unlink_telegram", view_func=api_account_unlink_telegram, methods=["POST"])
     app.add_url_rule("/api/account/delete", endpoint="api_account_delete", view_func=account_delete, methods=["POST"])
+    app.add_url_rule("/account/sessions/terminate", endpoint="api_terminate_session", view_func=api_terminate_session, methods=["POST"])
+    app.add_url_rule("/account/sessions/terminate-all", endpoint="api_terminate_sessions_all", view_func=api_terminate_sessions_all, methods=["POST"])

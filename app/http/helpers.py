@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from flask import abort, current_app, flash, g, redirect, render_template, request, send_from_directory, session, url_for
-from flask_login import current_user
+from flask_login import current_user, logout_user
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
@@ -17,8 +17,9 @@ from app.core.config import SITE_ORIGIN
 from app.core.extensions import db, login_manager
 from app.domain.models import Subscription, User, UserSecurity
 from app.services.referrals import get_or_create_referral_code, mask_email
-from app.services.security import client_ip, csrf_token, device_fingerprint, ensure_db_schema, require_csrf
+from app.services.security import client_ip, csrf_token, device_fingerprint, ensure_db_schema, renew_session, require_csrf
 from app.services.subscriptions import ensure_remnawave_subscription_url
+from app.services.web_sessions import clear_current_web_session_token, ensure_current_web_session
 
 
 LOCALIZED_PATHS = {
@@ -246,6 +247,29 @@ def _persist_user_security(exc):
     return None
 
 
+def _sync_current_web_session():
+    if not current_user.is_authenticated:
+        return None
+    try:
+        _token, revoked = ensure_current_web_session(current_user.id)
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return None
+    if not revoked:
+        return None
+    chosen = session.get("lang")
+    logout_user()
+    clear_current_web_session_token()
+    renew_session(preserve_keys=("lang",) if chosen else ())
+    if chosen:
+        session["lang"] = chosen
+    flash(translate("Сессия завершена. Войдите снова."), "info")
+    return redirect(localized_url("login"))
+
+
 def _force_canonical_host_www_to_root():
     try:
         host = (request.host or "").split(":", 1)[0].lower()
@@ -397,6 +421,7 @@ def init_app(app) -> None:
                 pass
 
     app.before_request(_update_user_security)
+    app.before_request(_sync_current_web_session)
     app.teardown_request(_persist_user_security)
     app.before_request(_force_canonical_host_www_to_root)
     app.before_request(_security_before_request)

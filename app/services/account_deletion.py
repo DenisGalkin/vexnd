@@ -17,6 +17,7 @@ from app.domain.models import (
     User,
     UserCouponRedemption,
     UserSecurity,
+    WebSession,
 )
 from app.services.remnawave import delete_remnawave_user_for_local_user
 
@@ -43,6 +44,7 @@ def delete_user_account(user_id: int) -> bool:
         SubscriptionNotificationLog.query.filter_by(user_id=user.id).delete(synchronize_session=False)
         TrialGrant.query.filter_by(user_id=user.id).delete(synchronize_session=False)
         UserSecurity.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+        WebSession.query.filter_by(user_id=user.id).delete(synchronize_session=False)
         UserCouponRedemption.query.filter_by(user_id=user.id).delete(synchronize_session=False)
         ReferralFingerprint.query.filter_by(referred_user_id=user.id).delete(synchronize_session=False)
         ReferralSignup.query.filter(

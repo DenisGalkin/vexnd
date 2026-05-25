@@ -114,6 +114,24 @@ class UserSecurity(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 
+class WebSession(db.Model):
+    __tablename__ = "web_session"
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_token = db.Column(db.String(128), nullable=False, unique=True, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    last_ip = db.Column(db.String(64), nullable=True)
+    last_user_agent = db.Column(db.String(255), nullable=True)
+    last_path = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    last_seen_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    revoked_at = db.Column(db.DateTime, nullable=True, index=True)
+
+    __table_args__ = (
+        db.Index("ix_web_session_user_revoked_seen", "user_id", "revoked_at", "last_seen_at"),
+    )
+
+
 class ReferralFingerprint(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fingerprint = db.Column(db.String(64), nullable=False, unique=True, index=True)

@@ -39,7 +39,7 @@
       </div>
     </section>
 
-    <div class="glass-effect rounded-2xl p-2">
+    <div class="glass-effect dashboard-surface-card dashboard-surface-card--compact rounded-2xl p-2">
       <div class="dash-tabs flex gap-2 overflow-x-auto touch-scroll" role="tablist" aria-label="{{ _('Разделы кабинета') }}">
         <button id="tab-btn-sub" type="button" role="tab" aria-selected="true" aria-controls="tab-sub"
                 class="tab-btn active shrink-0 min-w-[10rem] sm:min-w-0 sm:flex-1 px-4 py-3 rounded-xl font-semibold text-sm sm:text-base leading-tight transition tap-target">
@@ -253,7 +253,7 @@
     </div>
 
     <div id="tab-ref" class="hidden space-y-6" role="tabpanel" aria-labelledby="tab-btn-ref">
-      <section class="glass-effect rounded-2xl p-5 sm:p-6 space-y-5">
+      <section class="glass-effect dashboard-surface-card rounded-2xl p-5 sm:p-6 space-y-5">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div class="max-w-2xl">
             <h2 class="text-2xl font-bold">{{ _('Реферальная программа') }}</h2>
@@ -283,7 +283,7 @@
               {{ _('Не открывайте ссылку сами — просто отправьте её другу.') }}
             </div>
             <button type="button"
-                    class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 transition font-semibold tap-target"
+                    class="dashboard-accent-btn inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition font-semibold tap-target"
                     onclick="copyText('{{ referral_link|e }}', this)">
               <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path d="M8 2a2 2 0 00-2 2v2H5a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2v-1h2a2 2 0 002-2V7l-5-5H8z" />
@@ -298,7 +298,7 @@
         </div>
       </section>
 
-      <section class="glass-effect rounded-2xl p-5 sm:p-6">
+      <section class="glass-effect dashboard-surface-card rounded-2xl p-5 sm:p-6">
         <div class="flex items-center justify-between gap-3 mb-4">
           <h3 class="text-xl font-bold">{{ _('Ваши рефералы') }}</h3>
           <div class="text-sm text-gray-400">{{ _('Всего:') }} <span class="font-semibold text-gray-200">{{ referrals_total_value }}</span></div>
@@ -366,7 +366,7 @@
 
     <div id="tab-settings" class="hidden" role="tabpanel" aria-labelledby="tab-btn-settings">
         <div class="settings-container mx-auto flex w-full max-w-6xl flex-col lg:flex-row gap-6" id="settings-shell" data-csrf="{{ csrf_token() }}">
-            <nav class="settings-side-nav flex overflow-x-auto lg:flex-col gap-2 lg:w-56">
+            <nav class="settings-side-nav dashboard-surface-card dashboard-surface-card--compact rounded-[1.75rem] flex overflow-x-auto lg:flex-col gap-2 lg:w-56 p-2">
                 <button type="button" class="settings-nav-button active" data-section="account">
                     <span class="inline-flex items-center gap-2">
                         <!-- user icon -->
@@ -453,9 +453,9 @@
                             <div class="settings-row">
                                 <div class="settings-row-label">
                                     <span class="inline-flex items-center gap-2">
-                                        <svg class="h-4 w-4 text-purple-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                            <circle cx="12" cy="12" r="3"></circle>
-                                            <path d="M19.4 15a7 7 0 1 0-14.8 0"></path>
+                                        <svg class="h-4 w-4 shrink-0 overflow-visible text-purple-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                            <circle cx="12" cy="7" r="4"></circle>
                                         </svg>
                                         <span>{{ _('ID пользователя') }}</span>
                                     </span>
@@ -525,14 +525,6 @@
                                   <a href="{{ telegram_auth.bot_url }}" target="_blank" rel="noopener noreferrer" class="settings-action settings-action-primary">{{ _('Подключить') }}</a>
                                 {% endif %}
                             </div>
-                            {% if telegram_auth and not telegram_account %}
-                              <div class="settings-note settings-note--info rounded-2xl px-4 py-3 text-sm text-cyan-100/90">
-                                <div>{{ _('Подтвердите привязку в Telegram-боте, после чего кабинет обновится автоматически.') }}</div>
-                                <div id="tg-link-status" class="mt-2 text-cyan-100/70" data-status-url="{{ telegram_auth.status_url }}">
-                                  {{ _('Статус привязки обновляется автоматически.') }}
-                                </div>
-                              </div>
-                            {% endif %}
                             <div class="settings-feedback hidden" id="telegram-status"></div>
                             <!-- Language row -->
                             <div class="settings-row">
@@ -564,51 +556,36 @@
                         <div class="settings-section-head">
                             <div>
                                 <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Безопасность') }}</h3>
-                                <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Сбросьте пароль через код из письма, если хотите обновить доступ без ввода старого пароля.') }}</p>
+                                <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Способ восстановления выбирается автоматически: сначала email, если он привязан, иначе Telegram.') }}</p>
                             </div>
                         </div>
-                        <!-- 2FA toggle -->
-                        <div class="settings-row">
-                            <div class="settings-row-label">{{ _('Двухфакторная аутентификация') }}</div>
-                            <div class="settings-row-value">
-                                <label class="inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" class="form-input" id="twofa-toggle" {% if two_fa_enabled %}checked{% endif %}>
-                                    <span class="ml-2 text-sm text-gray-300">{{ _('Включить через Telegram-бота') }}</span>
-                                </label>
-                            </div>
-                            <div></div>
-                        </div>
-                        <div class="settings-stack mt-4">
-                        {% if current_email_missing %}
-                            {% if telegram_account and password_reset_telegram_auth %}
-                                <div class="settings-form settings-security-panel">
-                                    <div class="settings-note settings-note--telegram-reset rounded-2xl px-4 py-3 text-sm text-gray-300">
-                                        <div class="font-semibold text-white">{{ _('Сброс пароля через Telegram') }}</div>
-                                        {% if password_reset_telegram_approved %}
-                                          <div class="mt-1">{{ _('Подтверждение получено. Теперь задайте новый пароль ниже.') }}</div>
-                                        {% else %}
-                                          <div class="mt-1">{{ _('Подтвердите сброс пароля в Telegram, после чего здесь появится форма для нового пароля.') }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% if not password_reset_telegram_approved %}
-                                        <div class="settings-action-row">
-                                            <div class="settings-action-group">
-                                                <a href="{{ password_reset_telegram_auth.bot_url }}" target="_blank" rel="noopener noreferrer" class="settings-action settings-action-primary">
-                                                  {{ _('Открыть Telegram и подтвердить') }}
-                                                </a>
-                                                <form method="POST" action="{{ url_for('account_password_reset_cancel') }}">
-                                                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                  <button type="submit" class="settings-action settings-action-muted">{{ _('Отмена') }}</button>
-                                                </form>
-                                            </div>
-                                            <div id="tg-password-reset-status" class="settings-status-inline" data-status-url="{{ password_reset_telegram_auth.status_url }}">
-                                              {{ _('Статус подтверждения обновляется автоматически.') }}
-                                            </div>
+                        <div class="settings-security-layout">
+                            <article class="settings-security-block">
+                                {% set use_email_recovery = not current_email_missing %}
+                                {% set use_telegram_recovery = current_email_missing and telegram_account %}
+                                {% if use_email_recovery %}
+                                    <div class="settings-security-method-head">
+                                        <div>
+                                            <h5 class="settings-security-method-title">{{ _('Восстановление через email') }}</h5>
+                                            <p class="settings-security-method-text">
+                                                {% if pending_password_reset %}
+                                                    {{ _('Код уже отправлен на') }} <span class="font-mono">{{ pending_password_reset_masked }}</span>. {{ _('Введите его и задайте новый пароль.') }}
+                                                {% else %}
+                                                    {{ _('Мы отправим 6-значный код на текущий email, после чего вы сможете задать новый пароль.') }}
+                                                {% endif %}
+                                            </p>
                                         </div>
-                                    {% else %}
-                                        <form class="settings-form settings-form--nested space-y-4" method="POST" action="{{ url_for('account_password_reset_verify') }}">
+                                    </div>
+
+                                    {% if pending_password_reset %}
+                                        <form class="space-y-4" method="POST" action="{{ url_for('account_password_reset_verify') }}">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <div class="grid gap-3 sm:grid-cols-2">
+                                            <input type="hidden" name="reset_method" value="email">
+                                            <div class="grid gap-3 sm:grid-cols-3">
+                                                <label class="settings-field">
+                                                  <span>{{ _('Код подтверждения') }}</span>
+                                                  <input type="text" name="otp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required>
+                                                </label>
                                                 <label class="settings-field">
                                                   <span>{{ _('Новый пароль') }}</span>
                                                   <input type="password" name="new_password" autocomplete="new-password" required>
@@ -619,65 +596,138 @@
                                                 </label>
                                             </div>
                                             <div class="settings-action-row">
-                                                <p class="text-sm text-gray-500">{{ _('После сохранения новый пароль начнёт действовать сразу для входа на сайте.') }}</p>
+                                                <p class="text-sm text-gray-500">{{ _('Если письма нет, проверьте папку Спам и подождите минуту перед повторной отправкой.') }}</p>
                                                 <button type="submit" class="settings-action settings-action-primary">{{ _('Сохранить новый пароль') }}</button>
                                             </div>
                                         </form>
+                                        <div class="settings-action-group">
+                                            <form method="POST" action="{{ url_for('account_password_reset_resend') }}">
+                                              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                              <button type="submit" class="settings-action settings-action-muted">{{ _('Отправить код повторно') }}</button>
+                                            </form>
+                                            <form method="POST" action="{{ url_for('account_password_reset_cancel') }}">
+                                              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                              <input type="hidden" name="reset_method" value="email">
+                                              <button type="submit" class="settings-action settings-action-muted">{{ _('Отмена') }}</button>
+                                            </form>
+                                        </div>
+                                    {% else %}
+                                        <form method="POST" action="{{ url_for('account_password_reset_start') }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="settings-action settings-action-primary">{{ _('Получить код на email') }}</button>
+                                        </form>
                                     {% endif %}
+                                {% elif use_telegram_recovery %}
+                                    <div class="settings-security-method-head">
+                                        <div>
+                                            <h5 class="settings-security-method-title">{{ _('Восстановление через Telegram') }}</h5>
+                                            <p class="settings-security-method-text">
+                                                {% if password_reset_telegram_auth %}
+                                                    {{ _('Подтвердите запрос в Telegram-боте, после чего здесь откроется форма для нового пароля.') }}
+                                                {% else %}
+                                                    {{ _('Используйте Telegram для восстановления доступа к аккаунту.') }}
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {% if password_reset_telegram_auth %}
+                                        {% if password_reset_telegram_approved %}
+                                            <div class="settings-note settings-note--telegram-reset rounded-2xl px-4 py-3 text-sm text-gray-300">
+                                                <div class="font-semibold text-white">{{ _('Подтверждение получено') }}</div>
+                                                <div class="mt-1">{{ _('Задайте новый пароль. Он начнёт действовать сразу после сохранения.') }}</div>
+                                            </div>
+                                            <form class="space-y-4" method="POST" action="{{ url_for('account_password_reset_verify') }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="reset_method" value="telegram">
+                                                <div class="grid gap-3 sm:grid-cols-2">
+                                                    <label class="settings-field">
+                                                      <span>{{ _('Новый пароль') }}</span>
+                                                      <input type="password" name="new_password" autocomplete="new-password" required>
+                                                    </label>
+                                                    <label class="settings-field">
+                                                      <span>{{ _('Повторите пароль') }}</span>
+                                                      <input type="password" name="new_password2" autocomplete="new-password" required>
+                                                    </label>
+                                                </div>
+                                                <div class="settings-action-row">
+                                                    <p class="text-sm text-gray-500">{{ _('После сохранения новый пароль будет использоваться для следующего входа на сайте.') }}</p>
+                                                    <button type="submit" class="settings-action settings-action-primary">{{ _('Сохранить новый пароль') }}</button>
+                                                </div>
+                                            </form>
+                                        {% else %}
+                                            <div class="settings-note rounded-2xl px-4 py-3 text-sm text-gray-300">
+                                                <div class="font-semibold text-white">{{ _('Ожидаем подтверждение в Telegram') }}</div>
+                                                <div class="mt-1">{{ _('После подтверждения страница обновится автоматически, и здесь появится форма для нового пароля.') }}</div>
+                                            </div>
+                                            <div class="settings-action-row">
+                                                <div class="settings-action-group">
+                                                    <a href="{{ password_reset_telegram_auth.bot_url }}" target="_blank" rel="noopener noreferrer" class="settings-action settings-action-primary">
+                                                      {{ _('Открыть Telegram-бота') }}
+                                                    </a>
+                                                    <form method="POST" action="{{ url_for('account_password_reset_cancel') }}">
+                                                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                      <input type="hidden" name="reset_method" value="telegram">
+                                                      <button type="submit" class="settings-action settings-action-muted">{{ _('Отмена') }}</button>
+                                                    </form>
+                                                </div>
+                                                <div id="tg-password-reset-status" class="settings-status-inline" data-status-url="{{ password_reset_telegram_auth.status_url }}">
+                                                  {{ _('Статус подтверждения обновляется автоматически.') }}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="settings-note rounded-2xl px-4 py-3 text-sm text-gray-300">
+                                            {{ _('Для восстановления через Telegram откройте связанный бот и подтвердите запрос.') }}
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="settings-security-method-head">
+                                        <div>
+                                            <h5 class="settings-security-method-title">{{ _('Способ восстановления не настроен') }}</h5>
+                                            <p class="settings-security-method-text">
+                                                {{ _('Сначала привяжите email или Telegram в разделе аккаунта, чтобы можно было восстановить пароль.') }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="settings-note rounded-2xl px-4 py-3 text-sm text-gray-400">
+                                        {{ _('Привязка email или Telegram находится в разделе аккаунта выше.') }}
+                                    </div>
+                                {% endif %}
+                            </article>
+
+                            <article class="settings-security-block">
+                                <div class="settings-security-block-head">
+                                    <div>
+                                        <h4 class="settings-security-block-title">{{ _('Смена пароля') }}</h4>
+                                        <p class="settings-security-block-text">{{ _('Если вы знаете текущий пароль, просто введите его и задайте новый без дополнительного подтверждения.') }}</p>
+                                    </div>
                                 </div>
-                            {% else %}
-                                <div class="settings-note rounded-2xl px-4 py-3 text-sm text-gray-400">
-                                  {{ _('Для сброса пароля нужен связанный Telegram или привязанный email.') }}
-                                </div>
-                            {% endif %}
-                        {% elif pending_password_reset %}
-                            <div class="settings-note rounded-2xl px-4 py-3 text-sm text-gray-300">
-                                <div class="font-semibold text-white">{{ _('Подтвердите сброс пароля') }}</div>
-                                <div class="mt-1">
-                                  {{ _('Мы отправили 6-значный код на адрес:') }} <span class="font-mono">{{ pending_password_reset_masked }}</span><br>
-                                  {{ _('Введите код и новый пароль. Код действует') }} {{ email_change_otp_ttl_minutes }} {{ _('минут') }}.
-                                </div>
-                            </div>
-                            <form class="settings-form space-y-4" method="POST" action="{{ url_for('account_password_reset_verify') }}">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <div class="grid gap-3 sm:grid-cols-3">
-                                    <label class="settings-field">
-                                      <span>{{ _('Код подтверждения') }}</span>
-                                      <input type="text" name="otp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required>
-                                    </label>
-                                    <label class="settings-field">
-                                      <span>{{ _('Новый пароль') }}</span>
-                                      <input type="password" name="new_password" autocomplete="new-password" required>
-                                    </label>
-                                    <label class="settings-field">
-                                      <span>{{ _('Повторите пароль') }}</span>
-                                      <input type="password" name="new_password2" autocomplete="new-password" required>
-                                    </label>
-                                </div>
-                                <div class="settings-action-row">
-                                    <p class="text-sm text-gray-500">{{ _('Если письма нет, проверьте папку Спам и подождите минуту перед повторной отправкой.') }}</p>
-                                    <button type="submit" class="settings-action settings-action-primary">{{ _('Сохранить новый пароль') }}</button>
-                                </div>
-                            </form>
-                            <div class="settings-action-group">
-                                <form method="POST" action="{{ url_for('account_password_reset_resend') }}">
-                                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                  <button type="submit" class="settings-action settings-action-muted">{{ _('Отправить код повторно') }}</button>
+
+                                <form class="settings-form settings-security-change-form space-y-4" method="POST" action="{{ url_for('account_change_password') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <div class="grid gap-3">
+                                        <label class="settings-field">
+                                          <span>{{ _('Текущий пароль') }}</span>
+                                          <input type="password" name="current_password" autocomplete="current-password" required>
+                                        </label>
+                                        <div class="grid gap-3 sm:grid-cols-2">
+                                            <label class="settings-field">
+                                              <span>{{ _('Новый пароль') }}</span>
+                                              <input type="password" name="new_password" autocomplete="new-password" required>
+                                            </label>
+                                            <label class="settings-field">
+                                              <span>{{ _('Повторите пароль') }}</span>
+                                              <input type="password" name="new_password2" autocomplete="new-password" required>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="settings-action-row">
+                                        <p class="text-sm text-gray-500">{{ _('Для безопасности используйте не меньше 10 символов с буквами, цифрами и символами.') }}</p>
+                                        <button type="submit" class="settings-action settings-action-primary">{{ _('Изменить пароль') }}</button>
+                                    </div>
                                 </form>
-                                <form method="POST" action="{{ url_for('account_password_reset_cancel') }}">
-                                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                  <button type="submit" class="settings-action settings-action-muted">{{ _('Отмена') }}</button>
-                                </form>
-                            </div>
-                        {% else %}
-                            <form class="settings-form space-y-4" method="POST" action="{{ url_for('account_password_reset_start') }}">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <div class="settings-action-row">
-                                    <p class="text-sm text-gray-500">{{ _('Мы отправим код подтверждения на ваш текущий email, после чего можно будет задать новый пароль.') }}</p>
-                                    <button type="submit" class="settings-action settings-action-primary">{{ _('Сбросить пароль через email') }}</button>
-                                </div>
-                            </form>
-                        {% endif %}
+                            </article>
                         </div>
                     </section>
                 </div>
@@ -714,12 +764,13 @@
                             <p class="mt-3 text-sm text-gray-500">{{ _('Осталось дней:') }} {{ days_left }}</p>
                         </div>
                         <!-- Transactions table -->
-                        <div class="overflow-x-auto">
+                        <div class="dashboard-table-wrap overflow-x-auto">
                             {% if transactions %}
                             <table class="min-w-full divide-y divide-gray-700 text-sm">
                                 <thead>
                                     <tr class="text-left">
                                         <th class="px-4 py-2 font-medium text-gray-400">{{ _('Дата') }}</th>
+                                        <th class="px-4 py-2 font-medium text-gray-400">{{ _('Провайдер') }}</th>
                                         <th class="px-4 py-2 font-medium text-gray-400">{{ _('Сумма') }}</th>
                                         <th class="px-4 py-2 font-medium text-gray-400">{{ _('Тариф') }}</th>
                                         <th class="px-4 py-2 font-medium text-gray-400">{{ _('Статус') }}</th>
@@ -728,12 +779,20 @@
                                 <tbody class="divide-y divide-gray-800">
                                     {% for t in transactions %}
                                     <tr>
-                                        <td class="px-4 py-2 whitespace-nowrap">{{ t.date.strftime('%Y-%m-%d') }}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap">{{ t.amount }}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap">{{ t.date.strftime('%Y-%m-%d %H:%M') if t.date else '—' }}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap capitalize">{{ t.provider }}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap">
+                                          <div class="text-white">{{ t.amount }}</div>
+                                          {% if t.coupon_code %}
+                                            <div class="text-xs text-gray-500">{{ _('Промокод:') }} {{ t.coupon_code }}</div>
+                                          {% endif %}
+                                        </td>
                                         <td class="px-4 py-2 whitespace-nowrap">{{ t.plan_name }}</td>
                                         <td class="px-4 py-2 whitespace-nowrap">
                                             {% if t.status == 'success' %}
                                               <span class="text-emerald-300">{{ _('Успешно') }}</span>
+                                            {% elif t.status == 'pending' %}
+                                              <span class="text-amber-300">{{ _('Ожидает оплаты') }}</span>
                                             {% else %}
                                               <span class="text-red-300">{{ _('Ошибка') }}</span>
                                             {% endif %}
@@ -743,7 +802,7 @@
                                 </tbody>
                             </table>
                             {% else %}
-                            <div class="text-gray-400">{{ _('История транзакций пока пуста.') }}</div>
+                            <div class="pill-muted rounded-2xl p-4 text-sm text-gray-300">{{ _('История транзакций пока пуста.') }}</div>
                             {% endif %}
                         </div>
                     </section>
@@ -758,19 +817,21 @@
                             </div>
                         </div>
                         {% if sessions %}
-                        <div class="divide-y divide-gray-700">
+                        <div class="space-y-3">
                             {% for s in sessions %}
-                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center py-3">
+                            <div class="settings-session-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                 <div class="flex flex-col">
                                     <span class="font-semibold text-gray-100">{{ s.browser }}</span>
                                     <span class="text-sm text-gray-400">{{ s.os }}</span>
                                     <span class="text-xs text-gray-500">{{ _('IP:') }} {{ s.ip }}</span>
+                                    <span class="text-xs text-gray-500">{{ _('Последняя активность:') }} {{ s.last_seen_at.strftime('%Y-%m-%d %H:%M') if s.last_seen_at else '—' }}</span>
                                 </div>
                                 <div class="mt-2 sm:mt-0 flex items-center gap-3">
                                     {% if s.current %}
                                       <span class="text-emerald-400 text-sm">{{ _('Текущая сессия') }}</span>
                                     {% else %}
                                       <form method="POST" action="{{ url_for('api_terminate_session') }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <input type="hidden" name="session_id" value="{{ s.id }}">
                                         <button type="submit" class="settings-action settings-action-muted">{{ _('Завершить') }}</button>
                                       </form>
@@ -781,11 +842,12 @@
                         </div>
                         <div class="mt-4 flex justify-end">
                             <form method="POST" action="{{ url_for('api_terminate_sessions_all') }}">
+                              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                               <button type="submit" class="settings-action settings-action-danger">{{ _('Завершить все другие сессии') }}</button>
                             </form>
                         </div>
                         {% else %}
-                        <div class="text-gray-400">{{ _('Нет активных сессий.') }}</div>
+                        <div class="pill-muted rounded-2xl p-4 text-sm text-gray-300">{{ _('Нет активных сессий.') }}</div>
                         {% endif %}
                     </section>
                 </div>
@@ -798,40 +860,49 @@
                                 <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Настройте, какие уведомления вы хотите получать.') }}</p>
                             </div>
                         </div>
-                        <div class="settings-list">
-                            <!-- Subscription expiry reminder toggle -->
-                            <div class="settings-row">
-                                <div class="settings-row-label">{{ _('Напоминание об окончании подписки') }}</div>
-                                <div class="settings-row-value">
-                                    <label class="inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" class="form-input" name="notify_expiry" id="notify-expiry" {% if notify_expiry %}checked{% endif %}>
-                                        <span class="ml-2 text-sm text-gray-300">{{ _('За 3 дня и за 24 часа') }}</span>
-                                    </label>
+                        <div class="settings-list settings-list--notifications">
+                            <label class="settings-notification-card" for="notify-expiry">
+                                <div class="settings-notification-copy">
+                                    <div class="settings-notification-title">{{ _('Напоминание об окончании подписки') }}</div>
+                                    <p class="settings-notification-text">{{ _('Напомним заранее, чтобы вы успели продлить доступ без паузы.') }}</p>
+                                    <div class="settings-notification-meta">{{ _('За 3 дня и за 24 часа') }}</div>
                                 </div>
-                                <div></div>
-                            </div>
-                            <!-- Maintenance notifications toggle -->
-                            <div class="settings-row">
-                                <div class="settings-row-label">{{ _('Технические работы') }}</div>
-                                <div class="settings-row-value">
-                                    <label class="inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" class="form-input" name="notify_maintenance" id="notify-maintenance" {% if notify_maintenance %}checked{% endif %}>
-                                        <span class="ml-2 text-sm text-gray-300">{{ _('Получать уведомления') }}</span>
-                                    </label>
+                                <div class="settings-notification-control">
+                                    <span class="settings-notification-state">{{ _('Включено') if notify_expiry else _('Выключено') }}</span>
+                                    <span class="settings-switch">
+                                        <input type="checkbox" name="notify_expiry" id="notify-expiry" {% if notify_expiry %}checked{% endif %}>
+                                        <span class="settings-switch-ui" aria-hidden="true"></span>
+                                    </span>
                                 </div>
-                                <div></div>
-                            </div>
-                            <!-- News and promo toggle -->
-                            <div class="settings-row">
-                                <div class="settings-row-label">{{ _('Новости и промокоды') }}</div>
-                                <div class="settings-row-value">
-                                    <label class="inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" class="form-input" name="notify_news" id="notify-news" {% if notify_news %}checked{% endif %}>
-                                        <span class="ml-2 text-sm text-gray-300">{{ _('Новости сервиса, новые локации, промокоды') }}</span>
-                                    </label>
+                            </label>
+                            <label class="settings-notification-card" for="notify-maintenance">
+                                <div class="settings-notification-copy">
+                                    <div class="settings-notification-title">{{ _('Технические работы') }}</div>
+                                    <p class="settings-notification-text">{{ _('Сообщим о плановых работах и важных изменениях в доступности сервиса.') }}</p>
+                                    <div class="settings-notification-meta">{{ _('Только важные сервисные уведомления') }}</div>
                                 </div>
-                                <div></div>
-                            </div>
+                                <div class="settings-notification-control">
+                                    <span class="settings-notification-state">{{ _('Включено') if notify_maintenance else _('Выключено') }}</span>
+                                    <span class="settings-switch">
+                                        <input type="checkbox" name="notify_maintenance" id="notify-maintenance" {% if notify_maintenance %}checked{% endif %}>
+                                        <span class="settings-switch-ui" aria-hidden="true"></span>
+                                    </span>
+                                </div>
+                            </label>
+                            <label class="settings-notification-card" for="notify-news">
+                                <div class="settings-notification-copy">
+                                    <div class="settings-notification-title">{{ _('Новости и промокоды') }}</div>
+                                    <p class="settings-notification-text">{{ _('Получайте новости сервиса, информацию о новых локациях и специальные предложения.') }}</p>
+                                    <div class="settings-notification-meta">{{ _('Обновления продукта и промокампании') }}</div>
+                                </div>
+                                <div class="settings-notification-control">
+                                    <span class="settings-notification-state">{{ _('Включено') if notify_news else _('Выключено') }}</span>
+                                    <span class="settings-switch">
+                                        <input type="checkbox" name="notify_news" id="notify-news" {% if notify_news %}checked{% endif %}>
+                                        <span class="settings-switch-ui" aria-hidden="true"></span>
+                                    </span>
+                                </div>
+                            </label>
                         </div>
                     </section>
                 </div>
@@ -872,18 +943,38 @@
 </div>
 
 <style>
+  .dashboard-surface-card {
+    border: 1px solid rgba(255,255,255,.1);
+    background:
+      radial-gradient(circle at top right, rgba(139,92,246,.1), transparent 36%),
+      linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.024));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.05),
+      0 18px 40px rgba(3,7,18,.16);
+  }
+  .dashboard-surface-card--compact {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.05),
+      0 12px 28px rgba(3,7,18,.12);
+  }
   .tab-btn { color: rgba(229,231,235,.85); background: transparent; border: 1px solid rgba(255,255,255,.08); }
   .tab-btn:hover { background: rgba(255,255,255,.06); }
   .tab-btn.active { background: linear-gradient(135deg, #8b5cf6, #ec4899); color: #fff; border-color: rgba(255,255,255,.12); }
   .dashboard-panel-card {
-    border: 1px solid rgba(255,255,255,.08);
-    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border: 1px solid rgba(255,255,255,.1);
+    background:
+      radial-gradient(circle at top right, rgba(192,38,211,.08), transparent 38%),
+      linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.025));
     border-radius: 1.5rem;
     padding: 1.25rem;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.05),
+      0 18px 40px rgba(3,7,18,.18);
   }
   .dashboard-panel-card--hero {
-    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+    background:
+      radial-gradient(circle at top left, rgba(139,92,246,.14), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
   }
   .dashboard-panel-label {
     font-size: .75rem;
@@ -936,19 +1027,28 @@
   }
   .settings-section {
     border-radius: var(--radius-base);
-    border: 1px solid var(--color-border);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(255,255,255,.1);
+    background:
+      radial-gradient(circle at top right, rgba(59,130,246,.08), transparent 34%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.022));
     padding: 1.5rem;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 18px 40px rgba(3,7,18,.16);
   }
   .settings-section--hero {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.025));
+    background:
+      radial-gradient(circle at top left, rgba(139,92,246,.16), transparent 34%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
   }
   .settings-section--danger {
-    border-color: rgba(239, 68, 68, 0.2);
+    border-color: rgba(248, 113, 113, 0.28);
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
-      radial-gradient(circle at top right, rgba(239, 68, 68, 0.14), transparent 35%);
+      radial-gradient(circle at top right, rgba(239, 68, 68, 0.24), transparent 36%),
+      linear-gradient(180deg, rgba(127, 29, 29, 0.28), rgba(69, 10, 10, 0.18));
+    box-shadow:
+      inset 0 1px 0 rgba(254, 202, 202, 0.08),
+      0 20px 46px rgba(69, 10, 10, 0.26);
   }
   .settings-section-head {
     margin-bottom: 1.25rem;
@@ -956,36 +1056,178 @@
   .settings-list {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: .9rem;
+  }
+  .settings-list--notifications {
+    gap: .9rem;
   }
   .settings-row {
     display: grid;
     grid-template-columns: minmax(0, 180px) minmax(0, 1fr) auto;
     gap: 1rem;
     align-items: center;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(255,255,255,.06);
-  }
-  .settings-row:last-of-type {
-    padding-bottom: 0;
-    border-bottom: 0;
+    padding: 1rem 1.1rem;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 1.35rem;
+    background:
+      radial-gradient(circle at top left, rgba(139,92,246,.08), transparent 32%),
+      linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.04),
+      0 12px 28px rgba(3,7,18,.12);
   }
   .settings-row-label {
     font-size: .95rem;
     font-weight: 600;
     color: rgba(248,250,252,.98);
   }
+  .settings-row-label svg {
+    display: block;
+    flex: none;
+    overflow: visible;
+  }
   .settings-row-value {
     text-align: center;
     font-size: .95rem;
     color: rgba(229,231,235,.94);
   }
-  .settings-form {
+  .settings-notification-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1.25rem;
+    align-items: center;
     border: 1px solid rgba(255,255,255,.08);
-    background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+    border-radius: 1.35rem;
+    padding: 1rem 1.1rem;
+    background:
+      radial-gradient(circle at top left, rgba(139,92,246,.08), transparent 32%),
+      linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.04),
+      0 12px 28px rgba(3,7,18,.12);
+    cursor: pointer;
+    transition: border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .settings-notification-card:hover {
+    border-color: rgba(255,255,255,.12);
+    background:
+      radial-gradient(circle at top left, rgba(139,92,246,.1), transparent 32%),
+      linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.024));
+    transform: translateY(-1px);
+  }
+  .settings-notification-card:has(input:focus-visible) {
+    border-color: rgba(192,38,211,.5);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.04),
+      0 0 0 2px rgba(192,38,211,.18);
+  }
+  .settings-notification-copy {
+    min-width: 0;
+  }
+  .settings-notification-title {
+    font-size: 1rem;
+    line-height: 1.4;
+    font-weight: 700;
+    color: rgba(248,250,252,.98);
+  }
+  .settings-notification-text {
+    margin-top: .35rem;
+    max-width: 40rem;
+    font-size: .93rem;
+    line-height: 1.6;
+    color: rgba(209,213,219,.82);
+  }
+  .settings-notification-meta {
+    margin-top: .7rem;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    border-radius: 999px;
+    padding: 0 .85rem;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.035);
+    font-size: .82rem;
+    font-weight: 600;
+    color: rgba(226,232,240,.88);
+  }
+  .settings-notification-control {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .9rem;
+    min-width: 11rem;
+  }
+  .settings-notification-state {
+    min-width: 5.6rem;
+    text-align: right;
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    color: rgba(191,219,254,.82);
+  }
+  .settings-switch {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+  }
+  .settings-switch input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .settings-switch-ui {
+    position: relative;
+    display: inline-flex;
+    width: 3.5rem;
+    height: 2rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.08);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.25);
+    transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+  .settings-switch-ui::after {
+    content: "";
+    position: absolute;
+    top: .2rem;
+    left: .2rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(226,232,240,.88));
+    box-shadow: 0 6px 14px rgba(15,23,42,.38);
+    transition: transform .18s ease;
+  }
+  .settings-switch input:checked + .settings-switch-ui {
+    border-color: rgba(236,72,153,.45);
+    background: linear-gradient(135deg, rgba(139,92,246,.92), rgba(236,72,153,.92));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.16),
+      0 10px 24px rgba(192,38,211,.22);
+  }
+  .settings-switch input:checked + .settings-switch-ui::after {
+    transform: translateX(1.5rem);
+  }
+  .settings-switch input:focus-visible + .settings-switch-ui {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.16),
+      0 0 0 3px rgba(192,38,211,.22);
+  }
+  .settings-form {
+    border: 1px solid rgba(255,255,255,.1);
+    background:
+      radial-gradient(circle at top right, rgba(59,130,246,.08), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.022));
     border-radius: 1.5rem;
     padding: 1rem;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.05),
+      0 14px 34px rgba(3,7,18,.14);
   }
   .settings-form--nested {
     border-radius: 1.25rem;
@@ -1059,15 +1301,23 @@
   }
   .settings-feedback {
     margin-top: .25rem;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 1rem;
+    border: 1px solid rgba(255,255,255,.1);
     padding: .8rem .95rem;
     font-size: .9rem;
+    background:
+      radial-gradient(circle at top left, rgba(139,92,246,.08), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.022));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
   }
   .settings-note {
-    border: 1px solid rgba(255,255,255,.08);
-    background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.1);
+    background:
+      radial-gradient(circle at top left, rgba(139,92,246,.08), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.022));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.05),
+      0 14px 30px rgba(3,7,18,.12);
   }
   .settings-note--info {
     border-color: rgba(34,211,238,.18);
@@ -1097,9 +1347,73 @@
     flex-direction: column;
     gap: 1rem;
   }
-  .settings-security-panel {
+  .settings-security-layout {
+    display: grid;
+    gap: 1.25rem;
+  }
+  .settings-security-block {
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 1.35rem;
+    padding: 1.25rem;
+    background:
+      radial-gradient(circle at top left, rgba(139,92,246,.08), transparent 32%),
+      linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.04),
+      0 12px 28px rgba(3,7,18,.12);
+  }
+  .settings-session-card {
+    padding: 1rem 1.1rem;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 1.35rem;
+    background:
+      radial-gradient(circle at top right, rgba(59,130,246,.07), transparent 32%),
+      linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.04),
+      0 12px 28px rgba(3,7,18,.12);
+  }
+  .settings-security-block-head {
+    margin-bottom: .65rem;
+  }
+  .settings-security-block-title {
+    font-size: 1.1rem;
+    line-height: 1.35;
+    font-weight: 700;
+    color: #fff;
+  }
+  .settings-security-block-text {
+    margin-top: .35rem;
+    max-width: 52rem;
+    font-size: .94rem;
+    line-height: 1.6;
+    color: rgba(156,163,175,.94);
+  }
+  .settings-security-meta {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    gap: .5rem 1rem;
+    margin-bottom: 1rem;
+    font-size: .86rem;
+    color: rgba(209,213,219,.82);
+  }
+  .settings-security-method-head {
+    display: block;
+    margin-bottom: 1rem;
+  }
+  .settings-security-method-title {
+    font-size: 1rem;
+    line-height: 1.35;
+    font-weight: 700;
+    color: #fff;
+  }
+  .settings-security-method-text {
+    margin-top: .35rem;
+    font-size: .92rem;
+    line-height: 1.55;
+    color: rgba(156,163,175,.94);
+  }
+  .settings-security-change-form {
     gap: 1rem;
   }
   .settings-feedback.is-success {
@@ -1138,11 +1452,32 @@
       padding: .9rem;
       border-radius: 1.25rem;
     }
+    .settings-security-block {
+      padding: 1rem;
+      border-radius: 1.25rem;
+    }
     .settings-row {
       grid-template-columns: 1fr;
       text-align: left;
     }
     .settings-row-value {
+      text-align: left;
+    }
+    .settings-notification-card {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      padding: 1rem;
+    }
+    .settings-notification-text {
+      max-width: none;
+    }
+    .settings-notification-control {
+      width: 100%;
+      min-width: 0;
+      justify-content: space-between;
+    }
+    .settings-notification-state {
+      min-width: 0;
       text-align: left;
     }
     .settings-note--telegram-reset {
@@ -1265,7 +1600,15 @@
     notifyFields.forEach((id) => {
       const el = document.getElementById(id);
       if (el) {
+        const stateLabel = el.closest('.settings-notification-card')?.querySelector('.settings-notification-state');
+        const syncState = () => {
+          if (stateLabel) {
+            stateLabel.textContent = el.checked ? "{{ _('Включено') }}" : "{{ _('Выключено') }}";
+          }
+        };
+        syncState();
         el.addEventListener('change', async () => {
+          syncState();
           const payload = {
             expiry: document.getElementById('notify-expiry')?.checked || false,
             maintenance: document.getElementById('notify-maintenance')?.checked || false,
