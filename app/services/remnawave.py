@@ -318,6 +318,9 @@ def remnawave_sync_user_identity(
     if telegram_id and current_telegram_id != int(telegram_id):
         payload["telegramId"] = int(telegram_id)
         changed = True
+    elif not telegram_id and current_telegram_id is not None:
+        payload["telegramId"] = None
+        changed = True
     if desired_username and current_username != desired_username:
         payload["username"] = desired_username
         changed = True

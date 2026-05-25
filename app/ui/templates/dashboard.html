@@ -365,248 +365,153 @@
     </div>
 
     <div id="tab-settings" class="hidden" role="tabpanel" aria-labelledby="tab-btn-settings">
-      <div class="grid gap-6">
-        <section class="glass-effect settings-hero rounded-[1.75rem] p-5 sm:p-6">
-          <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div class="max-w-3xl">
-              <div class="dashboard-panel-label">{{ _('Управление аккаунтом') }}</div>
-              <h2 class="mt-3 text-2xl sm:text-3xl font-bold">{{ _('Настройки доступа и профиля') }}</h2>
-              <p class="mt-2 text-sm leading-6 text-gray-400">
-                {{ _('Здесь можно поменять email, обновить пароль, связать Telegram и управлять доступом к аккаунту без лишних шагов.') }}
-              </p>
-            </div>
-            <div class="grid gap-3 sm:grid-cols-3 xl:min-w-[27rem]">
-              <div class="settings-summary-card rounded-2xl p-4">
-                <div class="settings-summary-label">{{ _('Email') }}</div>
-                <div class="mt-2 text-sm font-semibold text-white break-anywhere">
-                  {% if current_email_missing %}
-                    {{ _('Не добавлен') }}
-                  {% else %}
-                    {{ current_email_display }}
-                  {% endif %}
-                </div>
-              </div>
-              <div class="settings-summary-card rounded-2xl p-4">
-                <div class="settings-summary-label">Telegram</div>
-                <div class="mt-2 text-sm font-semibold text-white">
-                  {% if telegram_account %}
-                    {% if telegram_account.username %}@{{ telegram_account.username }}{% else %}ID {{ telegram_account.telegram_id }}{% endif %}
-                  {% else %}
-                    {{ _('Не привязан') }}
-                  {% endif %}
-                </div>
-              </div>
-              <div class="settings-summary-card rounded-2xl p-4">
-                <div class="settings-summary-label">{{ _('Безопасность') }}</div>
-                <div class="mt-2 text-sm font-semibold {{ 'text-amber-200' if current_email_missing else 'text-emerald-200' }}">
-                  {{ _('Требует внимания') if current_email_missing else _('Настроена') }}
-                </div>
-              </div>
-            </div>
+      <div class="mx-auto flex w-full max-w-3xl flex-col gap-5" id="settings-shell" data-csrf="{{ csrf_token() }}">
+        <section class="settings-section">
+          <div class="max-w-2xl">
+            <div class="dashboard-panel-label">{{ _('Управление аккаунтом') }}</div>
+            <h2 class="mt-3 text-2xl font-bold sm:text-3xl">{{ _('Настройки доступа и профиля') }}</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-400">
+              {{ _('Структурируйте доступ к аккаунту: контакт для входа, связанный Telegram и пароль для защиты учётной записи.') }}
+            </p>
           </div>
         </section>
 
-        <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)]">
-          <div class="space-y-6">
-            <section class="glass-effect rounded-[1.6rem] p-5 sm:p-6">
-              <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div class="max-w-2xl">
-                  <h3 class="text-xl sm:text-2xl font-bold">{{ _('Email для входа') }}</h3>
-                  <p class="mt-2 text-sm leading-6 text-gray-400">
-                    {{ _('На этот адрес отправляется код подтверждения. После подтверждения он станет новым email для входа в аккаунт.') }}
-                  </p>
-                </div>
-                <div class="settings-state-pill {{ 'is-warning' if current_email_missing else 'is-ready' }}">
-                  {{ _('Нужно добавить email') if current_email_missing else _('Email подтверждён') }}
-                </div>
-              </div>
-
-              <div class="mt-5 settings-current-value rounded-2xl p-4">
-                <div class="settings-summary-label">{{ _('Текущий email') }}</div>
-                <div class="mt-2 text-base font-semibold text-white break-anywhere">
-                  {% if current_email_missing %}
-                    {{ _('Не добавлен') }}
-                  {% else %}
-                    {{ current_email_display }}
-                  {% endif %}
-                </div>
-              </div>
-
-              {% if pending_email_change %}
-                <div class="mt-5 rounded-[1.5rem] border border-cyan-400/20 bg-cyan-500/10 p-5">
-                  <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <div class="text-sm font-semibold text-cyan-100">{{ _('Подтвердите новый email') }}</div>
-                      <div class="mt-1 text-sm text-cyan-100/80">
-                        {{ _('Мы отправили 6-значный код на адрес:') }}
-                        <span class="font-mono text-cyan-50">{{ pending_email_change_masked }}</span>
-                      </div>
-                    </div>
-                    <div class="text-xs text-cyan-100/70">{{ _('Код действует') }} {{ email_change_otp_ttl_minutes }} {{ _('минут') }}</div>
-                  </div>
-
-                  <form method="POST" action="{{ url_for('account_change_email_verify') }}" class="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div>
-                      <label class="block text-sm text-cyan-100/80 mb-1">{{ _('Код подтверждения') }}</label>
-                      <input type="text" name="otp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required
-                             class="w-full bg-slate-950/40 border border-cyan-400/20 rounded-xl px-4 py-3 focus:outline-none focus:border-cyan-300/60"
-                             placeholder="123456">
-                    </div>
-                    <button type="submit" class="inline-flex items-center justify-center rounded-2xl bg-cyan-500 hover:bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition tap-target">
-                      {{ _('Подтвердить email') }}
-                    </button>
-                  </form>
-
-                  <div class="mt-3 flex flex-col gap-3 sm:flex-row">
-                    <form method="POST" action="{{ url_for('account_change_email_resend') }}">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <button type="submit" class="dashboard-ghost-btn inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition tap-target">
-                        {{ _('Отправить код повторно') }}
-                      </button>
-                    </form>
-                    <form method="POST" action="{{ url_for('account_change_email_cancel') }}">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <button type="submit" class="dashboard-ghost-btn inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition tap-target">
-                        {{ _('Указать другой email') }}
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              {% else %}
-                <form method="POST" action="{{ url_for('account_change_email_start') }}" class="mt-5 space-y-4">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                  <div>
-                    <label class="block text-sm text-gray-400 mb-1">{{ _('Новый email') }}</label>
-                    <input type="email" name="new_email" required autocomplete="email"
-                           class="w-full bg-gray-900/40 border border-gray-800 rounded-xl px-4 py-3 focus:outline-none focus:border-cyan-400/50"
-                           placeholder="your@email.com">
-                  </div>
-
-                  <div>
-                    <label class="block text-sm text-gray-400 mb-1">{{ _('Текущий пароль') }}</label>
-                    <input type="password" name="password" required autocomplete="current-password"
-                           class="w-full bg-gray-900/40 border border-gray-800 rounded-xl px-4 py-3 focus:outline-none focus:border-cyan-400/50">
-                  </div>
-
-                  <button type="submit" class="inline-flex w-full items-center justify-center rounded-2xl bg-cyan-500 hover:bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition tap-target">
-                    {{ _('Получить код подтверждения') }}
-                  </button>
-                </form>
-              {% endif %}
-            </section>
-
-            <section class="glass-effect rounded-[1.6rem] p-5 sm:p-6">
-              <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div class="max-w-2xl">
-                  <h3 class="text-xl sm:text-2xl font-bold">{{ _('Смена пароля') }}</h3>
-                  <p class="mt-2 text-sm leading-6 text-gray-400">{{ _('Один новый пароль для сайта и всех входов в аккаунт. Используйте минимум 10 символов.') }}</p>
-                </div>
-                <div class="settings-state-pill is-neutral">{{ _('Рекомендуется обновлять регулярно') }}</div>
-              </div>
-
-              <form method="POST" action="{{ url_for('account_change_password') }}" class="mt-5 space-y-4">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                <div>
-                  <label class="block text-sm text-gray-400 mb-1">{{ _('Текущий пароль') }}</label>
-                  <input type="password" name="current_password" required autocomplete="current-password"
-                         class="w-full bg-gray-900/40 border border-gray-800 rounded-xl px-4 py-3 focus:outline-none focus:border-purple-500/50">
-                </div>
-
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <label class="block text-sm text-gray-400 mb-1">{{ _('Новый пароль') }}</label>
-                    <input type="password" name="new_password" required autocomplete="new-password"
-                           class="w-full bg-gray-900/40 border border-gray-800 rounded-xl px-4 py-3 focus:outline-none focus:border-purple-500/50">
-                  </div>
-                  <div>
-                    <label class="block text-sm text-gray-400 mb-1">{{ _('Повтор') }}</label>
-                    <input type="password" name="new_password2" required autocomplete="new-password"
-                           class="w-full bg-gray-900/40 border border-gray-800 rounded-xl px-4 py-3 focus:outline-none focus:border-purple-500/50">
-                  </div>
-                </div>
-
-                <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-2xl font-semibold transition tap-target">
-                  {{ _('Сменить пароль') }}
-                </button>
-              </form>
-            </section>
+        <section class="settings-section">
+          <div class="settings-section-head">
+            <div>
+              <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Аккаунт') }}</h3>
+              <p class="mt-1 text-sm leading-6 text-slate-400">{{ _('Контакты для входа и связанные каналы доступа.') }}</p>
+            </div>
           </div>
 
-          <div class="space-y-6">
-            <section class="glass-effect rounded-[1.6rem] p-5 sm:p-6">
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <h3 class="text-xl sm:text-2xl font-bold">Telegram</h3>
-                  <p class="mt-2 text-sm leading-6 text-gray-400">
-                    {{ _('Свяжите сайт и Telegram, чтобы управлять одной подпиской в обоих местах и быстро подтверждать вход.') }}
-                  </p>
-                </div>
-                <div class="settings-state-pill {{ 'is-ready' if telegram_account else 'is-neutral' }}">
-                  {{ _('Подключён') if telegram_account else _('Можно подключить') }}
-                </div>
+          <div class="settings-list">
+            <div class="settings-row">
+              <div class="settings-row-label">{{ _('Email') }}</div>
+              <div class="settings-row-value break-anywhere {% if current_email_missing %}text-slate-500{% endif %}" id="email-current-value">
+                {% if current_email_missing %}
+                  {{ _('Не указан') }}
+                {% else %}
+                  {{ current_email_display }}
+                {% endif %}
               </div>
+              <button type="button" class="settings-action settings-action-muted" data-toggle-target="email-link-form">
+                {{ _('Привязать') if current_email_missing else _('Изменить') }}
+              </button>
+            </div>
 
+            <form id="email-link-form" class="hidden border-t border-white/6 pt-4" data-api-form data-endpoint="{{ url_for('api_account_link_email') }}">
+              <div class="grid gap-3 sm:grid-cols-2">
+                <label class="settings-field">
+                  <span>{{ _('Email') }}</span>
+                  <input type="email" name="email" autocomplete="email" placeholder="you@example.com" value="{{ '' if current_email_missing else current_email_display }}">
+                </label>
+                <label class="settings-field">
+                  <span>{{ _('Текущий пароль') }}</span>
+                  <input type="password" name="password" autocomplete="current-password">
+                </label>
+              </div>
+              <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm text-slate-500">{{ _('Email сохраняется сразу после проверки пароля и доступности адреса.') }}</p>
+                <button type="submit" class="settings-action settings-action-primary">{{ _('Сохранить email') }}</button>
+              </div>
+              <div class="settings-feedback hidden" data-form-status></div>
+            </form>
+
+            <div class="settings-row">
+              <div class="settings-row-label">
+                <span class="inline-flex items-center gap-2">
+                  <svg class="h-4 w-4 text-cyan-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M9.78 18.65c-.32 0-.27-.12-.38-.42l-.96-3.15 7.35-4.35c.34-.2.59-.09.33.14l-5.95 5.36-.23 3.18c.33 0 .48-.15.66-.33l1.59-1.55 3.3 2.43c.61.34 1.05.16 1.2-.56l2.18-10.28c.21-.88-.33-1.28-.92-1.01L5.08 12.23c-.86.34-.85.82-.15 1.03l3.29 1.03 7.62-4.8c.36-.22.69-.1.42.14"/>
+                  </svg>
+                  <span>Telegram</span>
+                </span>
+              </div>
+              <div class="settings-row-value" id="telegram-current-value">
+                {% if telegram_account %}
+                  {% if telegram_account.username %}@{{ telegram_account.username }}{% else %}ID {{ telegram_account.telegram_id }}{% endif %}
+                {% else %}
+                  <span class="text-slate-500">{{ _('Не подключен') }}</span>
+                {% endif %}
+              </div>
               {% if telegram_account %}
-                <div class="mt-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-                  <div class="settings-summary-label text-emerald-200">{{ _('Привязанный аккаунт') }}</div>
-                  <div class="mt-2 text-base font-semibold text-white">
-                    {% if telegram_account.username %}@{{ telegram_account.username }}{% else %}ID {{ telegram_account.telegram_id }}{% endif %}
-                  </div>
-                </div>
-              {% elif telegram_auth %}
-                <div class="mt-5 overflow-hidden rounded-[1.5rem] border border-cyan-400/20 bg-[linear-gradient(145deg,rgba(34,211,238,0.16),rgba(14,116,144,0.06))] shadow-[0_16px_50px_rgba(8,145,178,0.14)]">
-                  <div class="p-5">
-                    {% if telegram_auth.bot_url %}
-                    <a href="{{ telegram_auth.bot_url }}" target="_blank" rel="noopener noreferrer"
-                       class="inline-flex w-full items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-cyan-50 font-semibold transition hover:bg-cyan-500/14">
-                      {{ _('Продолжить через Telegram') }}
-                    </a>
-                    {% endif %}
-                    <div class="mt-4">
-                      <div id="tg-link-status"
-                           class="rounded-2xl border border-cyan-400/15 bg-slate-950/30 px-4 py-3 text-sm text-cyan-100/90"
-                           data-status-url="{{ telegram_auth.status_url }}">
-                        {{ _('Ожидаем подтверждение в боте…') }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <button type="button" class="settings-action settings-action-muted" id="unlink-telegram-btn">{{ _('Отключить') }}</button>
+              {% elif telegram_auth and telegram_auth.bot_url %}
+                <a href="{{ telegram_auth.bot_url }}" target="_blank" rel="noopener noreferrer" class="settings-action settings-action-primary">{{ _('Подключить') }}</a>
               {% endif %}
-            </section>
+            </div>
 
-            <section class="glass-effect rounded-[1.6rem] p-5 sm:p-6 border border-red-500/20">
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <h3 class="text-xl sm:text-2xl font-bold text-red-200">{{ _('Удаление аккаунта') }}</h3>
-                  <p class="mt-2 text-sm leading-6 text-gray-400">{{ _('Удаляет аккаунт, подписку и связанные данные без возможности восстановления.') }}</p>
+            {% if telegram_auth and not telegram_account %}
+              <div class="rounded-[12px] border border-cyan-400/15 bg-cyan-500/8 px-4 py-3 text-sm text-cyan-100/90">
+                <div>{{ _('Подтвердите привязку в Telegram-боте, после чего кабинет обновится автоматически.') }}</div>
+                <div id="tg-link-status" class="mt-2 text-cyan-100/70" data-status-url="{{ telegram_auth.status_url }}">
+                  {{ _('Ожидаем подтверждение в боте…') }}
                 </div>
-                <div class="settings-state-pill is-danger">{{ _('Опасная зона') }}</div>
               </div>
+            {% endif %}
 
-              <form method="POST" action="{{ url_for('account_delete') }}" class="mt-5 space-y-4" onsubmit="return confirmDelete()">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                <div>
-                  <label class="block text-sm text-gray-400 mb-1">{{ _('Пароль') }}</label>
-                  <input type="password" name="password" required autocomplete="current-password"
-                         class="w-full bg-gray-900/40 border border-gray-800 rounded-xl px-4 py-3 focus:outline-none focus:border-red-400/50">
-                </div>
-                <div>
-                  <label class="block text-sm text-gray-400 mb-1">{{ _('Введите DELETE для подтверждения') }}</label>
-                  <input type="text" name="confirm" required placeholder="DELETE"
-                         class="w-full bg-gray-900/40 border border-gray-800 rounded-xl px-4 py-3 uppercase tracking-widest focus:outline-none focus:border-red-400/50">
-                </div>
-
-                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 px-6 py-3 rounded-2xl font-semibold transition tap-target">
-                  {{ _('Удалить аккаунт') }}
-                </button>
-              </form>
-            </section>
+            <div class="settings-feedback hidden" id="telegram-status"></div>
           </div>
-        </div>
+        </section>
+
+        <section class="settings-section">
+          <div class="settings-section-head">
+            <div>
+              <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Безопасность') }}</h3>
+              <p class="mt-1 text-sm leading-6 text-slate-400">{{ _('Обновите пароль для сайта и связанных входов в аккаунт.') }}</p>
+            </div>
+          </div>
+
+          <form id="password-form" class="space-y-4" data-api-form data-endpoint="{{ url_for('api_account_change_password') }}">
+            <div class="grid gap-3 sm:grid-cols-3">
+              <label class="settings-field">
+                <span>{{ _('Текущий пароль') }}</span>
+                <input type="password" name="current_password" autocomplete="current-password" required>
+              </label>
+              <label class="settings-field">
+                <span>{{ _('Новый пароль') }}</span>
+                <input type="password" name="new_password" autocomplete="new-password" required>
+              </label>
+              <label class="settings-field">
+                <span>{{ _('Повтор') }}</span>
+                <input type="password" name="new_password2" autocomplete="new-password" required>
+              </label>
+            </div>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p class="text-sm text-slate-500">{{ _('Кнопка станет активной после заполнения всех трёх полей.') }}</p>
+              <button type="submit" id="password-submit" class="settings-action settings-action-primary" disabled>{{ _('Сохранить') }}</button>
+            </div>
+            <div class="settings-feedback hidden" data-form-status></div>
+          </form>
+        </section>
+
+        <section class="settings-section mt-10 border border-red-500/18">
+          <div class="settings-section-head">
+            <div>
+              <h3 class="text-lg font-semibold text-red-100 sm:text-xl">{{ _('Опасная зона') }}</h3>
+              <p class="mt-1 text-sm leading-6 text-slate-400">{{ _('Удаление аккаунта необратимо. Сначала подтвердите пароль и ключевое слово.') }}</p>
+            </div>
+          </div>
+
+          <form id="delete-form" class="space-y-4" data-api-form data-endpoint="{{ url_for('api_account_delete') }}">
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label class="settings-field">
+                <span>{{ _('Текущий пароль') }}</span>
+                <input type="password" name="password" id="delete-password" autocomplete="current-password" required>
+              </label>
+              <label class="settings-field">
+                <span>{{ _('Введите DELETE') }}</span>
+                <input type="text" name="confirm_word" id="delete-confirm-word" placeholder="DELETE" autocomplete="off" required>
+              </label>
+            </div>
+            <div class="rounded-[12px] border border-white/6 bg-black/10 px-4 py-3 text-sm text-slate-500" id="delete-hint">
+              {{ _('Кнопка активируется только после проверки текущего пароля и точного ввода слова DELETE.') }}
+            </div>
+            <div class="flex justify-end">
+              <button type="submit" id="delete-submit" class="settings-action settings-action-danger" disabled>{{ _('Удалить аккаунт') }}</button>
+            </div>
+            <div class="settings-feedback hidden" data-form-status></div>
+          </form>
+        </section>
       </div>
     </div>
   </div>
@@ -664,17 +569,6 @@
   .dashboard-ghost-btn:hover {
     background: rgba(255,255,255,.08);
   }
-  .settings-hero {
-    background:
-      radial-gradient(circle at top left, rgba(34,211,238,.14), transparent 34%),
-      radial-gradient(circle at top right, rgba(168,85,247,.18), transparent 36%),
-      linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
-  }
-  .settings-summary-card {
-    border: 1px solid rgba(255,255,255,.08);
-    background: rgba(15,23,42,.45);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
-  }
   .settings-summary-label {
     font-size: .72rem;
     line-height: 1rem;
@@ -683,48 +577,139 @@
     font-weight: 700;
     color: rgba(148,163,184,.88);
   }
-  .settings-current-value {
+  .settings-section {
+    border-radius: 12px;
     border: 1px solid rgba(255,255,255,.08);
-    background: linear-gradient(180deg, rgba(15,23,42,.66), rgba(15,23,42,.38));
+    background:
+      linear-gradient(180deg, rgba(15,23,42,.78), rgba(15,23,42,.52)),
+      radial-gradient(circle at top left, rgba(34,211,238,.08), transparent 30%);
+    padding: 1.5rem;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
   }
-  .settings-state-pill {
+  .settings-section-head {
+    margin-bottom: 1.25rem;
+  }
+  .settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .settings-row {
+    display: grid;
+    grid-template-columns: minmax(0, 180px) minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .settings-row:last-of-type {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+  .settings-row-label {
+    font-size: .95rem;
+    font-weight: 600;
+    color: rgba(248,250,252,.98);
+  }
+  .settings-row-value {
+    text-align: center;
+    font-size: .95rem;
+    color: rgba(226,232,240,.94);
+  }
+  .settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: .45rem;
+    font-size: .88rem;
+    color: rgba(148,163,184,.92);
+  }
+  .settings-field input {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(2,6,23,.4);
+    padding: .8rem .95rem;
+    color: #fff;
+    outline: none;
+  }
+  .settings-field input:focus {
+    border-color: rgba(56,189,248,.5);
+    box-shadow: 0 0 0 1px rgba(56,189,248,.18);
+  }
+  .settings-action {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 999px;
-    padding: .7rem 1rem;
-    font-size: .85rem;
+    min-height: 42px;
+    border-radius: 8px;
+    padding: 0 .95rem;
+    font-size: .9rem;
     font-weight: 600;
-    line-height: 1.1;
+    transition: .18s ease;
+    white-space: nowrap;
+  }
+  .settings-action-primary {
+    border: 1px solid rgba(34,211,238,.18);
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+  .settings-action-primary:hover {
+    background: #f8fafc;
+  }
+  .settings-action-muted {
     border: 1px solid rgba(255,255,255,.08);
     background: rgba(255,255,255,.04);
-    color: rgba(226,232,240,.95);
+    color: rgba(203,213,225,.9);
   }
-  .settings-state-pill.is-ready {
+  .settings-action-muted:hover {
+    background: rgba(255,255,255,.08);
+  }
+  .settings-action-danger {
+    border: 1px solid rgba(248,113,113,.18);
+    background: rgba(255,255,255,.06);
+    color: rgba(148,163,184,.95);
+  }
+  .settings-action-danger.is-ready {
+    background: #b91c1c;
+    color: #fff;
+    border-color: rgba(248,113,113,.45);
+  }
+  .settings-action:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+  }
+  .settings-feedback {
+    margin-top: .25rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.08);
+    padding: .8rem .95rem;
+    font-size: .9rem;
+  }
+  .settings-feedback.is-success {
     border-color: rgba(16,185,129,.22);
-    background: rgba(16,185,129,.12);
+    background: rgba(16,185,129,.08);
     color: rgba(209,250,229,.98);
   }
-  .settings-state-pill.is-warning {
-    border-color: rgba(251,191,36,.24);
-    background: rgba(245,158,11,.12);
-    color: rgba(254,243,199,.98);
-  }
-  .settings-state-pill.is-danger {
-    border-color: rgba(248,113,113,.24);
-    background: rgba(239,68,68,.12);
+  .settings-feedback.is-error {
+    border-color: rgba(248,113,113,.22);
+    background: rgba(239,68,68,.08);
     color: rgba(254,226,226,.98);
   }
-  .settings-state-pill.is-neutral {
-    color: rgba(226,232,240,.9);
+  @media (max-width: 640px) {
+    .settings-section {
+      padding: 1rem;
+    }
+    .settings-row {
+      grid-template-columns: 1fr;
+      text-align: left;
+    }
+    .settings-row-value {
+      text-align: left;
+    }
   }
 </style>
 
 <script>
-  function confirmDelete(){
-    return confirm("{{ _('Вы уверены? Аккаунт будет удалён без возможности восстановления.') }}");
-  }
-
   async function copyText(text, btn){
     try{
       await navigator.clipboard.writeText(text);
@@ -791,6 +776,203 @@
       else if (saved === 'ref') setTab('ref');
     }
   } catch(e) {}
+
+  const settingsShell = document.getElementById('settings-shell');
+  const csrfToken = settingsShell?.dataset.csrf || '';
+
+  function showFormStatus(node, message, type){
+    if (!node) return;
+    node.textContent = message || '';
+    node.classList.remove('hidden', 'is-success', 'is-error');
+    node.classList.add(type === 'success' ? 'is-success' : 'is-error');
+  }
+
+  function clearFormStatus(node){
+    if (!node) return;
+    node.textContent = '';
+    node.classList.add('hidden');
+    node.classList.remove('is-success', 'is-error');
+  }
+
+  async function postJson(url, payload){
+    const response = await fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.ok === false){
+      throw new Error(data.error || "{{ _('Не удалось выполнить запрос. Попробуйте позже.') }}");
+    }
+    return data;
+  }
+
+  document.querySelectorAll('[data-toggle-target]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const target = document.getElementById(button.dataset.toggleTarget);
+      if (!target) return;
+      target.classList.toggle('hidden');
+    });
+  });
+
+  const emailForm = document.getElementById('email-link-form');
+  if (emailForm) {
+    emailForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const statusNode = emailForm.querySelector('[data-form-status]');
+      clearFormStatus(statusNode);
+      const formData = new FormData(emailForm);
+      try {
+        const data = await postJson(emailForm.dataset.endpoint, {
+          email: formData.get('email'),
+          password: formData.get('password'),
+        });
+        const emailValueNode = document.getElementById('email-current-value');
+        if (emailValueNode && data.email) {
+          emailValueNode.textContent = data.email;
+          emailValueNode.classList.remove('text-slate-500');
+        }
+        const toggleBtn = document.querySelector('[data-toggle-target="email-link-form"]');
+        if (toggleBtn) toggleBtn.textContent = "{{ _('Изменить') }}";
+        emailForm.reset();
+        const emailInput = emailForm.querySelector('input[name="email"]');
+        if (emailInput && data.email) emailInput.value = data.email;
+        showFormStatus(statusNode, data.message, 'success');
+      } catch (error) {
+        showFormStatus(statusNode, error.message, 'error');
+      }
+    });
+  }
+
+  const unlinkTelegramBtn = document.getElementById('unlink-telegram-btn');
+  if (unlinkTelegramBtn) {
+    unlinkTelegramBtn.addEventListener('click', async () => {
+      const statusNode = document.getElementById('telegram-status');
+      clearFormStatus(statusNode);
+      unlinkTelegramBtn.disabled = true;
+      try {
+        const data = await postJson("{{ url_for('api_account_unlink_telegram') }}", {});
+        const telegramValue = document.getElementById('telegram-current-value');
+        if (telegramValue) telegramValue.innerHTML = '<span class="text-slate-500">{{ _("Не подключен") }}</span>';
+        unlinkTelegramBtn.remove();
+        showFormStatus(statusNode, data.message, 'success');
+      } catch (error) {
+        showFormStatus(statusNode, error.message, 'error');
+        unlinkTelegramBtn.disabled = false;
+      }
+    });
+  }
+
+  const passwordForm = document.getElementById('password-form');
+  const passwordSubmit = document.getElementById('password-submit');
+  if (passwordForm && passwordSubmit) {
+    const passwordInputs = Array.from(passwordForm.querySelectorAll('input'));
+    const syncPasswordButton = () => {
+      const ready = passwordInputs.every((input) => input.value.trim().length > 0);
+      passwordSubmit.disabled = !ready;
+    };
+    passwordInputs.forEach((input) => input.addEventListener('input', syncPasswordButton));
+    syncPasswordButton();
+
+    passwordForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const statusNode = passwordForm.querySelector('[data-form-status]');
+      clearFormStatus(statusNode);
+      const formData = new FormData(passwordForm);
+      try {
+        const data = await postJson(passwordForm.dataset.endpoint, {
+          current_password: formData.get('current_password'),
+          new_password: formData.get('new_password'),
+          new_password2: formData.get('new_password2'),
+        });
+        passwordForm.reset();
+        syncPasswordButton();
+        showFormStatus(statusNode, data.message, 'success');
+      } catch (error) {
+        showFormStatus(statusNode, error.message, 'error');
+      }
+    });
+  }
+
+  const deleteForm = document.getElementById('delete-form');
+  const deletePassword = document.getElementById('delete-password');
+  const deleteConfirmWord = document.getElementById('delete-confirm-word');
+  const deleteSubmit = document.getElementById('delete-submit');
+  const deleteHint = document.getElementById('delete-hint');
+  let deletePasswordValid = false;
+  let deleteVerifySeq = 0;
+
+  async function verifyDeletePassword(){
+    if (!deletePassword || !deletePassword.value.trim()) {
+      deletePasswordValid = false;
+      updateDeleteButton();
+      return;
+    }
+    const seq = ++deleteVerifySeq;
+    try {
+      await postJson("{{ url_for('api_account_verify_password') }}", {password: deletePassword.value});
+      if (seq !== deleteVerifySeq) return;
+      deletePasswordValid = true;
+      updateDeleteButton();
+    } catch (_error) {
+      if (seq !== deleteVerifySeq) return;
+      deletePasswordValid = false;
+      updateDeleteButton();
+    }
+  }
+
+  function updateDeleteButton(){
+    if (!deleteSubmit || !deleteConfirmWord) return;
+    const confirmReady = deleteConfirmWord.value.trim().toUpperCase() === 'DELETE';
+    const ready = deletePasswordValid && confirmReady;
+    deleteSubmit.disabled = !ready;
+    deleteSubmit.classList.toggle('is-ready', ready);
+    if (!deleteHint) return;
+    if (ready) deleteHint.textContent = "{{ _('Проверка пройдена. Удаление станет необратимым после отправки формы.') }}";
+    else if (deletePassword && deletePassword.value.trim() && !deletePasswordValid) deleteHint.textContent = "{{ _('Текущий пароль пока не подтверждён.') }}";
+    else deleteHint.textContent = "{{ _('Кнопка активируется только после проверки текущего пароля и точного ввода слова DELETE.') }}";
+  }
+
+  if (deletePassword && deleteConfirmWord && deleteSubmit) {
+    let verifyTimer = null;
+    deletePassword.addEventListener('input', () => {
+      deletePasswordValid = false;
+      updateDeleteButton();
+      window.clearTimeout(verifyTimer);
+      verifyTimer = window.setTimeout(verifyDeletePassword, 350);
+    });
+    deleteConfirmWord.addEventListener('input', updateDeleteButton);
+    updateDeleteButton();
+  }
+
+  if (deleteForm) {
+    deleteForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const statusNode = deleteForm.querySelector('[data-form-status]');
+      clearFormStatus(statusNode);
+      try {
+        const formData = new FormData(deleteForm);
+        const data = await postJson(deleteForm.dataset.endpoint, {
+          password: formData.get('password'),
+          confirm_word: formData.get('confirm_word'),
+        });
+        if (data.redirect) {
+          window.location.href = data.redirect;
+          return;
+        }
+        showFormStatus(statusNode, data.message, 'success');
+      } catch (error) {
+        deletePasswordValid = false;
+        updateDeleteButton();
+        showFormStatus(statusNode, error.message, 'error');
+      }
+    });
+  }
 
   (function pollTelegramLink(){
     const node = document.getElementById('tg-link-status');

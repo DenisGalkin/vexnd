@@ -5,7 +5,9 @@ from datetime import datetime
 from flask import current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from email_validator import EmailNotValidError, validate_email
+from werkzeug.security import check_password_hash
 
+from app.bot.models import TelegramAccount
 from app.core.extensions import db
 from app.services.account_deletion import delete_user_account
 from app.domain.models import PendingRegistration, ReferralCode, ReferralFingerprint, ReferralSignup, User, UserSecurity
@@ -18,7 +20,7 @@ from app.services.email_change_otp import (
 )
 from app.services.email_otp import OTP_RESEND_COOLDOWN_SECONDS, OTP_TTL_MINUTES, EmailOtpError, delete_pending_registration, get_pending_registration, resend_pending_registration, start_pending_registration, verify_pending_registration
 from app.services.referrals import mask_email
-from app.services.remnawave import get_remnawave_config, remnawave_sync_user_identity
+from app.services.remnawave import get_remnawave_config, is_telegram_placeholder_email, remnawave_sync_user_identity
 from app.services.security import client_ip, device_fingerprint, renew_session, throttle_is_locked, throttle_register_fail, throttle_reset, validate_password_strength
 from app.services.telegram_auth import CHALLENGE_TTL_MINUTES, consume_approved_challenge, create_telegram_auth_challenge, get_active_challenge
 from app.services.telegram_links import telegram_bot_deeplink
@@ -83,9 +85,58 @@ def _settings_redirect():
     return redirect(localized_url("dashboard", tab="settings"))
 
 
+def _request_payload() -> dict[str, object]:
+    if request.is_json:
+        payload = request.get_json(silent=True)
+        if isinstance(payload, dict):
+            return payload
+    return request.form.to_dict()
+
+
+def _wants_json() -> bool:
+    return request.is_json or request.path.startswith("/api/")
+
+
+def _respond_success(message: str, *, redirect_to: str | None = None, extra: dict[str, object] | None = None):
+    if _wants_json():
+        data: dict[str, object] = {"ok": True, "message": message}
+        if redirect_to:
+            data["redirect"] = redirect_to
+        if extra:
+            data.update(extra)
+        return jsonify(data)
+    if message:
+        flash(message, "success")
+    return redirect(redirect_to) if redirect_to else _settings_redirect()
+
+
+def _respond_error(message: str, status_code: int = 400, *, category: str = "error", extra: dict[str, object] | None = None):
+    if _wants_json():
+        data: dict[str, object] = {"ok": False, "error": message}
+        if extra:
+            data.update(extra)
+        return jsonify(data), status_code
+    if message:
+        flash(message, category)
+    return _settings_redirect()
+
+
 def _normalize_email_input(value: str | None) -> str:
     normalized = validate_email((value or "").strip(), check_deliverability=False).normalized
     return normalized.strip().lower()
+
+
+def _password_is_valid(user: User, password: str | None) -> bool:
+    return bool(user.password_hash and password and check_password_hash(user.password_hash, password))
+
+
+def _sync_identity_safe(user: User) -> None:
+    try:
+        cfg = get_remnawave_config()
+        if cfg.base_url and cfg.token:
+            remnawave_sync_user_identity(cfg, user)
+    except Exception:
+        current_app.logger.exception("Remnawave identity sync failed")
 
 
 def _complete_referral_signup(user: User, pending: PendingRegistration) -> None:
@@ -410,7 +461,7 @@ def account_change_password():
     current_pw = request.form.get("current_password") or ""
     new_pw = request.form.get("new_password") or ""
     new_pw2 = request.form.get("new_password2") or ""
-    if not current_user.check_password(current_pw):
+    if not _password_is_valid(current_user, current_pw):
         flash(translate("Текущий пароль неверный"), "error")
         throttle_register_fail("change_password", f"ip:{ip}", window_seconds=15 * 60, max_fails=6, lock_seconds=15 * 60)
         return _settings_redirect()
@@ -439,27 +490,23 @@ def account_delete():
     ip = client_ip()
     locked, _ = throttle_is_locked("delete_account", f"ip:{ip}")
     if locked:
-        flash(translate("Слишком много попыток. Попробуйте позже."), "error")
-        return _settings_redirect()
-    password = request.form.get("password") or ""
-    confirm = (request.form.get("confirm") or "").strip().upper()
-    if confirm != "DELETE":
-        flash(translate("Введите DELETE для подтверждения удаления"), "error")
-        return _settings_redirect()
-    if not current_user.check_password(password):
-        flash(translate("Пароль неверный"), "error")
+        return _respond_error(translate("Слишком много попыток. Попробуйте позже."), 429)
+    payload = _request_payload()
+    password = str(payload.get("password") or "")
+    confirm_word = str(payload.get("confirm_word") or payload.get("confirm") or "").strip().upper()
+    if confirm_word != "DELETE":
+        return _respond_error(translate("Введите DELETE для подтверждения удаления"), 400)
+    if not _password_is_valid(current_user, password):
         throttle_register_fail("delete_account", f"ip:{ip}", window_seconds=15 * 60, max_fails=5, lock_seconds=30 * 60)
-        return _settings_redirect()
+        return _respond_error(translate("Пароль неверный"), 400)
     uid = current_user.id
     try:
         delete_user_account(uid)
         logout_user()
-        flash(translate("Аккаунт удалён"), "success")
-        return redirect(url_for("index"))
+        return _respond_success(translate("Аккаунт удалён"), redirect_to=localized_url("index"))
     except Exception:
         db.session.rollback()
-        flash(translate("Не удалось удалить аккаунт. Попробуйте позже."), "error")
-        return _settings_redirect()
+        return _respond_error(translate("Не удалось удалить аккаунт. Попробуйте позже."), 500)
 
 
 @login_required
@@ -503,6 +550,120 @@ def account_change_email_start():
             current_app.logger.exception("Start pending email change failed")
             flash(translate("Не удалось отправить код подтверждения. Попробуйте ещё раз позже."), "error")
     return _settings_redirect()
+
+
+@login_required
+def api_account_verify_password():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    payload = _request_payload()
+    password = str(payload.get("password") or "")
+    is_valid = _password_is_valid(current_user, password)
+    if not is_valid:
+        return jsonify({"ok": False, "valid": False, "error": translate("Пароль неверный")}), 400
+    return jsonify({"ok": True, "valid": True, "message": translate("Пароль подтверждён")})
+
+
+@login_required
+def api_account_change_password():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    ip = client_ip()
+    locked, _ = throttle_is_locked("change_password", f"ip:{ip}")
+    if locked:
+        return _respond_error(translate("Слишком много попыток. Попробуйте позже."), 429)
+
+    payload = _request_payload()
+    current_pw = str(payload.get("current_password") or "")
+    new_pw = str(payload.get("new_password") or "")
+    new_pw2 = str(payload.get("new_password2") or "")
+
+    if not _password_is_valid(current_user, current_pw):
+        throttle_register_fail("change_password", f"ip:{ip}", window_seconds=15 * 60, max_fails=6, lock_seconds=15 * 60)
+        return _respond_error(translate("Текущий пароль неверный"), 400)
+    if new_pw != new_pw2:
+        return _respond_error(translate("Пароли не совпадают"), 400)
+    if not validate_password_strength(new_pw):
+        return _respond_error(translate("Пароль слишком слабый. Используйте минимум 10 символов и комбинацию букв/цифр/символов."), 400)
+
+    try:
+        current_user.set_password(new_pw)
+        db.session.commit()
+        throttle_reset("change_password", f"ip:{ip}")
+        return _respond_success(translate("Пароль успешно изменён"))
+    except Exception:
+        db.session.rollback()
+        return _respond_error(translate("Не удалось изменить пароль. Попробуйте позже."), 500)
+
+
+@login_required
+def api_account_link_email():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    ip = client_ip()
+    locked, _ = throttle_is_locked("link_email", f"ip:{ip}")
+    if locked:
+        return _respond_error(translate("Слишком много попыток. Попробуйте позже."), 429)
+
+    payload = _request_payload()
+    email_raw = payload.get("email")
+    password = str(payload.get("password") or "")
+
+    if not _password_is_valid(current_user, password):
+        throttle_register_fail("link_email", f"ip:{ip}", window_seconds=15 * 60, max_fails=6, lock_seconds=15 * 60)
+        return _respond_error(translate("Пароль неверный"), 400)
+
+    try:
+        email = _normalize_email_input(str(email_raw or ""))
+    except EmailNotValidError:
+        return _respond_error(translate("Введите корректный email"), 400)
+
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user and existing_user.id != current_user.id:
+        return _respond_error(translate("Email уже зарегистрирован"), 400)
+
+    current_email = (current_user.email or "").strip().lower()
+    if current_email == email:
+        return _respond_success(translate("Email уже привязан"), extra={"email": email})
+
+    try:
+        current_user.email = email
+        db.session.commit()
+        delete_pending_email_change(get_pending_email_change(current_user.id))
+    except Exception:
+        db.session.rollback()
+        return _respond_error(translate("Не удалось привязать email. Попробуйте позже."), 500)
+
+    throttle_reset("link_email", f"ip:{ip}")
+    _sync_identity_safe(current_user)
+    return _respond_success(translate("Email успешно сохранён"), extra={"email": email})
+
+
+@login_required
+def api_account_unlink_telegram():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    telegram_account = TelegramAccount.query.filter_by(user_id=current_user.id).first()
+    if not telegram_account:
+        return _respond_error(translate("Telegram уже отключён"), 400)
+
+    current_email = (current_user.email or "").strip().lower()
+    if not current_email or is_telegram_placeholder_email(current_email):
+        return _respond_error(translate("Сначала привяжите email, чтобы не потерять доступ к аккаунту."), 400)
+
+    try:
+        db.session.delete(telegram_account)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return _respond_error(translate("Не удалось отключить Telegram. Попробуйте позже."), 500)
+
+    _sync_identity_safe(current_user)
+    return _respond_success(translate("Telegram отключён"))
 
 
 @login_required
@@ -598,3 +759,8 @@ def register(app) -> None:
     app.add_url_rule("/account/change-email/verify", endpoint="account_change_email_verify", view_func=account_change_email_verify, methods=["POST"])
     app.add_url_rule("/account/change-password", endpoint="account_change_password", view_func=account_change_password, methods=["POST"])
     app.add_url_rule("/account/delete", endpoint="account_delete", view_func=account_delete, methods=["POST"])
+    app.add_url_rule("/api/account/verify-password", endpoint="api_account_verify_password", view_func=api_account_verify_password, methods=["POST"])
+    app.add_url_rule("/api/account/change-password", endpoint="api_account_change_password", view_func=api_account_change_password, methods=["POST"])
+    app.add_url_rule("/api/account/link-email", endpoint="api_account_link_email", view_func=api_account_link_email, methods=["POST"])
+    app.add_url_rule("/api/account/unlink-telegram", endpoint="api_account_unlink_telegram", view_func=api_account_unlink_telegram, methods=["POST"])
+    app.add_url_rule("/api/account/delete", endpoint="api_account_delete", view_func=account_delete, methods=["POST"])
