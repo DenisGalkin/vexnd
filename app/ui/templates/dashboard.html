@@ -431,7 +431,7 @@
                   <svg class="h-4 w-4 text-cyan-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path d="M9.78 18.65c-.32 0-.27-.12-.38-.42l-.96-3.15 7.35-4.35c.34-.2.59-.09.33.14l-5.95 5.36-.23 3.18c.33 0 .48-.15.66-.33l1.59-1.55 3.3 2.43c.61.34 1.05.16 1.2-.56l2.18-10.28c.21-.88-.33-1.28-.92-1.01L5.08 12.23c-.86.34-.85.82-.15 1.03l3.29 1.03 7.62-4.8c.36-.22.69-.1.42.14"/>
                   </svg>
-                  <span>Telegram</span>
+                  <span>{{ _('Telegram') }}</span>
                 </span>
               </div>
               <div class="settings-row-value" id="telegram-current-value">
@@ -471,7 +471,7 @@
 
           {% if current_email_missing %}
             {% if telegram_account and password_reset_telegram_auth %}
-          <div class="settings-note rounded-2xl px-4 py-3 text-sm text-gray-300">
+          <div class="settings-note settings-note--telegram-reset rounded-2xl px-4 py-3 text-sm text-gray-300">
             <div class="font-semibold text-white">{{ _('Сброс пароля через Telegram') }}</div>
             {% if password_reset_telegram_approved %}
             <div class="mt-1">{{ _('Подтверждение получено. Теперь задайте новый пароль ниже.') }}</div>
@@ -481,17 +481,17 @@
           </div>
 
             {% if not password_reset_telegram_approved %}
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="settings-security-actions">
             <a href="{{ password_reset_telegram_auth.bot_url }}" target="_blank" rel="noopener noreferrer" class="settings-action settings-action-primary">
               {{ _('Открыть Telegram и подтвердить') }}
             </a>
-            <form method="POST" action="{{ url_for('account_password_reset_cancel') }}">
+            <form method="POST" action="{{ url_for('account_password_reset_cancel') }}" class="settings-security-cancel">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="settings-action settings-action-muted">{{ _('Отмена') }}</button>
             </form>
-          </div>
-          <div id="tg-password-reset-status" class="text-sm text-cyan-100/70" data-status-url="{{ password_reset_telegram_auth.status_url }}">
-            {{ _('Статус подтверждения обновляется автоматически.') }}
+            <div id="tg-password-reset-status" class="settings-status-inline settings-status-inline--telegram" data-status-url="{{ password_reset_telegram_auth.status_url }}">
+              {{ _('Статус подтверждения обновляется автоматически.') }}
+            </div>
           </div>
             {% else %}
           <form class="settings-form space-y-4" method="POST" action="{{ url_for('account_password_reset_verify') }}">
@@ -799,6 +799,17 @@
       linear-gradient(180deg, rgba(34,211,238,.12), rgba(34,211,238,.05)),
       linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
   }
+  .settings-note--telegram-reset {
+    border-color: rgba(255,255,255,.1);
+    border-radius: 2rem;
+    padding: 1.5rem;
+    background:
+      radial-gradient(circle at 14% 115%, rgba(192,38,211,.18), transparent 26%),
+      linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.018));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.04),
+      0 18px 40px rgba(0,0,0,.16);
+  }
   .settings-note--danger {
     border-color: rgba(239,68,68,.16);
     background:
@@ -815,6 +826,32 @@
     background: rgba(239,68,68,.08);
     color: rgba(254,226,226,.98);
   }
+  .settings-security-actions {
+    display: grid;
+    grid-template-columns: minmax(0, max-content) auto;
+    gap: 1rem 1.25rem;
+    align-items: center;
+  }
+  .settings-security-actions > a {
+    min-height: 5.25rem;
+    padding-inline: 2rem;
+    border-radius: 1.65rem;
+  }
+  .settings-security-cancel {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    justify-self: end;
+  }
+  .settings-security-cancel .settings-action {
+    min-width: 11.25rem;
+  }
+  .settings-status-inline {
+    font-size: .95rem;
+    color: rgba(191,219,254,.78);
+  }
+  .settings-status-inline--telegram {
+    align-self: start;
+  }
   @media (max-width: 640px) {
     .settings-section {
       padding: 1rem;
@@ -829,6 +866,23 @@
     }
     .settings-row-value {
       text-align: left;
+    }
+    .settings-note--telegram-reset {
+      padding: 1.1rem;
+      border-radius: 1.5rem;
+    }
+    .settings-security-actions {
+      grid-template-columns: 1fr;
+    }
+    .settings-security-actions > a,
+    .settings-security-cancel,
+    .settings-security-cancel .settings-action {
+      width: 100%;
+    }
+    .settings-security-cancel {
+      grid-column: auto;
+      grid-row: auto;
+      justify-self: stretch;
     }
   }
 </style>
