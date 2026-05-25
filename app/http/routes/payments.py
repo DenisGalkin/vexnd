@@ -72,8 +72,9 @@ def start_payment(method):
     return redirect(url_for("coming_soon"))
 
 
-def payment_callback():
-    return ("Deprecated", 410)
+# The legacy /payment_callback endpoint has been removed.
+# It previously returned HTTP 410 but served no purpose. Removing unused routes
+# reduces attack surface and avoids confusion.
 
 
 def _return_by_provider(provider: str, process_fn):
@@ -258,7 +259,7 @@ def platega_callback_secret(secret: str):
 
 def register(app) -> None:
     app.add_url_rule("/start_payment/<method>", endpoint="start_payment", view_func=start_payment, methods=["POST"])
-    app.add_url_rule("/payment_callback", endpoint="payment_callback", view_func=payment_callback, methods=["GET"])
+    # Removed deprecated /payment_callback endpoint registration.
     app.add_url_rule("/cryptobot/return", endpoint="cryptobot_return", view_func=cryptobot_return, methods=["GET"])
     app.add_url_rule("/crystalpay/return", endpoint="crystalpay_return", view_func=crystalpay_return, methods=["GET"])
     app.add_url_rule("/cryptobot/webhook", endpoint="cryptobot_webhook", view_func=cryptobot_webhook, methods=["POST"])

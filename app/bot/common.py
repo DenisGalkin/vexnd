@@ -53,11 +53,31 @@ SUBSCRIPTION_REMINDER_CHECK_INTERVAL_SECONDS = int(os.environ.get("BOT_SUBSCRIPT
 
 
 def build_http_session() -> requests.Session:
+    """
+    Create an HTTP session for bot API requests with connection pooling and optional
+    retry support. Pool sizes and retry counts can be tuned via environment
+    variables. Allowing limited retries helps absorb transient network errors
+    without surfacing them to end users. The defaults mirror those used by
+    the main application HTTP client defined in ``app.core.config``.
+
+    Environment variables:
+      HTTP_POOL_CONNECTIONS: number of connection pools to maintain (default 20)
+      HTTP_POOL_MAXSIZE: maximum number of connections per pool (default 50)
+      HTTP_MAX_RETRIES: number of automatic retries on transient errors (default 3)
+    """
     session = requests.Session()
+    pool_connections = int(os.environ.get("HTTP_POOL_CONNECTIONS", "20"))
+    pool_maxsize = int(os.environ.get("HTTP_POOL_MAXSIZE", "50"))
+    # Permit a few automatic retries on transient failures. If the env var is unset or
+    # invalid, fall back to three retries – similar to the web client.
+    try:
+        max_retries = int(os.environ.get("HTTP_MAX_RETRIES", "3"))
+    except Exception:
+        max_retries = 3
     adapter = HTTPAdapter(
-        pool_connections=int(os.environ.get("HTTP_POOL_CONNECTIONS", "20")),
-        pool_maxsize=int(os.environ.get("HTTP_POOL_MAXSIZE", "50")),
-        max_retries=0,
+        pool_connections=pool_connections,
+        pool_maxsize=pool_maxsize,
+        max_retries=max_retries,
     )
     session.mount("https://", adapter)
     session.mount("http://", adapter)

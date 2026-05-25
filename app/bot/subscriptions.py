@@ -384,13 +384,23 @@ def dispatch_subscription_reminders() -> None:
     now = utc_now()
     soon_delta = timedelta(hours=max(SUBSCRIPTION_REMINDER_SOON_HOURS, 1))
     expiry_cutoff = now - timedelta(hours=max(SUBSCRIPTION_REMINDER_EXPIRED_GRACE_HOURS, 1))
+    # Only load accounts whose subscriptions expire soon or have recently expired.
+    # Pulling every account/subscription into memory can cause large delays when
+    # there are many users. Instead, bound the query to the relevant time window.
+    soon_cutoff = now + soon_delta
+    # Expired subscriptions within the grace period are still relevant for reminders.
+    expiry_lower_bound = expiry_cutoff
     rows = (
         db.session.query(TelegramAccount, Subscription, BotUserState, TrialGrant, User)
         .join(Subscription, Subscription.user_id == TelegramAccount.user_id)
         .join(User, User.id == TelegramAccount.user_id)
         .outerjoin(BotUserState, BotUserState.telegram_id == TelegramAccount.telegram_id)
         .outerjoin(TrialGrant, TrialGrant.user_id == TelegramAccount.user_id)
-        .filter(Subscription.expiry_date.isnot(None))
+        .filter(
+            Subscription.expiry_date.isnot(None),
+            Subscription.expiry_date <= soon_cutoff,
+            Subscription.expiry_date >= expiry_lower_bound,
+        )
         .all()
     )
     for account, subscription, state, trial, user in rows:

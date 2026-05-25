@@ -17,6 +17,9 @@ def coupon_preview():
         plan_months = int(request.form.get("plan") or (payload or {}).get("plan") or 1)
     except Exception:
         plan_months = 1
+    # Clamp plan_months to at least 1 to avoid invalid or negative values.
+    if plan_months < 1:
+        plan_months = 1
     coupon_code = request.form.get("coupon_code")
     if coupon_code is None:
         coupon_code = (payload or {}).get("coupon_code")

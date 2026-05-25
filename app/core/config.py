@@ -22,10 +22,12 @@ def _env_bool(name: str, default: bool = False) -> bool:
 
 def build_http_session() -> requests.Session:
     session = requests.Session()
+    # Use environment-controlled connection pool and retry settings. Allow a few automatic
+    # retries on transient failures to reduce API latency and avoid costly reattempts.
     adapter = HTTPAdapter(
         pool_connections=int(os.environ.get("HTTP_POOL_CONNECTIONS", "20")),
         pool_maxsize=int(os.environ.get("HTTP_POOL_MAXSIZE", "50")),
-        max_retries=0,
+        max_retries=int(os.environ.get("HTTP_MAX_RETRIES", "3")),
     )
     session.mount("https://", adapter)
     session.mount("http://", adapter)

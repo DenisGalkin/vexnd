@@ -29,9 +29,11 @@ class Subscription(db.Model):
     sub_id = db.Column(db.String(64), unique=True, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
 
+    # Add dedicated expiry_date index to speed up queries filtering by expiry_date.
     __table_args__ = (
         db.Index("ix_subscription_user_id", "user_id"),
         db.Index("ix_subscription_user_active_expiry", "user_id", "is_active", "expiry_date"),
+        db.Index("ix_subscription_expiry_date", "expiry_date"),
     )
 
 
