@@ -47,8 +47,8 @@
     {# Optimise external resource loading #}
     <!-- Preconnect to Tailwind CDN to reduce handshake latency -->
     <link rel="preconnect" href="https://cdn.tailwindcss.com">
-    {# Load Tailwind from CDN using defer to avoid blocking HTML parsing; it still applies before paint due to deferred execution #}
-    <script src="https://cdn.tailwindcss.com" defer></script>
+    {# Load Tailwind synchronously to ensure styles are available immediately.  Without defer the script blocks, avoiding flashes of unstyled content. #}
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-black text-gray-100 min-h-screen font-sans antialiased">
     <nav class="glass-effect fixed w-full z-50 border-b border-gray-800">
