@@ -534,6 +534,8 @@ html, body {
 html {
     background: #000;
     color: #f3f4f6;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 body {
@@ -546,6 +548,7 @@ body {
 
 /* Avoid iOS Safari “100vh jump” when the address bar collapses */
 .min-h-screen {
+    min-height: 100vh;
     min-height: 100svh;
 }
 
@@ -557,11 +560,15 @@ body {
 
 /* Neutralize default button background during the first paint */
 button {
+    -webkit-appearance: none;
+    appearance: none;
     background: transparent;
     color: inherit;
 }
 
 input, select, textarea {
+    -webkit-appearance: none;
+    appearance: none;
     color: inherit;
 }
 
@@ -625,9 +632,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
         padding: 12px;
         border-top: 1px solid rgba(255, 255, 255, 0.08);
         background: rgba(0, 0, 0, 0.72);
+        -webkit-backdrop-filter: blur(12px);
         backdrop-filter: blur(12px);
         border-bottom-left-radius: 1rem;
         border-bottom-right-radius: 1rem;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
     }
 
     /* Reduce the visual jump from hover transforms on touch devices */
@@ -721,6 +730,20 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .tooltip-surface {
     background: rgba(3, 7, 18, 0.92); /* slate-950-ish */
     border: 1px solid rgba(255, 255, 255, 0.12);
+    -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+}
+
+/*
+ * Safari can render blurred/translucent surfaces with hard edges or reduced
+ * contrast when backdrop filtering is unsupported or temporarily unavailable.
+ */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .glass-effect,
+    .dashboard-locked::after,
+    .checkout-actions,
+    .tooltip-surface {
+        background: rgba(3, 7, 18, 0.9);
+    }
 }
