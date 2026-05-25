@@ -365,12 +365,12 @@
     </div>
 
     <div id="tab-settings" class="hidden" role="tabpanel" aria-labelledby="tab-btn-settings">
-      <div class="mx-auto flex w-full max-w-3xl flex-col gap-5" id="settings-shell" data-csrf="{{ csrf_token() }}">
-        <section class="settings-section">
+      <div class="mx-auto flex w-full max-w-4xl flex-col gap-6" id="settings-shell" data-csrf="{{ csrf_token() }}">
+        <section class="settings-section settings-section--hero">
           <div class="max-w-2xl">
             <div class="dashboard-panel-label">{{ _('Управление аккаунтом') }}</div>
             <h2 class="mt-3 text-2xl font-bold sm:text-3xl">{{ _('Настройки доступа и профиля') }}</h2>
-            <p class="mt-2 text-sm leading-6 text-slate-400">
+            <p class="mt-2 text-sm leading-6 text-gray-400">
               {{ _('Структурируйте доступ к аккаунту: контакт для входа, связанный Telegram и пароль для защиты учётной записи.') }}
             </p>
           </div>
@@ -380,14 +380,22 @@
           <div class="settings-section-head">
             <div>
               <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Аккаунт') }}</h3>
-              <p class="mt-1 text-sm leading-6 text-slate-400">{{ _('Контакты для входа и связанные каналы доступа.') }}</p>
+              <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Контакты для входа и связанные каналы доступа.') }}</p>
             </div>
           </div>
 
           <div class="settings-list">
             <div class="settings-row">
-              <div class="settings-row-label">{{ _('Email') }}</div>
-              <div class="settings-row-value break-anywhere {% if current_email_missing %}text-slate-500{% endif %}" id="email-current-value">
+              <div class="settings-row-label">
+                <span class="inline-flex items-center gap-2">
+                  <svg class="h-4 w-4 text-pink-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path>
+                    <path d="m22 8-8.97 6.35a1.8 1.8 0 0 1-2.06 0L2 8"></path>
+                  </svg>
+                  <span>{{ _('Email') }}</span>
+                </span>
+              </div>
+              <div class="settings-row-value break-anywhere {% if current_email_missing %}text-gray-500{% endif %}" id="email-current-value">
                 {% if current_email_missing %}
                   {{ _('Не указан') }}
                 {% else %}
@@ -399,7 +407,7 @@
               </button>
             </div>
 
-            <form id="email-link-form" class="hidden border-t border-white/6 pt-4" data-api-form data-endpoint="{{ url_for('api_account_link_email') }}">
+            <form id="email-link-form" class="settings-form hidden border-t border-white/6 pt-4" data-api-form data-endpoint="{{ url_for('api_account_link_email') }}">
               <div class="grid gap-3 sm:grid-cols-2">
                 <label class="settings-field">
                   <span>{{ _('Email') }}</span>
@@ -411,7 +419,7 @@
                 </label>
               </div>
               <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p class="text-sm text-slate-500">{{ _('Email сохраняется сразу после проверки пароля и доступности адреса.') }}</p>
+                <p class="text-sm text-gray-500">{{ _('Email сохраняется сразу после проверки пароля и доступности адреса.') }}</p>
                 <button type="submit" class="settings-action settings-action-primary">{{ _('Сохранить email') }}</button>
               </div>
               <div class="settings-feedback hidden" data-form-status></div>
@@ -430,7 +438,7 @@
                 {% if telegram_account %}
                   {% if telegram_account.username %}@{{ telegram_account.username }}{% else %}ID {{ telegram_account.telegram_id }}{% endif %}
                 {% else %}
-                  <span class="text-slate-500">{{ _('Не подключен') }}</span>
+                  <span class="text-gray-500">{{ _('Не подключен') }}</span>
                 {% endif %}
               </div>
               {% if telegram_account %}
@@ -441,7 +449,7 @@
             </div>
 
             {% if telegram_auth and not telegram_account %}
-              <div class="rounded-[12px] border border-cyan-400/15 bg-cyan-500/8 px-4 py-3 text-sm text-cyan-100/90">
+              <div class="settings-note settings-note--info rounded-2xl px-4 py-3 text-sm text-cyan-100/90">
                 <div>{{ _('Подтвердите привязку в Telegram-боте, после чего кабинет обновится автоматически.') }}</div>
                 <div id="tg-link-status" class="mt-2 text-cyan-100/70" data-status-url="{{ telegram_auth.status_url }}">
                   {{ _('Ожидаем подтверждение в боте…') }}
@@ -457,11 +465,11 @@
           <div class="settings-section-head">
             <div>
               <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Безопасность') }}</h3>
-              <p class="mt-1 text-sm leading-6 text-slate-400">{{ _('Обновите пароль для сайта и связанных входов в аккаунт.') }}</p>
+              <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Обновите пароль для сайта и связанных входов в аккаунт.') }}</p>
             </div>
           </div>
 
-          <form id="password-form" class="space-y-4" data-api-form data-endpoint="{{ url_for('api_account_change_password') }}">
+          <form id="password-form" class="settings-form space-y-4" data-api-form data-endpoint="{{ url_for('api_account_change_password') }}">
             <div class="grid gap-3 sm:grid-cols-3">
               <label class="settings-field">
                 <span>{{ _('Текущий пароль') }}</span>
@@ -477,22 +485,22 @@
               </label>
             </div>
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p class="text-sm text-slate-500">{{ _('Кнопка станет активной после заполнения всех трёх полей.') }}</p>
+              <p class="text-sm text-gray-500">{{ _('Кнопка станет активной после заполнения всех трёх полей.') }}</p>
               <button type="submit" id="password-submit" class="settings-action settings-action-primary" disabled>{{ _('Сохранить') }}</button>
             </div>
             <div class="settings-feedback hidden" data-form-status></div>
           </form>
         </section>
 
-        <section class="settings-section mt-10 border border-red-500/18">
+        <section class="settings-section settings-section--danger mt-2">
           <div class="settings-section-head">
             <div>
               <h3 class="text-lg font-semibold text-red-100 sm:text-xl">{{ _('Опасная зона') }}</h3>
-              <p class="mt-1 text-sm leading-6 text-slate-400">{{ _('Удаление аккаунта необратимо. Сначала подтвердите пароль и ключевое слово.') }}</p>
+              <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Удаление аккаунта необратимо. Сначала подтвердите пароль и ключевое слово.') }}</p>
             </div>
           </div>
 
-          <form id="delete-form" class="space-y-4" data-api-form data-endpoint="{{ url_for('api_account_delete') }}">
+          <form id="delete-form" class="settings-form space-y-4" data-api-form data-endpoint="{{ url_for('api_account_delete') }}">
             <div class="grid gap-3 sm:grid-cols-2">
               <label class="settings-field">
                 <span>{{ _('Текущий пароль') }}</span>
@@ -503,7 +511,7 @@
                 <input type="text" name="confirm_word" id="delete-confirm-word" placeholder="DELETE" autocomplete="off" required>
               </label>
             </div>
-            <div class="rounded-[12px] border border-white/6 bg-black/10 px-4 py-3 text-sm text-slate-500" id="delete-hint">
+            <div class="settings-note settings-note--danger rounded-2xl px-4 py-3 text-sm text-gray-400" id="delete-hint">
               {{ _('Кнопка активируется только после проверки текущего пароля и точного ввода слова DELETE.') }}
             </div>
             <div class="flex justify-end">
@@ -578,13 +586,20 @@
     color: rgba(148,163,184,.88);
   }
   .settings-section {
-    border-radius: 12px;
+    border-radius: 1.75rem;
     border: 1px solid rgba(255,255,255,.08);
-    background:
-      linear-gradient(180deg, rgba(15,23,42,.78), rgba(15,23,42,.52)),
-      radial-gradient(circle at top left, rgba(34,211,238,.08), transparent 30%);
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
     padding: 1.5rem;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  .settings-section--hero {
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+  }
+  .settings-section--danger {
+    border-color: rgba(239,68,68,.2);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)),
+      radial-gradient(circle at top right, rgba(239,68,68,.14), transparent 35%);
   }
   .settings-section-head {
     margin-bottom: 1.25rem;
@@ -614,65 +629,76 @@
   .settings-row-value {
     text-align: center;
     font-size: .95rem;
-    color: rgba(226,232,240,.94);
+    color: rgba(229,231,235,.94);
+  }
+  .settings-form {
+    border: 1px solid rgba(255,255,255,.08);
+    background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+    border-radius: 1.5rem;
+    padding: 1rem;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
   }
   .settings-field {
     display: flex;
     flex-direction: column;
     gap: .45rem;
     font-size: .88rem;
-    color: rgba(148,163,184,.92);
+    color: rgba(156,163,175,.92);
   }
   .settings-field input {
     width: 100%;
-    border-radius: 8px;
+    border-radius: 1rem;
     border: 1px solid rgba(255,255,255,.08);
-    background: rgba(2,6,23,.4);
+    background: rgba(255,255,255,.04);
     padding: .8rem .95rem;
     color: #fff;
     outline: none;
+    transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
   }
   .settings-field input:focus {
-    border-color: rgba(56,189,248,.5);
-    box-shadow: 0 0 0 1px rgba(56,189,248,.18);
+    border-color: rgba(192,38,211,.4);
+    box-shadow: 0 0 0 1px rgba(192,38,211,.2);
+    background: rgba(255,255,255,.06);
   }
   .settings-action {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: 42px;
-    border-radius: 8px;
-    padding: 0 .95rem;
+    border-radius: 1rem;
+    padding: 0 1rem;
     font-size: .9rem;
     font-weight: 600;
     transition: .18s ease;
     white-space: nowrap;
   }
   .settings-action-primary {
-    border: 1px solid rgba(34,211,238,.18);
-    background: #e2e8f0;
-    color: #0f172a;
+    border: 0;
+    background: linear-gradient(135deg, #c026d3, #ec4899);
+    box-shadow: 0 12px 30px rgba(192,38,211,.22);
+    color: #fff;
   }
   .settings-action-primary:hover {
-    background: #f8fafc;
+    filter: brightness(1.06);
   }
   .settings-action-muted {
-    border: 1px solid rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.1);
     background: rgba(255,255,255,.04);
-    color: rgba(203,213,225,.9);
+    color: rgba(229,231,235,.9);
   }
   .settings-action-muted:hover {
     background: rgba(255,255,255,.08);
   }
   .settings-action-danger {
-    border: 1px solid rgba(248,113,113,.18);
+    border: 1px solid rgba(255,255,255,.1);
     background: rgba(255,255,255,.06);
-    color: rgba(148,163,184,.95);
+    color: rgba(229,231,235,.95);
   }
   .settings-action-danger.is-ready {
-    background: #b91c1c;
+    background: linear-gradient(135deg, #b91c1c, #ef4444);
     color: #fff;
     border-color: rgba(248,113,113,.45);
+    box-shadow: 0 12px 30px rgba(185,28,28,.22);
   }
   .settings-action:disabled {
     opacity: .45;
@@ -684,6 +710,23 @@
     border: 1px solid rgba(255,255,255,.08);
     padding: .8rem .95rem;
     font-size: .9rem;
+  }
+  .settings-note {
+    border: 1px solid rgba(255,255,255,.08);
+    background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  .settings-note--info {
+    border-color: rgba(34,211,238,.18);
+    background:
+      linear-gradient(180deg, rgba(34,211,238,.12), rgba(34,211,238,.05)),
+      linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+  }
+  .settings-note--danger {
+    border-color: rgba(239,68,68,.16);
+    background:
+      linear-gradient(180deg, rgba(239,68,68,.08), rgba(239,68,68,.03)),
+      linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
   }
   .settings-feedback.is-success {
     border-color: rgba(16,185,129,.22);
@@ -698,6 +741,10 @@
   @media (max-width: 640px) {
     .settings-section {
       padding: 1rem;
+    }
+    .settings-form {
+      padding: .9rem;
+      border-radius: 1.25rem;
     }
     .settings-row {
       grid-template-columns: 1fr;
@@ -835,7 +882,7 @@
         const emailValueNode = document.getElementById('email-current-value');
         if (emailValueNode && data.email) {
           emailValueNode.textContent = data.email;
-          emailValueNode.classList.remove('text-slate-500');
+          emailValueNode.classList.remove('text-gray-500');
         }
         const toggleBtn = document.querySelector('[data-toggle-target="email-link-form"]');
         if (toggleBtn) toggleBtn.textContent = "{{ _('Изменить') }}";
@@ -858,7 +905,7 @@
       try {
         const data = await postJson("{{ url_for('api_account_unlink_telegram') }}", {});
         const telegramValue = document.getElementById('telegram-current-value');
-        if (telegramValue) telegramValue.innerHTML = '<span class="text-slate-500">{{ _("Не подключен") }}</span>';
+        if (telegramValue) telegramValue.innerHTML = '<span class="text-gray-500">{{ _("Не подключен") }}</span>';
         unlinkTelegramBtn.remove();
         showFormStatus(statusNode, data.message, 'success');
       } catch (error) {
