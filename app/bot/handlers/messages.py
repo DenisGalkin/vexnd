@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.bot.common import (
     app,
     db,
+    ensure_telegram_user_password,
     get_or_create_account,
     get_or_create_state,
     send_message,
@@ -87,7 +88,9 @@ def handle_message(message: dict[str, object]) -> None:
             return
 
         if text.startswith("/login "):
-            ok, reason, _challenge = approve_telegram_auth_challenge(text.split(maxsplit=1)[1], account.telegram_id)
+            ok, reason, challenge = approve_telegram_auth_challenge(text.split(maxsplit=1)[1], account.telegram_id)
+            if ok and challenge and challenge.purpose == "login":
+                ensure_telegram_user_password(chat_id, user, state)
             key = "telegram_login_ok" if ok else f"telegram_login_{reason}"
             send_message(chat_id, t(state, key), main_menu(state, user))
             return

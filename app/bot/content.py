@@ -85,6 +85,7 @@ TEXTS = {
         "telegram_login_merge_failed": "⚠️ Не удалось объединить аккаунты автоматически. Напишите в поддержку, и мы поможем.",
         "telegram_login_user_not_found": "⚠️ Профиль для входа не найден. Попробуйте ещё раз позже.",
         "telegram_login_declined": "❌ Подтверждение отклонено в Telegram. Вернитесь на сайт и начните снова, если вход всё ещё нужен.",
+        "telegram_generated_password": "🔑 <b>Пароль для входа на сайте</b>\n\nМы сгенерировали пароль для вашего аккаунта. Сохраните его в надёжном месте:\n<tg-spoiler>{password}</tg-spoiler>",
     },
     "en": {
         "buy": "🚀 Buy VPN",
@@ -169,6 +170,7 @@ TEXTS = {
         "telegram_login_merge_failed": "⚠️ Could not merge accounts automatically. Contact support and we will help.",
         "telegram_login_user_not_found": "⚠️ The profile for sign-in was not found. Please try again later.",
         "telegram_login_declined": "❌ Confirmation was declined in Telegram. Return to the website and start again if you still need to sign in.",
+        "telegram_generated_password": "🔑 <b>Password for website sign-in</b>\n\nWe generated a password for your account. Keep it in a safe place:\n<tg-spoiler>{password}</tg-spoiler>",
     },
 }
 

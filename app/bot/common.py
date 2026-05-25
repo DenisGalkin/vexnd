@@ -238,6 +238,16 @@ def send_message(chat_id: int, text: str, reply_markup: dict[str, Any] | None = 
     return api("sendMessage", payload)
 
 
+def ensure_telegram_user_password(chat_id: int, user: User, state: BotUserState | None) -> str | None:
+    if not user or (user.password_hash or "").strip():
+        return None
+    password = secrets.token_urlsafe(12)
+    user.set_password(password)
+    db.session.commit()
+    send_message(chat_id, t(state, "telegram_generated_password", password=h(password)))
+    return password
+
+
 def send_photo(chat_id: int, png_bytes: bytes, caption: str = "", reply_markup: dict[str, Any] | None = None) -> None:
     files = {"photo": ("subscription-qr.png", png_bytes, "image/png")}
     data = {"chat_id": str(chat_id), "caption": caption}
