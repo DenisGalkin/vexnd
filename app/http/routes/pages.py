@@ -82,10 +82,27 @@ def set_language(lang):
 
 
 def setup():
+    happ_ios_url = "https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973" if get_locale() == "ru" else "https://apps.apple.com/app/happ-proxy-utility/id6504287215"
     clients = {
-        "ios": [{"name": "v2RayTun", "url": "https://apps.apple.com/app/v2raytun/id6476628951"}, {"name": "Shadowrocket", "url": "#"}],
-        "android": [{"name": "v2rayNG", "url": "#"}, {"name": "NekoBox", "url": "#"}],
-        "windows": [{"name": "v2rayN", "url": "#"}, {"name": "Nekoray", "url": "#"}],
+        "ios": [
+            {"name": "v2RayTun", "url": "https://apps.apple.com/app/v2raytun/id6476628951", "store": "App Store"},
+            {"name": "Happ", "url": happ_ios_url, "store": "App Store"},
+        ],
+        "android": [
+            {"name": "v2RayTun", "url": "https://play.google.com/store/apps/details?id=com.v2raytun.android", "store": "Google Play"},
+            {"name": "FlClashX", "url": "https://github.com/pluralplay/FlClashX/releases/download/v0.3.2/FlClashX-android-universal.apk", "store": "GitHub"},
+            {"name": "Happ", "url": "https://play.google.com/store/apps/details?id=com.happproxy&pcampaignid=web_share", "store": "Google Play"},
+        ],
+        "windows": [
+            {"name": "FlClashX", "url": "https://github.com/pluralplay/FlClashX/releases/latest/download/FlClashX-windows-amd64-setup.exe", "store": "GitHub"},
+            {"name": "v2RayTun", "url": "https://storage.v2raytun.com/v2RayTun_Setup.exe", "store": "Website"},
+            {"name": "Happ", "url": "https://github.com/Happ-proxy/happ-desktop/releases/latest/download/setup-Happ.x64.exe", "store": "GitHub"},
+        ],
+        "macos": [
+            {"name": "FlClashX", "url": "https://github.com/pluralplay/FlClashX/releases/download/v0.3.2/FlClashX-macos-arm64.dmg", "store": "GitHub"},
+            {"name": "v2RayTun", "url": "https://apps.apple.com/app/v2raytun/id6476628951", "store": "App Store"},
+            {"name": "Happ", "url": happ_ios_url, "store": "App Store"},
+        ],
     }
     return render_template("setup.html", clients=clients)
 

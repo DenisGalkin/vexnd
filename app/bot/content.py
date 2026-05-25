@@ -48,7 +48,7 @@ TEXTS = {
         "subscription_active": "✅ <b>Подписка активна</b>\n\n🗓 Осталось дней: <b>{days}</b>\n⏱ Действует до: <b>{date}</b>",
         "syncing": "⏳ Ссылка ещё синхронизируется. Нажмите «Обновить» через минуту.",
         "start": "👋 Привет{name}! Это <b>VEXND VPN</b>.\n\nЗдесь можно купить подписку, оплатить удобным способом и сразу получить ссылку для подключения.\n\nВыберите действие ниже:",
-        "setup_text": "📲 <b>Как подключиться</b>\n\n1. Установите клиент: <b>v2RayTun</b>, <b>v2rayNG</b>, <b>NekoBox</b> или <b>v2rayN</b>.\n2. Откройте «Мой профиль» и скопируйте subscription URL.\n3. Импортируйте ссылку в приложении или отсканируйте QR-код.",
+        "setup_text": "📲 <b>Как подключиться</b>\n\n1. Установите клиент: <b>v2RayTun</b>, <b>FlClashX</b> или <b>Happ</b>.\n2. Откройте «Мой профиль» и скопируйте subscription URL.\n3. Импортируйте ссылку в приложении или отсканируйте QR-код.",
         "payment_title": "💳 <b>Оплата подписки</b>",
         "plan": "Тариф",
         "amount": "Сумма",
@@ -133,7 +133,7 @@ TEXTS = {
         "subscription_active": "✅ <b>Subscription is active</b>\n\n🗓 Days left: <b>{days}</b>\n⏱ Active until: <b>{date}</b>",
         "syncing": "⏳ The link is still syncing. Tap “Refresh” in a minute.",
         "start": "👋 Hi{name}! This is <b>VEXND VPN</b>.\n\nHere you can buy a subscription, pay securely, and instantly receive your connection link.\n\nChoose an action below:",
-        "setup_text": "📲 <b>How to connect</b>\n\n1. Install a client: <b>v2RayTun</b>, <b>v2rayNG</b>, <b>NekoBox</b>, or <b>v2rayN</b>.\n2. Open “My profile” and copy your subscription URL.\n3. Import the link in the app or scan the QR code.",
+        "setup_text": "📲 <b>How to connect</b>\n\n1. Install a client: <b>v2RayTun</b>, <b>FlClashX</b>, or <b>Happ</b>.\n2. Open “My profile” and copy your subscription URL.\n3. Import the link in the app or scan the QR code.",
         "payment_title": "💳 <b>Subscription payment</b>",
         "plan": "Plan",
         "amount": "Amount",
@@ -345,21 +345,31 @@ CONNECT_CLIENTS: dict[str, list[dict[str, str]]] = {
     ],
     "android": [
         {
+            "code": "v2raytun",
+            "name": "v2RayTun",
+            "url": "https://play.google.com/store/apps/details?id=com.v2raytun.android",
+        },
+        {
+            "code": "flclashx",
+            "name": "FlClashX",
+            "url": "https://github.com/pluralplay/FlClashX/releases/download/v0.3.2/FlClashX-android-universal.apk",
+        },
+        {
             "code": "happ",
             "name": "Happ",
             "url": "https://play.google.com/store/apps/details?id=com.happproxy&pcampaignid=web_share",
-        },
-        {
-            "code": "v2rayng",
-            "name": "v2rayNG",
-            "url": "https://github.com/2dust/v2rayNG/releases/download/2.1.8/v2rayNG_2.1.8-fdroid_universal.apk",
         },
     ],
     "windows": [
         {
             "code": "flclashx",
-            "name": "FLClashX",
+            "name": "FlClashX",
             "url": "https://github.com/pluralplay/FlClashX/releases/latest/download/FlClashX-windows-amd64-setup.exe",
+        },
+        {
+            "code": "v2raytun",
+            "name": "v2RayTun",
+            "url": "https://storage.v2raytun.com/v2RayTun_Setup.exe",
         },
         {
             "code": "happ",
@@ -369,15 +379,20 @@ CONNECT_CLIENTS: dict[str, list[dict[str, str]]] = {
     ],
     "macos": [
         {
-            "code": "happ",
-            "name": "Happ",
-            "url_ru": "https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973",
-            "url_global": "https://apps.apple.com/app/happ-proxy-utility/id6504287215",
+            "code": "flclashx",
+            "name": "FlClashX",
+            "url": "https://github.com/pluralplay/FlClashX/releases/download/v0.3.2/FlClashX-macos-arm64.dmg",
         },
         {
             "code": "v2raytun",
             "name": "v2RayTun",
             "url": "https://apps.apple.com/app/v2raytun/id6476628951",
+        },
+        {
+            "code": "happ",
+            "name": "Happ",
+            "url_ru": "https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973",
+            "url_global": "https://apps.apple.com/app/happ-proxy-utility/id6504287215",
         },
     ],
 }

@@ -10,74 +10,64 @@
     </p>
     
     <div class="space-y-12">
-        <!-- iOS -->
+        {% set sections = [
+            {
+                "key": "ios",
+                "icon": "📱",
+                "title": "iPhone",
+                "download_text": _('Скачать из App Store'),
+                "action_text": _('Установить →'),
+                "instruction": _('Скачайте приложение, откройте его и импортируйте вашу подписку (subscription URL) из личного кабинета.'),
+            },
+            {
+                "key": "android",
+                "icon": "🤖",
+                "title": "Android",
+                "download_text": _('Скачать из магазина'),
+                "action_text": _('Установить →'),
+                "instruction": _('Установите приложение, нажмите "+" и выберите "Импорт из буфера обмена", вставьте ссылку на подписку.'),
+            },
+            {
+                "key": "windows",
+                "icon": "💻",
+                "title": "Windows",
+                "download_text": _('Скачать'),
+                "action_text": _('Скачать →'),
+                "instruction": _('Установите приложение, запустите его и импортируйте ссылку на подписку из личного кабинета.'),
+            },
+            {
+                "key": "macos",
+                "icon": "🖥️",
+                "title": "MacOS",
+                "download_text": _('Скачать'),
+                "action_text": _('Скачать →'),
+                "instruction": _('Установите приложение, откройте его и импортируйте ссылку на подписку из личного кабинета.'),
+            },
+        ] %}
+
+        {% for section in sections %}
         <div class="glass-effect rounded-2xl p-8">
             <div class="flex items-center mb-6">
-                <div class="text-4xl mr-4">📱</div>
-                <h2 class="text-3xl font-bold">iOS</h2>
+                <div class="text-4xl mr-4">{{ section.icon }}</div>
+                <h2 class="text-3xl font-bold">{{ section.title }}</h2>
             </div>
-            <div class="grid md:grid-cols-2 gap-6">
-                {% for client in clients.ios %}
+            <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {% for client in clients[section.key] %}
                 <a href="{{ client.url }}" target="_blank" class="glass-effect p-6 rounded-xl hover:scale-105 transition-all">
                     <h3 class="text-xl font-bold mb-2">{{ client.name }}</h3>
-                    <p class="text-gray-400 text-sm mb-4">{{ _('Скачать из App Store') }}</p>
-                    <div class="text-purple-400">{{ _('Установить →') }}</div>
+                    <p class="text-gray-400 text-sm mb-4">{{ section.download_text }}{% if client.store %} · {{ client.store }}{% endif %}</p>
+                    <div class="text-purple-400">{{ section.action_text }}</div>
                 </a>
                 {% endfor %}
             </div>
             <div class="mt-6 p-4 bg-gray-800/50 rounded-lg">
                 <p class="text-gray-300">
                     <span class="font-bold">{{ _('Инструкция:') }}</span> 
-                    {{ _('Скачайте приложение, откройте его и импортируйте вашу подписку (subscription URL) из личного кабинета.') }}
+                    {{ section.instruction }}
                 </p>
             </div>
         </div>
-        
-        <!-- Android -->
-        <div class="glass-effect rounded-2xl p-8">
-            <div class="flex items-center mb-6">
-                <div class="text-4xl mr-4">🤖</div>
-                <h2 class="text-3xl font-bold">Android</h2>
-            </div>
-            <div class="grid md:grid-cols-2 gap-6">
-                {% for client in clients.android %}
-                <a href="{{ client.url }}" target="_blank" class="glass-effect p-6 rounded-xl hover:scale-105 transition-all">
-                    <h3 class="text-xl font-bold mb-2">{{ client.name }}</h3>
-                    <p class="text-gray-400 text-sm mb-4">{{ _('Скачать из магазина') }}</p>
-                    <div class="text-purple-400">{{ _('Установить →') }}</div>
-                </a>
-                {% endfor %}
-            </div>
-            <div class="mt-6 p-4 bg-gray-800/50 rounded-lg">
-                <p class="text-gray-300">
-                    <span class="font-bold">{{ _('Инструкция:') }}</span> 
-                    {{ _('Установите приложение, нажмите "+" и выберите "Импорт из буфера обмена", вставьте ссылку на подписку.') }}
-                </p>
-            </div>
-        </div>
-        
-        <!-- Windows -->
-        <div class="glass-effect rounded-2xl p-8">
-            <div class="flex items-center mb-6">
-                <div class="text-4xl mr-4">💻</div>
-                <h2 class="text-3xl font-bold">Windows</h2>
-            </div>
-            <div class="grid md:grid-cols-2 gap-6">
-                {% for client in clients.windows %}
-                <a href="{{ client.url }}" target="_blank" class="glass-effect p-6 rounded-xl hover:scale-105 transition-all">
-                    <h3 class="text-xl font-bold mb-2">{{ client.name }}</h3>
-                    <p class="text-gray-400 text-sm mb-4">{{ _('Скачать с GitHub') }}</p>
-                    <div class="text-purple-400">{{ _('Скачать →') }}</div>
-                </a>
-                {% endfor %}
-            </div>
-            <div class="mt-6 p-4 bg-gray-800/50 rounded-lg">
-                <p class="text-gray-300">
-                    <span class="font-bold">{{ _('Инструкция:') }}</span> 
-                    {{ _('Распакуйте архив, запустите приложение, добавьте ссылку на подписку через меню "Сервер" → "Импорт из буфера".') }}
-                </p>
-            </div>
-        </div>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}
