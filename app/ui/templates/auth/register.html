@@ -32,8 +32,8 @@
         {% endif %}
 
         {% if verification_pending %}
-        <div class="mb-6 rounded-xl border border-cyan-500/25 bg-cyan-500/10 p-4">
-            <div class="font-semibold text-cyan-100">{{ _('Подтвердите email') }}</div>
+        <div class="mb-6 rounded-xl border border-purple-500/25 bg-purple-500/10 p-4">
+            <div class="font-semibold text-purple-200">{{ _('Подтвердите email') }}</div>
             <div class="text-sm text-gray-300 mt-1">
                 {{ _('Мы отправили 6-значный код на адрес:') }} <span class="font-mono">{{ masked_pending_email }}</span><br>
                 {{ _('Введите код ниже. Он действует') }} {{ otp_ttl_minutes }} {{ _('минут') }}.
@@ -48,12 +48,12 @@
                     {{ _('Код подтверждения') }}
                 </label>
                 <input type="text" id="otp_code" name="otp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required
-                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white tracking-[0.35em] text-center focus:outline-none focus:ring-2 focus:ring-cyan-600"
+                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white tracking-[0.35em] text-center focus:outline-none focus:ring-2 focus:ring-purple-600"
                        placeholder="123456">
             </div>
 
             <button type="submit"
-                    class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-3 px-4 rounded-lg transition-all hover-glow">
+                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-all hover-glow">
                 {{ _('Подтвердить email') }}
             </button>
         </form>
