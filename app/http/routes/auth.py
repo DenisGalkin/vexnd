@@ -4,12 +4,21 @@ from datetime import datetime
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
+from email_validator import EmailNotValidError, validate_email
 
 from app.core.extensions import db
 from app.services.account_deletion import delete_user_account
 from app.domain.models import PendingRegistration, ReferralCode, ReferralFingerprint, ReferralSignup, User, UserSecurity
+from app.services.email_change_otp import (
+    delete_pending_email_change,
+    get_pending_email_change,
+    resend_pending_email_change,
+    start_pending_email_change,
+    verify_pending_email_change,
+)
 from app.services.email_otp import OTP_RESEND_COOLDOWN_SECONDS, OTP_TTL_MINUTES, EmailOtpError, delete_pending_registration, get_pending_registration, resend_pending_registration, start_pending_registration, verify_pending_registration
 from app.services.referrals import mask_email
+from app.services.remnawave import get_remnawave_config, remnawave_sync_user_identity
 from app.services.security import client_ip, device_fingerprint, renew_session, throttle_is_locked, throttle_register_fail, throttle_reset, validate_password_strength
 from app.services.telegram_auth import CHALLENGE_TTL_MINUTES, consume_approved_challenge, create_telegram_auth_challenge, get_active_challenge
 from app.services.telegram_links import telegram_bot_deeplink
@@ -68,6 +77,15 @@ def _pending_registration_context() -> dict[str, object]:
         "otp_ttl_minutes": OTP_TTL_MINUTES,
         "resend_cooldown_seconds": OTP_RESEND_COOLDOWN_SECONDS,
     }
+
+
+def _settings_redirect():
+    return redirect(localized_url("dashboard", tab="settings"))
+
+
+def _normalize_email_input(value: str | None) -> str:
+    normalized = validate_email((value or "").strip(), check_deliverability=False).normalized
+    return normalized.strip().lower()
 
 
 def _complete_referral_signup(user: User, pending: PendingRegistration) -> None:
@@ -329,6 +347,10 @@ def register_user():
 
 @login_required
 def logout():
+    if request.method == "POST":
+        from app.services.security import require_csrf
+
+        require_csrf()
     chosen = _normalized_lang()
     logout_user()
     renew_session()
@@ -377,24 +399,27 @@ def telegram_auth_link():
 
 @login_required
 def account_change_password():
+    from app.services.security import require_csrf
+
+    require_csrf()
     ip = client_ip()
     locked, _ = throttle_is_locked("change_password", f"ip:{ip}")
     if locked:
         flash(translate("Слишком много попыток. Попробуйте позже."), "error")
-        return redirect(url_for("dashboard"))
+        return _settings_redirect()
     current_pw = request.form.get("current_password") or ""
     new_pw = request.form.get("new_password") or ""
     new_pw2 = request.form.get("new_password2") or ""
     if not current_user.check_password(current_pw):
         flash(translate("Текущий пароль неверный"), "error")
         throttle_register_fail("change_password", f"ip:{ip}", window_seconds=15 * 60, max_fails=6, lock_seconds=15 * 60)
-        return redirect(url_for("dashboard"))
+        return _settings_redirect()
     if new_pw != new_pw2:
         flash(translate("Пароли не совпадают"), "error")
-        return redirect(url_for("dashboard"))
+        return _settings_redirect()
     if not validate_password_strength(new_pw):
         flash(translate("Пароль слишком слабый. Используйте минимум 10 символов и комбинацию букв/цифр/символов."), "error")
-        return redirect(url_for("dashboard"))
+        return _settings_redirect()
     try:
         current_user.set_password(new_pw)
         db.session.commit()
@@ -403,25 +428,28 @@ def account_change_password():
     except Exception:
         db.session.rollback()
         flash(translate("Не удалось изменить пароль. Попробуйте позже."), "error")
-    return redirect(url_for("dashboard"))
+    return _settings_redirect()
 
 
 @login_required
 def account_delete():
+    from app.services.security import require_csrf
+
+    require_csrf()
     ip = client_ip()
     locked, _ = throttle_is_locked("delete_account", f"ip:{ip}")
     if locked:
         flash(translate("Слишком много попыток. Попробуйте позже."), "error")
-        return redirect(url_for("dashboard"))
+        return _settings_redirect()
     password = request.form.get("password") or ""
     confirm = (request.form.get("confirm") or "").strip().upper()
     if confirm != "DELETE":
         flash(translate("Введите DELETE для подтверждения удаления"), "error")
-        return redirect(url_for("dashboard"))
+        return _settings_redirect()
     if not current_user.check_password(password):
         flash(translate("Пароль неверный"), "error")
         throttle_register_fail("delete_account", f"ip:{ip}", window_seconds=15 * 60, max_fails=5, lock_seconds=30 * 60)
-        return redirect(url_for("dashboard"))
+        return _settings_redirect()
     uid = current_user.id
     try:
         delete_user_account(uid)
@@ -431,7 +459,127 @@ def account_delete():
     except Exception:
         db.session.rollback()
         flash(translate("Не удалось удалить аккаунт. Попробуйте позже."), "error")
-        return redirect(url_for("dashboard"))
+        return _settings_redirect()
+
+
+@login_required
+def account_change_email_start():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    ip = client_ip()
+    locked, _ = throttle_is_locked("change_email", f"ip:{ip}")
+    if locked:
+        flash(translate("Слишком много попыток. Попробуйте позже."), "error")
+        return _settings_redirect()
+
+    new_email_raw = request.form.get("new_email")
+    current_password = request.form.get("password") or ""
+
+    if not current_user.check_password(current_password):
+        flash(translate("Пароль неверный"), "error")
+        throttle_register_fail("change_email", f"ip:{ip}", window_seconds=15 * 60, max_fails=6, lock_seconds=15 * 60)
+        return _settings_redirect()
+
+    try:
+        new_email = _normalize_email_input(new_email_raw)
+    except EmailNotValidError:
+        flash(translate("Введите корректный email"), "error")
+        return _settings_redirect()
+
+    try:
+        start_pending_email_change(user=current_user, new_email=new_email, lang=_normalized_lang())
+        throttle_reset("change_email", f"ip:{ip}")
+        flash(translate("Мы отправили код подтверждения на новый email."), "success")
+    except EmailOtpError as exc:
+        reason = str(exc)
+        if reason == "same_email":
+            flash(translate("Укажите другой email"), "error")
+        elif reason == "email_exists":
+            flash(translate("Email уже зарегистрирован"), "error")
+        elif reason == "email_already_pending":
+            flash(translate("Этот email уже ожидает подтверждения."), "error")
+        else:
+            current_app.logger.exception("Start pending email change failed")
+            flash(translate("Не удалось отправить код подтверждения. Попробуйте ещё раз позже."), "error")
+    return _settings_redirect()
+
+
+@login_required
+def account_change_email_resend():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    try:
+        resend_pending_email_change(current_user.id)
+        flash(translate("Новый код подтверждения отправлен на новый email."), "success")
+    except EmailOtpError as exc:
+        reason = str(exc)
+        if reason == "not_found":
+            flash(translate("Запрос на смену email не найден. Начните заново."), "error")
+        elif reason == "cooldown":
+            flash(translate("Код уже отправлен. Подождите немного перед повторной отправкой."), "error")
+        else:
+            current_app.logger.exception("Resend pending email change failed")
+            flash(translate("Не удалось отправить код подтверждения. Попробуйте ещё раз позже."), "error")
+    return _settings_redirect()
+
+
+@login_required
+def account_change_email_cancel():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    delete_pending_email_change(get_pending_email_change(current_user.id))
+    flash(translate("Можно указать другой email."), "info")
+    return _settings_redirect()
+
+
+@login_required
+def account_change_email_verify():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    otp_code = (request.form.get("otp_code") or "").strip()
+    if not otp_code.isdigit() or len(otp_code) != 6:
+        flash(translate("Введите 6-значный код из письма."), "error")
+        return _settings_redirect()
+
+    ok, reason, pending = verify_pending_email_change(current_user.id, otp_code)
+    if not ok or not pending:
+        if reason == "expired":
+            flash(translate("Срок действия кода истёк. Отправьте новый код."), "error")
+        elif reason == "too_many_attempts":
+            flash(translate("Слишком много неверных попыток. Запросите новый код."), "error")
+        elif reason == "not_found":
+            flash(translate("Запрос на смену email не найден. Начните заново."), "error")
+        else:
+            flash(translate("Неверный код подтверждения."), "error")
+        return _settings_redirect()
+
+    if User.query.filter_by(email=pending.new_email).first():
+        delete_pending_email_change(pending)
+        flash(translate("Email уже зарегистрирован"), "error")
+        return _settings_redirect()
+
+    try:
+        current_user.email = pending.new_email
+        db.session.commit()
+        delete_pending_email_change(pending)
+    except Exception:
+        db.session.rollback()
+        flash(translate("Не удалось изменить email. Попробуйте позже."), "error")
+        return _settings_redirect()
+
+    try:
+        cfg = get_remnawave_config()
+        if cfg.base_url and cfg.token:
+            remnawave_sync_user_identity(cfg, current_user)
+    except Exception:
+        current_app.logger.exception("Remnawave sync after email change failed")
+
+    flash(translate("Email успешно изменён"), "success")
+    return _settings_redirect()
 
 
 def register(app) -> None:
@@ -444,5 +592,9 @@ def register(app) -> None:
     app.add_url_rule("/register", endpoint="register", view_func=register_user, methods=["GET", "POST"])
     app.add_url_rule("/en/register", endpoint="register_en", view_func=register_user, methods=["GET", "POST"])
     app.add_url_rule("/logout", endpoint="logout", view_func=logout, methods=["POST"])
+    app.add_url_rule("/account/change-email", endpoint="account_change_email_start", view_func=account_change_email_start, methods=["POST"])
+    app.add_url_rule("/account/change-email/resend", endpoint="account_change_email_resend", view_func=account_change_email_resend, methods=["POST"])
+    app.add_url_rule("/account/change-email/cancel", endpoint="account_change_email_cancel", view_func=account_change_email_cancel, methods=["POST"])
+    app.add_url_rule("/account/change-email/verify", endpoint="account_change_email_verify", view_func=account_change_email_verify, methods=["POST"])
     app.add_url_rule("/account/change-password", endpoint="account_change_password", view_func=account_change_password, methods=["POST"])
     app.add_url_rule("/account/delete", endpoint="account_delete", view_func=account_delete, methods=["POST"])

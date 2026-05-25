@@ -18,8 +18,11 @@ from app.core.extensions import db
 from app.domain.models import PaymentIntent, ReferralSignup, Subscription, User
 from app.domain.plans import format_usd_amount, plan_details
 from app.services.coupons import coupon_pricing, normalize_coupon_code
+from app.services.email_change_otp import get_pending_email_change
+from app.services.email_otp import OTP_TTL_MINUTES
 from app.services.payments.reconcile import process_payment_intent
 from app.services.referrals import get_or_create_referral_code, mask_email
+from app.services.remnawave import is_telegram_placeholder_email
 from app.services.security import require_csrf, rotate_csrf_token
 from app.services.subscriptions import ensure_remnawave_subscription_url
 from app.services.telegram_auth import CHALLENGE_TTL_MINUTES, create_telegram_auth_challenge, get_active_challenge
@@ -118,6 +121,8 @@ def dashboard():
         referrals_total = 0
         referrals_paid = 0
     telegram_account = TelegramAccount.query.filter_by(user_id=current_user.id).first()
+    pending_email_change = get_pending_email_change(current_user.id)
+    current_email_value = (current_user.email or "").strip().lower()
     telegram_auth = None
     if not telegram_account:
         session_key = "tg_auth_code:link"
@@ -156,6 +161,11 @@ def dashboard():
         traffic_progress=traffic_progress,
         telegram_account=telegram_account,
         telegram_auth=telegram_auth,
+        current_email_display=current_user.email if not is_telegram_placeholder_email(current_email_value) else "",
+        current_email_missing=is_telegram_placeholder_email(current_email_value),
+        pending_email_change=pending_email_change,
+        pending_email_change_masked=mask_email(pending_email_change.new_email) if pending_email_change else None,
+        email_change_otp_ttl_minutes=OTP_TTL_MINUTES,
     )
 
 
