@@ -222,7 +222,6 @@ def dashboard():
         transactions=transactions,
         sessions=sessions,
         subscription_plan_name=subscription_plan_name,
-        telegram_account=telegram_account,
         telegram_auth=telegram_auth,
         pending_email_change=pending_email_change,
         pending_email_change_masked=mask_email(pending_email_change.new_email) if pending_email_change else None,
