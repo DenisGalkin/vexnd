@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hmac
+import ipaddress
 import os
 import secrets
 import tempfile
@@ -64,11 +65,59 @@ def ensure_db_schema() -> None:
 
 
 def client_ip() -> str:
-    if _env_bool("TRUST_PROXY_HEADERS", False):
-        xff = (request.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+    remote_addr = (request.remote_addr or "").strip()
+    trust_proxy_headers = _env_bool("TRUST_PROXY_HEADERS", False)
+
+    try:
+        remote_ip = ipaddress.ip_address(remote_addr) if remote_addr else None
+    except ValueError:
+        remote_ip = None
+
+    should_use_proxy_headers = trust_proxy_headers or bool(
+        remote_ip
+        and (
+            remote_ip.is_private
+            or remote_ip.is_loopback
+            or remote_ip.is_link_local
+            or remote_ip.is_reserved
+        )
+    )
+
+    if should_use_proxy_headers:
+        forwarded = (request.headers.get("Forwarded") or "").strip()
+        if forwarded:
+            for part in forwarded.split(","):
+                for item in part.split(";"):
+                    key, _, value = item.strip().partition("=")
+                    if key.lower() != "for":
+                        continue
+                    candidate = value.strip().strip('"')
+                    if candidate.startswith("[") and "]" in candidate:
+                        candidate = candidate[1 : candidate.index("]")]
+                    elif candidate.count(":") == 1 and "." in candidate:
+                        candidate = candidate.split(":", 1)[0]
+                    try:
+                        return str(ipaddress.ip_address(candidate))
+                    except ValueError:
+                        continue
+
+        xff = (request.headers.get("X-Forwarded-For") or "").strip()
         if xff:
-            return xff
-    return request.remote_addr or "unknown"
+            for item in xff.split(","):
+                candidate = item.strip()
+                try:
+                    return str(ipaddress.ip_address(candidate))
+                except ValueError:
+                    continue
+
+        x_real_ip = (request.headers.get("X-Real-IP") or "").strip()
+        if x_real_ip:
+            try:
+                return str(ipaddress.ip_address(x_real_ip))
+            except ValueError:
+                pass
+
+    return remote_addr or "unknown"
 
 
 def csrf_token() -> str:

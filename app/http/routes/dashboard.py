@@ -32,6 +32,26 @@ from app.services.web_sessions import current_web_session_token, user_web_sessio
 from app.http.helpers import public_url, translate
 
 
+def _dashboard_security_context() -> dict[str, object]:
+    telegram_account = TelegramAccount.query.filter_by(user_id=current_user.id).first()
+    current_email_value = (current_user.email or "").strip().lower()
+    pending_password_reset = get_pending_password_reset(current_email_value) if current_email_value else None
+    password_reset_delivery_hint = None
+    if telegram_account:
+        if telegram_account.username:
+            password_reset_delivery_hint = f"@{telegram_account.username.lstrip('@')}"
+        else:
+            password_reset_delivery_hint = f"ID {telegram_account.telegram_id}"
+    return {
+        "telegram_account": telegram_account,
+        "current_email_display": current_user.email if not is_telegram_placeholder_email(current_email_value) else "",
+        "current_email_missing": is_telegram_placeholder_email(current_email_value),
+        "pending_password_reset": pending_password_reset,
+        "pending_password_reset_masked": mask_email(pending_password_reset.email) if pending_password_reset else None,
+        "password_reset_delivery_hint": password_reset_delivery_hint,
+    }
+
+
 @login_required
 def dashboard():
     pending_intents = (
@@ -105,7 +125,11 @@ def dashboard():
         subscription_plan_name = None
     sessions = []
     try:
-        sessions = user_web_sessions(current_user.id, current_token=current_web_session_token())
+        sessions = user_web_sessions(
+            current_user.id,
+            current_token=current_web_session_token(),
+            locale=(current_user.lang or "en"),
+        )
     except Exception:
         sessions = []
     used_bytes = subscription_snapshot.get("used_bytes")
@@ -156,34 +180,9 @@ def dashboard():
     except Exception:
         referrals_total = 0
         referrals_paid = 0
-    telegram_account = TelegramAccount.query.filter_by(user_id=current_user.id).first()
+    security_context = _dashboard_security_context()
+    telegram_account = security_context["telegram_account"]
     pending_email_change = get_pending_email_change(current_user.id)
-    current_email_value = (current_user.email or "").strip().lower()
-    pending_password_reset = None
-    if current_email_value and not is_telegram_placeholder_email(current_email_value):
-        pending_password_reset = get_pending_password_reset(current_email_value)
-
-    password_reset_telegram_auth = None
-    password_reset_telegram_approved = False
-    if telegram_account:
-        session_key = "tg_auth_code:password_reset"
-        challenge = get_active_challenge(request.args.get("pw_reset_tg") or "", purpose="password_reset")
-        if not challenge or challenge.target_user_id != current_user.id:
-            challenge = get_active_challenge(session.get(session_key), purpose="password_reset")
-        if challenge and challenge.target_user_id != current_user.id:
-            challenge = None
-        if not challenge:
-            challenge = create_telegram_auth_challenge(purpose="password_reset", target_user_id=current_user.id)
-            session[session_key] = challenge.code
-        start_value = f"password_reset_{challenge.code}"
-        password_reset_telegram_auth = {
-            "code": challenge.code,
-            "minutes": CHALLENGE_TTL_MINUTES,
-            "bot_url": telegram_bot_deeplink(start_value),
-            "status_url": url_for("telegram_auth_status", code=challenge.code),
-            "command": f"/start {start_value}",
-        }
-        password_reset_telegram_approved = challenge.approved_at is not None
     telegram_auth = None
     if not telegram_account:
         session_key = "tg_auth_code:link"
@@ -225,18 +224,13 @@ def dashboard():
         subscription_plan_name=subscription_plan_name,
         telegram_account=telegram_account,
         telegram_auth=telegram_auth,
-        current_email_display=current_user.email if not is_telegram_placeholder_email(current_email_value) else "",
-        current_email_missing=is_telegram_placeholder_email(current_email_value),
         pending_email_change=pending_email_change,
         pending_email_change_masked=mask_email(pending_email_change.new_email) if pending_email_change else None,
-        pending_password_reset=pending_password_reset,
-        pending_password_reset_masked=mask_email(pending_password_reset.email) if pending_password_reset else None,
-        password_reset_telegram_auth=password_reset_telegram_auth,
-        password_reset_telegram_approved=password_reset_telegram_approved,
         email_change_otp_ttl_minutes=OTP_TTL_MINUTES,
         notify_expiry=False,
         notify_maintenance=False,
         notify_news=False,
+        **security_context,
     )
 
 

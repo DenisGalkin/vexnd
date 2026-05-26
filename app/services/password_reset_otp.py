@@ -3,6 +3,8 @@ from __future__ import annotations
 import hmac
 from datetime import datetime, timedelta
 
+from app.bot.common import h, send_message
+from app.bot.models import BotUserState, TelegramAccount
 from app.core.extensions import db
 from app.domain.models import PendingPasswordReset, User
 from app.services.email_otp import (
@@ -14,6 +16,7 @@ from app.services.email_otp import (
     _otp_hash,
     _send_resend_email,
 )
+from app.services.remnawave import is_telegram_placeholder_email
 
 
 def _utcnow() -> datetime:
@@ -56,6 +59,40 @@ def _password_reset_content(email: str, otp_code: str, lang: str) -> tuple[str, 
     return subject, html, text
 
 
+def _password_reset_telegram_text(otp_code: str, lang: str) -> str:
+    if lang == "ru":
+        return (
+            "🔑 <b>Сброс пароля</b>\n\n"
+            "Ваш код для сброса пароля на сайте VEXND:\n"
+            f"<code>{h(otp_code)}</code>\n\n"
+            f"Код действует {OTP_TTL_MINUTES} минут.\n"
+            "Введите его на сайте, чтобы задать новый пароль."
+        )
+    return (
+        "🔑 <b>Password reset</b>\n\n"
+        "Your code to reset your VEXND website password:\n"
+        f"<code>{h(otp_code)}</code>\n\n"
+        f"This code expires in {OTP_TTL_MINUTES} minutes.\n"
+        "Enter it on the website to set a new password."
+    )
+
+
+def password_reset_uses_telegram(email: str | None) -> bool:
+    return is_telegram_placeholder_email((email or "").strip().lower())
+
+
+def _send_password_reset_via_telegram(email: str, otp_code: str) -> None:
+    user = User.query.filter_by(email=(email or "").strip().lower()).first()
+    if not user:
+        raise EmailOtpError("user_not_found")
+    telegram_account = TelegramAccount.query.filter_by(user_id=user.id).first()
+    if not telegram_account:
+        raise EmailOtpError("telegram_not_linked")
+    state = BotUserState.query.filter_by(telegram_id=telegram_account.telegram_id).first()
+    lang = state.lang if state and state.lang in ("ru", "en") else (user.lang if user.lang in ("ru", "en") else "en")
+    send_message(telegram_account.telegram_id, _password_reset_telegram_text(otp_code, lang))
+
+
 def get_pending_password_reset(email: str | None) -> PendingPasswordReset | None:
     normalized = (email or "").strip().lower()
     if not normalized:
@@ -95,9 +132,12 @@ def start_pending_password_reset(*, email: str, lang: str) -> PendingPasswordRes
     record.last_sent_at = now
     record.updated_at = now
 
-    subject, html, text = _password_reset_content(normalized_email, otp_code, lang if lang in ("ru", "en") else "en")
     try:
-        _send_resend_email(to_email=normalized_email, subject=subject, html=html, text=text)
+        if password_reset_uses_telegram(normalized_email):
+            _send_password_reset_via_telegram(normalized_email, otp_code)
+        else:
+            subject, html, text = _password_reset_content(normalized_email, otp_code, lang if lang in ("ru", "en") else "en")
+            _send_resend_email(to_email=normalized_email, subject=subject, html=html, text=text)
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -122,11 +162,14 @@ def resend_pending_password_reset(email: str) -> PendingPasswordReset:
     record.last_sent_at = now
     record.updated_at = now
 
-    user = User.query.filter_by(email=record.email).first()
-    lang = user.lang if user and user.lang in ("ru", "en") else "en"
-    subject, html, text = _password_reset_content(record.email, otp_code, lang)
     try:
-        _send_resend_email(to_email=record.email, subject=subject, html=html, text=text)
+        if password_reset_uses_telegram(record.email):
+            _send_password_reset_via_telegram(record.email, otp_code)
+        else:
+            user = User.query.filter_by(email=record.email).first()
+            lang = user.lang if user and user.lang in ("ru", "en") else "en"
+            subject, html, text = _password_reset_content(record.email, otp_code, lang)
+            _send_resend_email(to_email=record.email, subject=subject, html=html, text=text)
         db.session.commit()
     except Exception:
         db.session.rollback()

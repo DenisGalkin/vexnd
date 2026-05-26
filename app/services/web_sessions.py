@@ -7,6 +7,7 @@ from flask import request, session
 
 from app.core.extensions import db
 from app.domain.models import WebSession
+from app.services.geoip import lookup_ip_location
 from app.services.security import client_ip
 
 
@@ -129,7 +130,7 @@ def parse_user_agent(user_agent: str | None) -> tuple[str, str]:
     return browser, os_name
 
 
-def user_web_sessions(user_id: int, *, current_token: str | None = None) -> list[dict[str, object]]:
+def user_web_sessions(user_id: int, *, current_token: str | None = None, locale: str = "en") -> list[dict[str, object]]:
     rows = (
         WebSession.query.filter(
             WebSession.user_id == int(user_id),
@@ -141,12 +142,14 @@ def user_web_sessions(user_id: int, *, current_token: str | None = None) -> list
     result: list[dict[str, object]] = []
     for row in rows:
         browser, os_name = parse_user_agent(row.last_user_agent)
+        location = lookup_ip_location(row.last_ip, locale=locale)
         result.append(
             {
                 "id": row.id,
                 "browser": browser,
                 "os": os_name,
                 "ip": row.last_ip or "—",
+                "location": location.label if location else None,
                 "last_seen_at": row.last_seen_at,
                 "created_at": row.created_at,
                 "current": bool(current_token and row.session_token == current_token),
