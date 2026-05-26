@@ -1,0 +1,226 @@
+<div class="settings-container mx-auto flex w-full max-w-6xl flex-col lg:flex-row gap-6" id="settings-shell" data-csrf="{{ csrf_token() }}">
+  <nav class="settings-side-nav dashboard-surface-card dashboard-surface-card--compact rounded-[1.75rem] flex overflow-x-auto lg:flex-col gap-2 lg:w-56 p-2">
+    <button type="button" class="settings-nav-button active" data-section="account">
+      <span class="inline-flex items-center gap-2">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span>{{ _('Аккаунт') }}</span>
+      </span>
+    </button>
+    <button type="button" class="settings-nav-button" data-section="security">
+      <span class="inline-flex items-center gap-2">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <span>{{ _('Безопасность') }}</span>
+      </span>
+    </button>
+    <button type="button" class="settings-nav-button" data-section="billing">
+      <span class="inline-flex items-center gap-2">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="2" y1="10" x2="22" y2="10"></line>
+        </svg>
+        <span>{{ _('Оплата') }}</span>
+      </span>
+    </button>
+    <button type="button" class="settings-nav-button" data-section="devices">
+      <span class="inline-flex items-center gap-2">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        <span>{{ _('Устройства') }}</span>
+      </span>
+    </button>
+    <button type="button" class="settings-nav-button" data-section="notifications">
+      <span class="inline-flex items-center gap-2">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span>{{ _('Уведомления') }}</span>
+      </span>
+    </button>
+    <button type="button" class="settings-nav-button" data-section="danger">
+      <span class="inline-flex items-center gap-2">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+        <span>{{ _('Опасная зона') }}</span>
+      </span>
+    </button>
+  </nav>
+  <div class="settings-content flex-1">
+    <div id="section-account" class="settings-content-section active">
+      {% include "account/_account_section.html" %}
+    </div>
+    <div id="section-security" class="settings-content-section">
+      {% include "account/_security_section.html" %}
+    </div>
+    <div id="section-billing" class="settings-content-section">
+      <section class="settings-section">
+        <div class="settings-section-head">
+          <div>
+            <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Подписка и оплата') }}</h3>
+            <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Информация о вашем тарифе и история транзакций.') }}</p>
+          </div>
+        </div>
+        <div class="dashboard-panel-card dashboard-panel-card--hero mb-4">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="min-w-0">
+              <div class="dashboard-panel-label">{{ _('Текущий тариф') }}</div>
+              <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3">
+                <div class="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-sm font-semibold text-emerald-100">
+                  <span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>
+                  {{ _('Активна') if subscription and subscription.is_active and subscription.expiry_date and subscription.expiry_date > now else _('Не активна') }}
+                </div>
+                <p class="text-base font-semibold text-white">{{ subscription_plan_name if subscription_plan_name else 'VEXND Premium' }}</p>
+              </div>
+            </div>
+            <a href="{{ url_lang('index') }}#pricing" class="dashboard-ghost-btn inline-flex items-center justify-center rounded-2xl px-5 py-3 font-semibold transition tap-target">
+              {{ _('Продлить') if subscription and subscription.is_active and subscription.expiry_date and subscription.expiry_date > now else _('Активировать') }}
+            </a>
+          </div>
+          <p class="mt-3 text-sm text-gray-400">{{ _('Действует до:') }} <span class="font-semibold text-gray-100">{{ subscription.expiry_date.strftime('%d.%m.%Y') if subscription and subscription.expiry_date else '—' }}</span></p>
+          <div class="dashboard-traffic-track mt-4">
+            <span class="dashboard-traffic-fill" style="width: {{ traffic_progress if traffic_progress is not none else 8 }}%;"></span>
+          </div>
+          <p class="mt-3 text-sm text-gray-500">{{ _('Осталось дней:') }} {{ remaining_days if remaining_days is not none else 0 }}</p>
+        </div>
+        <div class="dashboard-table-wrap overflow-x-auto">
+          {% if transactions %}
+            <table class="min-w-full divide-y divide-gray-700 text-sm">
+              <thead>
+                <tr class="text-left">
+                  <th class="px-4 py-2 font-medium text-gray-400">{{ _('Дата') }}</th>
+                  <th class="px-4 py-2 font-medium text-gray-400">{{ _('Провайдер') }}</th>
+                  <th class="px-4 py-2 font-medium text-gray-400">{{ _('Сумма') }}</th>
+                  <th class="px-4 py-2 font-medium text-gray-400">{{ _('Тариф') }}</th>
+                  <th class="px-4 py-2 font-medium text-gray-400">{{ _('Статус') }}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-800">
+                {% for t in transactions %}
+                  <tr>
+                    <td class="px-4 py-2 whitespace-nowrap">{{ t.date.strftime('%Y-%m-%d %H:%M') if t.date else '—' }}</td>
+                    <td class="px-4 py-2 whitespace-nowrap capitalize">{{ t.provider }}</td>
+                    <td class="px-4 py-2 whitespace-nowrap">
+                      <div class="text-white">{{ t.amount }}</div>
+                      {% if t.coupon_code %}
+                        <div class="text-xs text-gray-500">{{ _('Промокод:') }} {{ t.coupon_code }}</div>
+                      {% endif %}
+                    </td>
+                    <td class="px-4 py-2 whitespace-nowrap">{{ t.plan_name }}</td>
+                    <td class="px-4 py-2 whitespace-nowrap">
+                      {% if t.status == 'success' %}
+                        <span class="text-emerald-300">{{ _('Успешно') }}</span>
+                      {% elif t.status == 'pending' %}
+                        <span class="text-amber-300">{{ _('Ожидает оплаты') }}</span>
+                      {% else %}
+                        <span class="text-red-300">{{ _('Ошибка') }}</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <div class="pill-muted rounded-2xl p-4 text-sm text-gray-300">{{ _('История транзакций пока пуста.') }}</div>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+    <div id="section-devices" class="settings-content-section">
+      {% include "account/_devices_section.html" %}
+    </div>
+    <div id="section-notifications" class="settings-content-section">
+      <section class="settings-section">
+        <div class="settings-section-head">
+          <div>
+            <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Уведомления') }}</h3>
+            <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Настройте, какие уведомления вы хотите получать.') }}</p>
+          </div>
+        </div>
+        <div class="settings-list settings-list--notifications">
+          <label class="settings-notification-card" for="notify-expiry">
+            <div class="settings-notification-copy">
+              <div class="settings-notification-title">{{ _('Напоминание об окончании подписки') }}</div>
+              <p class="settings-notification-text">{{ _('Напомним заранее, чтобы вы успели продлить доступ без паузы.') }}</p>
+              <div class="settings-notification-meta">{{ _('За 3 дня и за 24 часа') }}</div>
+            </div>
+            <div class="settings-notification-control">
+              <span class="settings-notification-state">{{ _('Включено') if notify_expiry else _('Выключено') }}</span>
+              <span class="settings-switch">
+                <input type="checkbox" name="notify_expiry" id="notify-expiry" {% if notify_expiry %}checked{% endif %}>
+                <span class="settings-switch-ui" aria-hidden="true"></span>
+              </span>
+            </div>
+          </label>
+          <label class="settings-notification-card" for="notify-maintenance">
+            <div class="settings-notification-copy">
+              <div class="settings-notification-title">{{ _('Технические работы') }}</div>
+              <p class="settings-notification-text">{{ _('Сообщим о плановых работах и важных изменениях в доступности сервиса.') }}</p>
+              <div class="settings-notification-meta">{{ _('Только важные сервисные уведомления') }}</div>
+            </div>
+            <div class="settings-notification-control">
+              <span class="settings-notification-state">{{ _('Включено') if notify_maintenance else _('Выключено') }}</span>
+              <span class="settings-switch">
+                <input type="checkbox" name="notify_maintenance" id="notify-maintenance" {% if notify_maintenance %}checked{% endif %}>
+                <span class="settings-switch-ui" aria-hidden="true"></span>
+              </span>
+            </div>
+          </label>
+          <label class="settings-notification-card" for="notify-news">
+            <div class="settings-notification-copy">
+              <div class="settings-notification-title">{{ _('Новости и промокоды') }}</div>
+              <p class="settings-notification-text">{{ _('Получайте новости сервиса, информацию о новых локациях и специальные предложения.') }}</p>
+              <div class="settings-notification-meta">{{ _('Обновления продукта и промокампании') }}</div>
+            </div>
+            <div class="settings-notification-control">
+              <span class="settings-notification-state">{{ _('Включено') if notify_news else _('Выключено') }}</span>
+              <span class="settings-switch">
+                <input type="checkbox" name="notify_news" id="notify-news" {% if notify_news %}checked{% endif %}>
+                <span class="settings-switch-ui" aria-hidden="true"></span>
+              </span>
+            </div>
+          </label>
+        </div>
+      </section>
+    </div>
+    <div id="section-danger" class="settings-content-section">
+      <section class="settings-section settings-section--danger mt-2">
+        <div class="settings-section-head">
+          <div>
+            <h3 class="text-lg font-semibold text-red-100 sm:text-xl">{{ _('Опасная зона') }}</h3>
+            <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Удаление аккаунта необратимо. Сначала подтвердите пароль и ключевое слово.') }}</p>
+          </div>
+        </div>
+        <form id="delete-form" class="settings-form space-y-4" data-api-form data-endpoint="{{ url_for('api_account_delete') }}">
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="settings-field">
+              <span>{{ _('Текущий пароль') }}</span>
+              <input type="password" name="password" id="delete-password" autocomplete="current-password" required>
+            </label>
+            <label class="settings-field">
+              <span>{{ _('Введите DELETE') }}</span>
+              <input type="text" name="confirm_word" id="delete-confirm-word" placeholder="DELETE" autocomplete="off" required>
+            </label>
+          </div>
+          <div class="settings-note settings-note--danger rounded-2xl px-4 py-3 text-sm text-gray-400" id="delete-hint">
+            {{ _('Кнопка активируется только после проверки текущего пароля и точного ввода слова DELETE.') }}
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" id="delete-submit" class="settings-action settings-action-danger" disabled>{{ _('Удалить аккаунт') }}</button>
+          </div>
+          <div class="settings-feedback hidden" data-form-status></div>
+        </form>
+      </section>
+    </div>
+  </div>
+</div>

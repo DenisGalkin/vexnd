@@ -57,8 +57,132 @@ def _requested_partial_targets() -> list[str]:
     return [target.strip() for target in header.split(",") if target.strip()]
 
 
+def _build_dashboard_referrals_context() -> dict[str, object]:
+    referral_code = get_or_create_referral_code(current_user)
+    referral_link = public_url("referral", code=referral_code, canonical=True)
+    referrals_list = []
+    try:
+        query = (
+            db.session.query(ReferralSignup, User.email)
+            .outerjoin(User, User.id == ReferralSignup.referred_user_id)
+            .filter(ReferralSignup.referrer_user_id == current_user.id)
+            .order_by(ReferralSignup.created_at.desc())
+            .all()
+        )
+        for signup, referred_email in query:
+            referrals_list.append(
+                {
+                    "email_masked": mask_email(referred_email) if referred_email else "—",
+                    "created_at": signup.created_at,
+                    "first_paid_at": signup.first_paid_at,
+                    "bonuses_applied_at": signup.bonuses_applied_at,
+                }
+            )
+    except Exception:
+        referrals_list = []
+    try:
+        referrals_total, referrals_paid = (
+            db.session.query(
+                func.count(ReferralSignup.id),
+                func.count(ReferralSignup.bonuses_applied_at),
+            )
+            .filter(ReferralSignup.referrer_user_id == current_user.id)
+            .one()
+        )
+    except Exception:
+        referrals_total = 0
+        referrals_paid = 0
+    return {
+        "referral_code": referral_code,
+        "referral_link": referral_link,
+        "referrals_total": referrals_total,
+        "referrals_paid": referrals_paid,
+        "referrals_list": referrals_list,
+    }
+
+
+def _build_dashboard_settings_context() -> dict[str, object]:
+    transactions = []
+    subscription_plan_name = None
+    try:
+        intents = (
+            db.session.query(PaymentIntent)
+            .filter(PaymentIntent.user_id == current_user.id)
+            .order_by(PaymentIntent.created_at.desc())
+            .limit(20)
+            .all()
+        )
+        for intent in intents:
+            pricing = intent_pricing(intent)
+            if subscription_plan_name is None and intent.processed_at:
+                subscription_plan_name = plan_duration_label(intent.plan_months)
+            transactions.append(
+                {
+                    "id": intent.id,
+                    "date": intent.processed_at or intent.created_at,
+                    "amount": f"{format_usd_amount(pricing['final_price'])} USD",
+                    "original_amount": format_usd_amount(pricing["original_price"]),
+                    "plan_name": plan_duration_label(intent.plan_months),
+                    "provider": (intent.provider or "").strip() or "—",
+                    "coupon_code": pricing.get("coupon_code") or None,
+                    "status": "success" if intent.processed_at else "pending",
+                }
+            )
+    except Exception:
+        transactions = []
+        subscription_plan_name = None
+
+    sessions = []
+    try:
+        sessions = user_web_sessions(
+            current_user.id,
+            current_token=current_web_session_token(),
+            locale=(current_user.lang or "en"),
+        )
+    except Exception:
+        sessions = []
+
+    security_context = _dashboard_security_context()
+    telegram_account = security_context["telegram_account"]
+    pending_email_change = get_pending_email_change(current_user.id)
+    telegram_auth = None
+    if not telegram_account:
+        session_key = "tg_auth_code:link"
+        challenge = get_active_challenge(request.args.get("tg_link") or "", purpose="link")
+        if not challenge or challenge.target_user_id != current_user.id:
+            challenge = get_active_challenge(session.get(session_key), purpose="link")
+        if challenge and challenge.target_user_id != current_user.id:
+            challenge = None
+        if not challenge:
+            challenge = create_telegram_auth_challenge(purpose="link", target_user_id=current_user.id)
+            session[session_key] = challenge.code
+        start_value = f"link_{challenge.code}"
+        telegram_auth = {
+            "code": challenge.code,
+            "minutes": CHALLENGE_TTL_MINUTES,
+            "bot_url": telegram_bot_deeplink(start_value),
+            "status_url": url_for("telegram_auth_status", code=challenge.code),
+            "command": f"/start {start_value}",
+        }
+
+    return {
+        "transactions": transactions,
+        "sessions": sessions,
+        "subscription_plan_name": subscription_plan_name,
+        "telegram_auth": telegram_auth,
+        "pending_email_change": pending_email_change,
+        "pending_email_change_masked": mask_email(pending_email_change.new_email) if pending_email_change else None,
+        "email_change_otp_ttl_minutes": OTP_TTL_MINUTES,
+        "notify_expiry": False,
+        "notify_maintenance": False,
+        "notify_news": False,
+        **security_context,
+    }
+
+
 @login_required
 def dashboard():
+    partial_targets = _requested_partial_targets()
     pending_intents = (
         db.session.query(PaymentIntent)
         .filter(
@@ -99,44 +223,6 @@ def dashboard():
             subscription_snapshot = remnawave_subscription_snapshot(current_user, schedule_async_refresh=False)
         except Exception:
             subscription_snapshot = {"used_bytes": None, "limit_bytes": None}
-    transactions = []
-    subscription_plan_name = None
-    try:
-        intents = (
-            db.session.query(PaymentIntent)
-            .filter(PaymentIntent.user_id == current_user.id)
-            .order_by(PaymentIntent.created_at.desc())
-            .limit(20)
-            .all()
-        )
-        for intent in intents:
-            pricing = intent_pricing(intent)
-            if subscription_plan_name is None and intent.processed_at:
-                subscription_plan_name = plan_duration_label(intent.plan_months)
-            transactions.append(
-                {
-                    "id": intent.id,
-                    "date": intent.processed_at or intent.created_at,
-                    "amount": f"{format_usd_amount(pricing['final_price'])} USD",
-                    "original_amount": format_usd_amount(pricing["original_price"]),
-                    "plan_name": plan_duration_label(intent.plan_months),
-                    "provider": (intent.provider or "").strip() or "—",
-                    "coupon_code": pricing.get("coupon_code") or None,
-                    "status": "success" if intent.processed_at else "pending",
-                }
-            )
-    except Exception:
-        transactions = []
-        subscription_plan_name = None
-    sessions = []
-    try:
-        sessions = user_web_sessions(
-            current_user.id,
-            current_token=current_web_session_token(),
-            locale=(current_user.lang or "en"),
-        )
-    except Exception:
-        sessions = []
     used_bytes = subscription_snapshot.get("used_bytes")
     limit_bytes = subscription_snapshot.get("limit_bytes")
     traffic_progress = None
@@ -151,90 +237,55 @@ def dashboard():
         buffered = io.BytesIO()
         img.save(buffered, format="PNG")
         qr_code = base64.b64encode(buffered.getvalue()).decode()
-    referral_code = get_or_create_referral_code(current_user)
-    referral_link = public_url("referral", code=referral_code, canonical=True)
-    referrals_list = []
-    try:
-        query = (
-            db.session.query(ReferralSignup, User.email)
-            .outerjoin(User, User.id == ReferralSignup.referred_user_id)
-            .filter(ReferralSignup.referrer_user_id == current_user.id)
-            .order_by(ReferralSignup.created_at.desc())
-            .all()
-        )
-        for signup, referred_email in query:
-            referrals_list.append(
-                {
-                    "email_masked": mask_email(referred_email) if referred_email else "—",
-                    "created_at": signup.created_at,
-                    "first_paid_at": signup.first_paid_at,
-                    "bonuses_applied_at": signup.bonuses_applied_at,
-                }
-            )
-    except Exception:
-        referrals_list = []
-    try:
-        referrals_total, referrals_paid = (
-            db.session.query(
-                func.count(ReferralSignup.id),
-                func.count(ReferralSignup.bonuses_applied_at),
-            )
-            .filter(ReferralSignup.referrer_user_id == current_user.id)
-            .one()
-        )
-    except Exception:
-        referrals_total = 0
-        referrals_paid = 0
-    security_context = _dashboard_security_context()
-    telegram_account = security_context["telegram_account"]
-    pending_email_change = get_pending_email_change(current_user.id)
-    telegram_auth = None
-    if not telegram_account:
-        session_key = "tg_auth_code:link"
-        challenge = get_active_challenge(request.args.get("tg_link") or "", purpose="link")
-        if not challenge or challenge.target_user_id != current_user.id:
-            challenge = get_active_challenge(session.get(session_key), purpose="link")
-        if challenge and challenge.target_user_id != current_user.id:
-            challenge = None
-        if not challenge:
-            challenge = create_telegram_auth_challenge(purpose="link", target_user_id=current_user.id)
-            session[session_key] = challenge.code
-        start_value = f"link_{challenge.code}"
-        telegram_auth = {
-            "code": challenge.code,
-            "minutes": CHALLENGE_TTL_MINUTES,
-            "bot_url": telegram_bot_deeplink(start_value),
-            "status_url": url_for("telegram_auth_status", code=challenge.code),
-            "command": f"/start {start_value}",
-        }
-    partial_targets = _requested_partial_targets()
     if partial_targets:
         fragments: dict[str, str] = {}
-        account_context = {
-            "telegram_auth": telegram_auth,
-            "pending_email_change": pending_email_change,
-            "pending_email_change_masked": mask_email(pending_email_change.new_email) if pending_email_change else None,
-            "email_change_otp_ttl_minutes": OTP_TTL_MINUTES,
-            **security_context,
-        }
+        referral_context: dict[str, object] | None = None
+        settings_context: dict[str, object] | None = None
         for target in partial_targets:
-            if target == "section-account":
+            if target == "tab-ref":
+                if referral_context is None:
+                    referral_context = _build_dashboard_referrals_context()
+                fragments[target] = render_template("dashboard/_referrals_tab.html", **referral_context)
+            elif target == "tab-settings":
+                if settings_context is None:
+                    settings_context = _build_dashboard_settings_context()
+                fragments[target] = render_template(
+                    "dashboard/_settings_tab.html",
+                    subscription=subscription,
+                    now=now,
+                    remaining_days=remaining_days,
+                    used_bytes=used_bytes,
+                    limit_bytes=limit_bytes,
+                    used_bytes_text=format_bytes(used_bytes),
+                    limit_bytes_text=format_bytes(limit_bytes),
+                    traffic_progress=traffic_progress,
+                    **settings_context,
+                )
+            elif target == "section-account":
+                if settings_context is None:
+                    settings_context = _build_dashboard_settings_context()
+                account_context = {
+                    "telegram_auth": settings_context["telegram_auth"],
+                    "pending_email_change": settings_context["pending_email_change"],
+                    "pending_email_change_masked": settings_context["pending_email_change_masked"],
+                    "email_change_otp_ttl_minutes": settings_context["email_change_otp_ttl_minutes"],
+                    **settings_context,
+                }
                 fragments[target] = render_template("account/_account_section.html", **account_context)
             elif target == "section-security":
-                fragments[target] = render_template("account/_security_section.html", **security_context)
+                if settings_context is None:
+                    settings_context = _build_dashboard_settings_context()
+                fragments[target] = render_template("account/_security_section.html", **settings_context)
             elif target == "section-devices":
-                fragments[target] = render_template("account/_devices_section.html", sessions=sessions)
+                if settings_context is None:
+                    settings_context = _build_dashboard_settings_context()
+                fragments[target] = render_template("account/_devices_section.html", sessions=settings_context["sessions"])
         return jsonify({"ok": True, "fragments": fragments})
     return render_template(
         "dashboard.html",
         subscription=subscription,
         subscription_url=subscription_url,
         qr_code=qr_code,
-        referral_code=referral_code,
-        referral_link=referral_link,
-        referrals_total=referrals_total,
-        referrals_paid=referrals_paid,
-        referrals_list=referrals_list,
         now=now,
         remaining_days=remaining_days,
         used_bytes=used_bytes,
@@ -242,17 +293,9 @@ def dashboard():
         used_bytes_text=format_bytes(used_bytes),
         limit_bytes_text=format_bytes(limit_bytes),
         traffic_progress=traffic_progress,
-        transactions=transactions,
-        sessions=sessions,
-        subscription_plan_name=subscription_plan_name,
-        telegram_auth=telegram_auth,
-        pending_email_change=pending_email_change,
-        pending_email_change_masked=mask_email(pending_email_change.new_email) if pending_email_change else None,
-        email_change_otp_ttl_minutes=OTP_TTL_MINUTES,
         notify_expiry=False,
         notify_maintenance=False,
         notify_news=False,
-        **security_context,
     )
 
 

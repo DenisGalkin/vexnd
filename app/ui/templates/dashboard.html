@@ -10,8 +10,6 @@
 {% set is_active = subscription and subscription.is_active and subscription.expiry_date and subscription.expiry_date > now %}
 {% set days_left = remaining_days if remaining_days is not none and remaining_days > 0 else (((subscription.expiry_date - now).total_seconds() / 86400)|round(0, 'ceil')|int if subscription and subscription.expiry_date and subscription.expiry_date > now else 0) %}
 {% set expiry_date = subscription.expiry_date.strftime('%d.%m.%Y') if subscription and subscription.expiry_date else '—' %}
-{% set referrals_total_value = referrals_total or 0 %}
-{% set referrals_paid_value = referrals_paid or 0 %}
 
 <div class="dashboard-shell max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
   <div class="dashboard-surface space-y-6">
@@ -252,356 +250,16 @@
       </div>
     </div>
 
-    <div id="tab-ref" class="hidden space-y-6" role="tabpanel" aria-labelledby="tab-btn-ref">
-      <section class="glass-effect dashboard-surface-card rounded-2xl p-5 sm:p-6 space-y-5">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div class="max-w-2xl">
-            <h2 class="text-2xl font-bold">{{ _('Реферальная программа') }}</h2>
-            <p class="mt-2 text-sm text-gray-400">
-              {{ _('Приглашайте друзей: им +3 дня к первой оплате, вам +5 дней после их первой оплаты.') }}
-            </p>
-          </div>
-          <div class="grid gap-3 sm:grid-cols-2 lg:min-w-[18rem]">
-            <div class="dashboard-card rounded-2xl p-4">
-              <div class="dashboard-label">{{ _('Приглашено:') }}</div>
-              <div class="mt-2 text-xl font-semibold text-white">{{ referrals_total_value }}</div>
-            </div>
-            <div class="dashboard-card rounded-2xl p-4">
-              <div class="dashboard-label">{{ _('Оплатили:') }}</div>
-              <div class="mt-2 text-xl font-semibold text-white">{{ referrals_paid_value }}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="space-y-3">
-          <label class="block text-sm text-gray-400">{{ _('Ваша реферальная ссылка') }}</label>
-          <div class="dashboard-link referral-link-frame rounded-2xl">
-            <input type="text" readonly value="{{ referral_link }}"
-                   class="referral-link-input text-sm font-mono text-purple-200 focus:outline-none"
-                   aria-label="{{ _('Реферальная ссылка') }}">
-            <button type="button"
-                    class="dashboard-accent-btn referral-copy-btn inline-flex items-center justify-center gap-2 rounded-xl transition font-semibold tap-target"
-                    onclick="copyText('{{ referral_link|e }}', this)">
-              <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path d="M8 2a2 2 0 00-2 2v2H5a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2v-1h2a2 2 0 002-2V7l-5-5H8z" />
-              </svg>
-              <span>{{ _('Скопировать') }}</span>
-            </button>
-          </div>
-          <div class="text-sm text-gray-400">
-            <span class="text-gray-200 font-semibold">{{ _('Важно:') }}</span>
-            {{ _('Бонусы начисляются один раз — после первой успешной оплаты приглашённого пользователя.') }}
-          </div>
-        </div>
-      </section>
-
-      <section class="glass-effect dashboard-surface-card rounded-2xl p-5 sm:p-6">
-        <div class="flex items-center justify-between gap-3 mb-4">
-          <h3 class="text-xl font-bold">{{ _('Ваши рефералы') }}</h3>
-          <div class="text-sm text-gray-400">{{ _('Всего:') }} <span class="font-semibold text-gray-200">{{ referrals_total_value }}</span></div>
-        </div>
-
-        {% if referrals_list and referrals_list|length > 0 %}
-          <div class="space-y-3 md:hidden">
-            {% for r in referrals_list %}
-              {% set paid = r.bonuses_applied_at %}
-              <div class="pill-muted rounded-2xl p-4">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0">
-                    <div class="font-mono text-sm text-purple-200 break-anywhere">{{ r.email_masked }}</div>
-                    <div class="mt-2 text-xs text-gray-500">{{ _('Регистрация:') }} {{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '—' }}</div>
-                    <div class="mt-1 text-xs text-gray-500">{{ _('Первая оплата:') }} {{ r.first_paid_at.strftime('%Y-%m-%d') if r.first_paid_at else '—' }}</div>
-                  </div>
-                  {% if paid %}
-                    <span class="px-2.5 py-1 rounded-xl bg-green-500/15 text-green-400 border border-green-500/25 shrink-0">{{ _('Оплатил') }}</span>
-                  {% else %}
-                    <span class="px-2.5 py-1 rounded-xl bg-white/5 text-gray-200 border border-white/10 shrink-0">{{ _('Ожидает') }}</span>
-                  {% endif %}
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-          <div class="dashboard-table-wrap hidden md:block overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="text-left text-gray-400 border-b border-white/10 bg-white/[0.03]">
-                  <th class="py-2 pr-4">{{ _('Реферал') }}</th>
-                  <th class="py-2 pr-4">{{ _('Статус') }}</th>
-                  <th class="py-2 pr-4">{{ _('Регистрация') }}</th>
-                  <th class="py-2">{{ _('Первая оплата') }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for r in referrals_list %}
-                  {% set paid = r.bonuses_applied_at %}
-                  <tr class="border-b border-white/5">
-                    <td class="py-3 pr-4 font-mono text-purple-200">{{ r.email_masked }}</td>
-                    <td class="py-3 pr-4">
-                      {% if paid %}
-                        <span class="px-2.5 py-1 rounded-xl bg-green-500/15 text-green-400 border border-green-500/25">{{ _('Оплатил') }}</span>
-                      {% else %}
-                        <span class="px-2.5 py-1 rounded-xl bg-white/5 text-gray-200 border border-white/10">{{ _('Зарегистрировался') }}</span>
-                      {% endif %}
-                    </td>
-                    <td class="py-3 pr-4 text-gray-300">{{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '—' }}</td>
-                    <td class="py-3 text-gray-300">{{ r.first_paid_at.strftime('%Y-%m-%d') if r.first_paid_at else '—' }}</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          <div class="mt-3 text-xs text-gray-500">
-            {{ _('Для защиты от абуза система учитывает устройство/браузер и не даёт использовать рефералку повторно с одного устройства.') }}
-          </div>
-        {% else %}
-          <div class="text-gray-400">
-            {{ _('Пока нет рефералов. Поделитесь ссылкой — и они появятся здесь.') }}
-          </div>
-        {% endif %}
-      </section>
+    <div id="tab-ref" class="hidden space-y-6" role="tabpanel" aria-labelledby="tab-btn-ref" data-loaded="false">
+      <div class="glass-effect dashboard-surface-card rounded-2xl p-5 sm:p-6 text-sm text-gray-400">
+        {{ _('Загружаем реферальную программу…') }}
+      </div>
     </div>
 
-    <div id="tab-settings" class="hidden" role="tabpanel" aria-labelledby="tab-btn-settings">
-        <div class="settings-container mx-auto flex w-full max-w-6xl flex-col lg:flex-row gap-6" id="settings-shell" data-csrf="{{ csrf_token() }}">
-            <nav class="settings-side-nav dashboard-surface-card dashboard-surface-card--compact rounded-[1.75rem] flex overflow-x-auto lg:flex-col gap-2 lg:w-56 p-2">
-                <button type="button" class="settings-nav-button active" data-section="account">
-                    <span class="inline-flex items-center gap-2">
-                        <!-- user icon -->
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="12" cy="7" r="4"></circle>
-                        </svg>
-                        <span>{{ _('Аккаунт') }}</span>
-                    </span>
-                </button>
-                <button type="button" class="settings-nav-button" data-section="security">
-                    <span class="inline-flex items-center gap-2">
-                        <!-- lock icon -->
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                        </svg>
-                        <span>{{ _('Безопасность') }}</span>
-                    </span>
-                </button>
-                <button type="button" class="settings-nav-button" data-section="billing">
-                    <span class="inline-flex items-center gap-2">
-                        <!-- credit-card icon -->
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect>
-                            <line x1="2" y1="10" x2="22" y2="10"></line>
-                        </svg>
-                        <span>{{ _('Оплата') }}</span>
-                    </span>
-                </button>
-                <button type="button" class="settings-nav-button" data-section="devices">
-                    <span class="inline-flex items-center gap-2">
-                        <!-- monitor icon -->
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                            <line x1="8" y1="21" x2="16" y2="21"></line>
-                            <line x1="12" y1="17" x2="12" y2="21"></line>
-                        </svg>
-                        <span>{{ _('Устройства') }}</span>
-                    </span>
-                </button>
-                <button type="button" class="settings-nav-button" data-section="notifications">
-                    <span class="inline-flex items-center gap-2">
-                        <!-- bell icon -->
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                        </svg>
-                        <span>{{ _('Уведомления') }}</span>
-                    </span>
-                </button>
-                <button type="button" class="settings-nav-button" data-section="danger">
-                    <span class="inline-flex items-center gap-2">
-                        <!-- trash icon -->
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                        <span>{{ _('Опасная зона') }}</span>
-                    </span>
-                </button>
-            </nav>
-            <div class="settings-content flex-1">
-                <!-- Account section -->
-                <div id="section-account" class="settings-content-section active">
-                    {% include "account/_account_section.html" %}
-                </div>
-                <!-- Security section -->
-                <div id="section-security" class="settings-content-section">
-                    {% include "account/_security_section.html" %}
-                </div>
-                <!-- Billing section -->
-                <div id="section-billing" class="settings-content-section">
-                    <section class="settings-section">
-                        <div class="settings-section-head">
-                            <div>
-                                <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Подписка и оплата') }}</h3>
-                                <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Информация о вашем тарифе и история транзакций.') }}</p>
-                            </div>
-                        </div>
-                        <!-- Current plan summary -->
-                        <div class="dashboard-panel-card dashboard-panel-card--hero mb-4">
-                            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                                <div class="min-w-0">
-                                    <div class="dashboard-panel-label">{{ _('Текущий тариф') }}</div>
-                                    <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3">
-                                        <div class="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-sm font-semibold text-emerald-100">
-                                            <span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>
-                                            {{ _('Активна') if is_active else _('Не активна') }}
-                                        </div>
-                                        <p class="text-base font-semibold text-white">{{ subscription_plan_name if subscription_plan_name else 'VEXND Premium' }}</p>
-                                    </div>
-                                </div>
-                                <a href="{{ url_lang('index') }}#pricing" class="dashboard-ghost-btn inline-flex items-center justify-center rounded-2xl px-5 py-3 font-semibold transition tap-target">
-                                    {{ _('Продлить') if is_active else _('Активировать') }}
-                                </a>
-                            </div>
-                            <p class="mt-3 text-sm text-gray-400">{{ _('Действует до:') }} <span class="font-semibold text-gray-100">{{ expiry_date }}</span></p>
-                            <div class="dashboard-traffic-track mt-4">
-                                <span class="dashboard-traffic-fill" style="width: {{ traffic_progress if traffic_progress is not none else 8 }}%;"></span>
-                            </div>
-                            <p class="mt-3 text-sm text-gray-500">{{ _('Осталось дней:') }} {{ days_left }}</p>
-                        </div>
-                        <!-- Transactions table -->
-                        <div class="dashboard-table-wrap overflow-x-auto">
-                            {% if transactions %}
-                            <table class="min-w-full divide-y divide-gray-700 text-sm">
-                                <thead>
-                                    <tr class="text-left">
-                                        <th class="px-4 py-2 font-medium text-gray-400">{{ _('Дата') }}</th>
-                                        <th class="px-4 py-2 font-medium text-gray-400">{{ _('Провайдер') }}</th>
-                                        <th class="px-4 py-2 font-medium text-gray-400">{{ _('Сумма') }}</th>
-                                        <th class="px-4 py-2 font-medium text-gray-400">{{ _('Тариф') }}</th>
-                                        <th class="px-4 py-2 font-medium text-gray-400">{{ _('Статус') }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-800">
-                                    {% for t in transactions %}
-                                    <tr>
-                                        <td class="px-4 py-2 whitespace-nowrap">{{ t.date.strftime('%Y-%m-%d %H:%M') if t.date else '—' }}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap capitalize">{{ t.provider }}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap">
-                                          <div class="text-white">{{ t.amount }}</div>
-                                          {% if t.coupon_code %}
-                                            <div class="text-xs text-gray-500">{{ _('Промокод:') }} {{ t.coupon_code }}</div>
-                                          {% endif %}
-                                        </td>
-                                        <td class="px-4 py-2 whitespace-nowrap">{{ t.plan_name }}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap">
-                                            {% if t.status == 'success' %}
-                                              <span class="text-emerald-300">{{ _('Успешно') }}</span>
-                                            {% elif t.status == 'pending' %}
-                                              <span class="text-amber-300">{{ _('Ожидает оплаты') }}</span>
-                                            {% else %}
-                                              <span class="text-red-300">{{ _('Ошибка') }}</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                            {% else %}
-                            <div class="pill-muted rounded-2xl p-4 text-sm text-gray-300">{{ _('История транзакций пока пуста.') }}</div>
-                            {% endif %}
-                        </div>
-                    </section>
-                </div>
-                <!-- Devices section -->
-                <div id="section-devices" class="settings-content-section">
-                    {% include "account/_devices_section.html" %}
-                </div>
-                <!-- Notifications section -->
-                <div id="section-notifications" class="settings-content-section">
-                    <section class="settings-section">
-                        <div class="settings-section-head">
-                            <div>
-                                <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Уведомления') }}</h3>
-                                <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Настройте, какие уведомления вы хотите получать.') }}</p>
-                            </div>
-                        </div>
-                        <div class="settings-list settings-list--notifications">
-                            <label class="settings-notification-card" for="notify-expiry">
-                                <div class="settings-notification-copy">
-                                    <div class="settings-notification-title">{{ _('Напоминание об окончании подписки') }}</div>
-                                    <p class="settings-notification-text">{{ _('Напомним заранее, чтобы вы успели продлить доступ без паузы.') }}</p>
-                                    <div class="settings-notification-meta">{{ _('За 3 дня и за 24 часа') }}</div>
-                                </div>
-                                <div class="settings-notification-control">
-                                    <span class="settings-notification-state">{{ _('Включено') if notify_expiry else _('Выключено') }}</span>
-                                    <span class="settings-switch">
-                                        <input type="checkbox" name="notify_expiry" id="notify-expiry" {% if notify_expiry %}checked{% endif %}>
-                                        <span class="settings-switch-ui" aria-hidden="true"></span>
-                                    </span>
-                                </div>
-                            </label>
-                            <label class="settings-notification-card" for="notify-maintenance">
-                                <div class="settings-notification-copy">
-                                    <div class="settings-notification-title">{{ _('Технические работы') }}</div>
-                                    <p class="settings-notification-text">{{ _('Сообщим о плановых работах и важных изменениях в доступности сервиса.') }}</p>
-                                    <div class="settings-notification-meta">{{ _('Только важные сервисные уведомления') }}</div>
-                                </div>
-                                <div class="settings-notification-control">
-                                    <span class="settings-notification-state">{{ _('Включено') if notify_maintenance else _('Выключено') }}</span>
-                                    <span class="settings-switch">
-                                        <input type="checkbox" name="notify_maintenance" id="notify-maintenance" {% if notify_maintenance %}checked{% endif %}>
-                                        <span class="settings-switch-ui" aria-hidden="true"></span>
-                                    </span>
-                                </div>
-                            </label>
-                            <label class="settings-notification-card" for="notify-news">
-                                <div class="settings-notification-copy">
-                                    <div class="settings-notification-title">{{ _('Новости и промокоды') }}</div>
-                                    <p class="settings-notification-text">{{ _('Получайте новости сервиса, информацию о новых локациях и специальные предложения.') }}</p>
-                                    <div class="settings-notification-meta">{{ _('Обновления продукта и промокампании') }}</div>
-                                </div>
-                                <div class="settings-notification-control">
-                                    <span class="settings-notification-state">{{ _('Включено') if notify_news else _('Выключено') }}</span>
-                                    <span class="settings-switch">
-                                        <input type="checkbox" name="notify_news" id="notify-news" {% if notify_news %}checked{% endif %}>
-                                        <span class="settings-switch-ui" aria-hidden="true"></span>
-                                    </span>
-                                </div>
-                            </label>
-                        </div>
-                    </section>
-                </div>
-                <!-- Danger zone -->
-                <div id="section-danger" class="settings-content-section">
-                    <section class="settings-section settings-section--danger mt-2">
-                        <div class="settings-section-head">
-                            <div>
-                                <h3 class="text-lg font-semibold text-red-100 sm:text-xl">{{ _('Опасная зона') }}</h3>
-                                <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Удаление аккаунта необратимо. Сначала подтвердите пароль и ключевое слово.') }}</p>
-                            </div>
-                        </div>
-                        <form id="delete-form" class="settings-form space-y-4" data-api-form data-endpoint="{{ url_for('api_account_delete') }}">
-                            <div class="grid gap-3 sm:grid-cols-2">
-                                <label class="settings-field">
-                                    <span>{{ _('Текущий пароль') }}</span>
-                                    <input type="password" name="password" id="delete-password" autocomplete="current-password" required>
-                                </label>
-                                <label class="settings-field">
-                                    <span>{{ _('Введите DELETE') }}</span>
-                                    <input type="text" name="confirm_word" id="delete-confirm-word" placeholder="DELETE" autocomplete="off" required>
-                                </label>
-                            </div>
-                            <div class="settings-note settings-note--danger rounded-2xl px-4 py-3 text-sm text-gray-400" id="delete-hint">
-                                {{ _('Кнопка активируется только после проверки текущего пароля и точного ввода слова DELETE.') }}
-                            </div>
-                            <div class="flex justify-end">
-                                <button type="submit" id="delete-submit" class="settings-action settings-action-danger" disabled>{{ _('Удалить аккаунт') }}</button>
-                            </div>
-                            <div class="settings-feedback hidden" data-form-status></div>
-                        </form>
-                    </section>
-                </div>
-            </div>
-        </div>
+    <div id="tab-settings" class="hidden" role="tabpanel" aria-labelledby="tab-btn-settings" data-loaded="false">
+      <div class="glass-effect dashboard-surface-card rounded-2xl p-5 sm:p-6 text-sm text-gray-400">
+        {{ _('Загружаем настройки…') }}
+      </div>
     </div>
   </div>
 </div>
@@ -1039,7 +697,40 @@
   const tabSettings = document.getElementById('tab-settings');
   const tabRef = document.getElementById('tab-ref');
 
-  function setTab(name){
+  async function ensureTabLoaded(name){
+    const targetMap = {
+      ref: tabRef,
+      settings: tabSettings,
+    };
+    const target = targetMap[name];
+    if (!target || target.dataset.loaded === 'true') return;
+
+    try {
+      const response = await fetch(`${window.location.pathname}?tab=${encodeURIComponent(name)}`, {
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json',
+          'X-Partial-Update': target.id,
+        },
+      });
+      const data = await response.json().catch(() => ({ ok: false, fragments: {} }));
+      if (!response.ok || data.ok === false || typeof data.fragments?.[target.id] !== 'string') {
+        throw new Error('load-failed');
+      }
+      target.innerHTML = data.fragments[target.id];
+      target.dataset.loaded = 'true';
+      bindSettingsInteractions(target);
+      bindSettingsShell(target);
+      bindDeleteForm(target);
+    } catch (_error) {
+      target.innerHTML = `
+        <div class="glass-effect dashboard-surface-card rounded-2xl p-5 sm:p-6 text-sm text-red-200">
+          {{ _('Не удалось загрузить раздел. Попробуйте открыть его еще раз.') }}
+        </div>`;
+    }
+  }
+
+  async function setTab(name){
     const isSub = name === 'sub';
     const isSettings = name === 'settings';
     const isRef = name === 'ref';
@@ -1056,62 +747,60 @@
     tabSettings.classList.toggle('hidden', !isSettings);
     tabRef.classList.toggle('hidden', !isRef);
 
+    if (!isSub) {
+      await ensureTabLoaded(name);
+    }
+
     try { localStorage.setItem('dashTab', name); } catch(e) {}
   }
 
-  if (tabBtnSub) tabBtnSub.addEventListener('click', () => setTab('sub'));
-  if (tabBtnSettings) tabBtnSettings.addEventListener('click', () => setTab('settings'));
-  if (tabBtnRef) tabBtnRef.addEventListener('click', () => setTab('ref'));
+  if (tabBtnSub) tabBtnSub.addEventListener('click', () => { void setTab('sub'); });
+  if (tabBtnSettings) tabBtnSettings.addEventListener('click', () => { void setTab('settings'); });
+  if (tabBtnRef) tabBtnRef.addEventListener('click', () => { void setTab('ref'); });
 
   try {
     const params = new URLSearchParams(window.location.search);
     const forced = params.get('tab');
     if (forced === 'sub' || forced === 'ref' || forced === 'settings') {
-      setTab(forced);
+      void setTab(forced);
       if (window.history && window.history.replaceState) {
         const clean = window.location.pathname + window.location.hash;
         window.history.replaceState(null, '', clean);
       }
     } else {
-      const saved = localStorage.getItem('dashTab');
-      if (saved === 'settings') setTab('settings');
-      else if (saved === 'ref') setTab('ref');
+      try { localStorage.setItem('dashTab', 'sub'); } catch(e) {}
+      void setTab('sub');
     }
   } catch(e) {}
 
-  // Settings navigation: switch between sub‑sections on the settings page.
-  document.addEventListener('DOMContentLoaded', () => {
-    const navButtons = document.querySelectorAll('.settings-nav-button');
-    const sections = document.querySelectorAll('.settings-content-section');
+  function bindSettingsShell(scope = document){
+    const navButtons = scope.querySelectorAll('.settings-nav-button');
     navButtons.forEach((btn) => {
+      if (btn.dataset.boundNav === '1') return;
+      btn.dataset.boundNav = '1';
+      const shell = btn.closest('#tab-settings') || scope;
       btn.addEventListener('click', () => {
-        // Highlight clicked button
-        navButtons.forEach((b) => b.classList.remove('active'));
+        shell.querySelectorAll('.settings-nav-button').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
-        // Show corresponding section
         const target = btn.dataset.section;
-        sections.forEach((sec) => {
+        shell.querySelectorAll('.settings-content-section').forEach((sec) => {
           if (sec.id === 'section-' + target) sec.classList.add('active');
           else sec.classList.remove('active');
         });
       });
     });
-    // Two‑factor authentication toggle (stub implementation)
-    const twofaToggle = document.getElementById('twofa-toggle');
+    const twofaToggle = scope.querySelector('#twofa-toggle');
     if (twofaToggle) {
       twofaToggle.addEventListener('change', async () => {
         try {
-          // This endpoint is a placeholder for future 2FA integration
           await postJson('/api/account/toggle-2fa', { enabled: twofaToggle.checked });
         } catch (_error) {
-          // Silently ignore errors; feature may not be implemented yet
         }
       });
     }
-    // Notification toggles (stub implementation)
     const notifyFields = ['notify-expiry', 'notify-maintenance', 'notify-news'];
     notifyFields.forEach((id) => {
-      const el = document.getElementById(id);
+      const el = scope.querySelector(`#${id}`);
       if (el) {
         const stateLabel = el.closest('.settings-notification-card')?.querySelector('.settings-notification-state');
         const syncState = () => {
@@ -1128,18 +817,17 @@
             news: document.getElementById('notify-news')?.checked || false
           };
           try {
-            // This endpoint is a placeholder for saving notification preferences
             await postJson('/api/account/notifications', payload);
           } catch (_error) {
-            // Optionally display feedback
           }
         });
       }
     });
-  });
+  }
 
-  const settingsShell = document.getElementById('settings-shell');
-  const csrfToken = settingsShell?.dataset.csrf || '';
+  function getCsrfToken(){
+    return document.getElementById('settings-shell')?.dataset.csrf || '';
+  }
 
   function showFormStatus(node, message, type){
     if (!node) return;
@@ -1161,7 +849,7 @@
     const headers = {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      'X-CSRF-Token': csrfToken,
+      'X-CSRF-Token': getCsrfToken(),
     };
     if (partialTargets.length) {
       headers['X-Partial-Update'] = partialTargets.join(',');
@@ -1267,7 +955,7 @@
   }
 
   async function refreshSettingsSections(sectionTargets){
-    const response = await fetch("{{ url_for('dashboard') }}?tab=settings", {
+    const response = await fetch(`${window.location.pathname}?tab=settings`, {
       credentials: 'same-origin',
       headers: {
         'Accept': 'application/json',
@@ -1476,60 +1164,61 @@
     pollTelegramLink(scope);
   }
 
-  bindSettingsInteractions(document);
+  function bindDeleteForm(scope = document){
+    const deleteForm = scope.querySelector('#delete-form');
+    const deletePassword = scope.querySelector('#delete-password');
+    const deleteConfirmWord = scope.querySelector('#delete-confirm-word');
+    const deleteSubmit = scope.querySelector('#delete-submit');
+    const deleteHint = scope.querySelector('#delete-hint');
+    if (!deleteForm || deleteForm.dataset.boundSubmit === '1') return;
 
-  const deleteForm = document.getElementById('delete-form');
-  const deletePassword = document.getElementById('delete-password');
-  const deleteConfirmWord = document.getElementById('delete-confirm-word');
-  const deleteSubmit = document.getElementById('delete-submit');
-  const deleteHint = document.getElementById('delete-hint');
-  let deletePasswordValid = false;
-  let deleteVerifySeq = 0;
+    let deletePasswordValid = false;
+    let deleteVerifySeq = 0;
 
-  async function verifyDeletePassword(){
-    if (!deletePassword || !deletePassword.value.trim()) {
-      deletePasswordValid = false;
-      updateDeleteButton();
-      return;
+    function updateDeleteButton(){
+      if (!deleteSubmit || !deleteConfirmWord) return;
+      const confirmReady = deleteConfirmWord.value.trim().toUpperCase() === 'DELETE';
+      const ready = deletePasswordValid && confirmReady;
+      deleteSubmit.disabled = !ready;
+      deleteSubmit.classList.toggle('is-ready', ready);
+      if (!deleteHint) return;
+      if (ready) deleteHint.textContent = "{{ _('Проверка пройдена. Удаление станет необратимым после отправки формы.') }}";
+      else if (deletePassword && deletePassword.value.trim() && !deletePasswordValid) deleteHint.textContent = "{{ _('Текущий пароль пока не подтверждён.') }}";
+      else deleteHint.textContent = "{{ _('Кнопка активируется только после проверки текущего пароля и точного ввода слова DELETE.') }}";
     }
-    const seq = ++deleteVerifySeq;
-    try {
-      await postJson("{{ url_for('api_account_verify_password') }}", {password: deletePassword.value});
-      if (seq !== deleteVerifySeq) return;
-      deletePasswordValid = true;
-      updateDeleteButton();
-    } catch (_error) {
-      if (seq !== deleteVerifySeq) return;
-      deletePasswordValid = false;
+
+    async function verifyDeletePassword(){
+      if (!deletePassword || !deletePassword.value.trim()) {
+        deletePasswordValid = false;
+        updateDeleteButton();
+        return;
+      }
+      const seq = ++deleteVerifySeq;
+      try {
+        await postJson("{{ url_for('api_account_verify_password') }}", {password: deletePassword.value});
+        if (seq !== deleteVerifySeq) return;
+        deletePasswordValid = true;
+        updateDeleteButton();
+      } catch (_error) {
+        if (seq !== deleteVerifySeq) return;
+        deletePasswordValid = false;
+        updateDeleteButton();
+      }
+    }
+
+    deleteForm.dataset.boundSubmit = '1';
+    if (deletePassword && deleteConfirmWord && deleteSubmit) {
+      let verifyTimer = null;
+      deletePassword.addEventListener('input', () => {
+        deletePasswordValid = false;
+        updateDeleteButton();
+        window.clearTimeout(verifyTimer);
+        verifyTimer = window.setTimeout(verifyDeletePassword, 350);
+      });
+      deleteConfirmWord.addEventListener('input', updateDeleteButton);
       updateDeleteButton();
     }
-  }
 
-  function updateDeleteButton(){
-    if (!deleteSubmit || !deleteConfirmWord) return;
-    const confirmReady = deleteConfirmWord.value.trim().toUpperCase() === 'DELETE';
-    const ready = deletePasswordValid && confirmReady;
-    deleteSubmit.disabled = !ready;
-    deleteSubmit.classList.toggle('is-ready', ready);
-    if (!deleteHint) return;
-    if (ready) deleteHint.textContent = "{{ _('Проверка пройдена. Удаление станет необратимым после отправки формы.') }}";
-    else if (deletePassword && deletePassword.value.trim() && !deletePasswordValid) deleteHint.textContent = "{{ _('Текущий пароль пока не подтверждён.') }}";
-    else deleteHint.textContent = "{{ _('Кнопка активируется только после проверки текущего пароля и точного ввода слова DELETE.') }}";
-  }
-
-  if (deletePassword && deleteConfirmWord && deleteSubmit) {
-    let verifyTimer = null;
-    deletePassword.addEventListener('input', () => {
-      deletePasswordValid = false;
-      updateDeleteButton();
-      window.clearTimeout(verifyTimer);
-      verifyTimer = window.setTimeout(verifyDeletePassword, 350);
-    });
-    deleteConfirmWord.addEventListener('input', updateDeleteButton);
-    updateDeleteButton();
-  }
-
-  if (deleteForm) {
     deleteForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const statusNode = deleteForm.querySelector('[data-form-status]');
@@ -1552,6 +1241,10 @@
       }
     });
   }
+
+  bindSettingsInteractions(document);
+  bindSettingsShell(document);
+  bindDeleteForm(document);
 
 </script>
 {% endblock %}
