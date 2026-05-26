@@ -429,202 +429,11 @@
             <div class="settings-content flex-1">
                 <!-- Account section -->
                 <div id="section-account" class="settings-content-section active">
-                    <section class="settings-section settings-section--hero mb-4">
-                        <div class="max-w-2xl">
-                            <div class="dashboard-panel-label">{{ _('Управление аккаунтом') }}</div>
-                            <h2 class="mt-3 text-2xl font-bold sm:text-3xl">{{ _('Настройки доступа и профиля') }}</h2>
-                            <p class="mt-2 text-sm leading-6 text-gray-400">
-                                {{ _('Структурируйте доступ к аккаунту: контакт для входа, связанный Telegram и пароль для защиты учётной записи.') }}
-                            </p>
-                        </div>
-                    </section>
-                    <section class="settings-section">
-                        <div class="settings-section-head">
-                            <div>
-                                <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Аккаунт') }}</h3>
-                                <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Контакты для входа и связанные каналы доступа.') }}</p>
-                            </div>
-                        </div>
-                        <div class="settings-list">
-                            <!-- User ID row -->
-                            <div class="settings-row">
-                                <div class="settings-row-label">
-                                    <span class="inline-flex items-center gap-2">
-                                        <svg class="h-4 w-4 shrink-0 overflow-visible text-purple-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                            <circle cx="12" cy="7" r="4"></circle>
-                                        </svg>
-                                        <span>{{ _('ID пользователя') }}</span>
-                                    </span>
-                                </div>
-                                <div class="settings-row-value break-anywhere text-purple-100 font-mono">{{ current_user.id }}</div>
-                                <button type="button" class="settings-action settings-action-primary" onclick="copyText('{{ current_user.id }}', this)">{{ _('Скопировать') }}</button>
-                            </div>
-                            <!-- Email row reused -->
-                            <div class="settings-row">
-                                <div class="settings-row-label">
-                                    <span class="inline-flex items-center gap-2">
-                                        <svg class="h-4 w-4 text-pink-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                            <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path>
-                                            <path d="m22 8-8.97 6.35a1.8 1.8 0 0 1-2.06 0L2 8"></path>
-                                        </svg>
-                                        <span>{{ _('Email') }}</span>
-                                    </span>
-                                </div>
-                                <div class="settings-row-value break-anywhere {% if current_email_missing %}text-gray-500{% endif %}" id="email-current-value">
-                                    {% if current_email_missing %}
-                                      {{ _('Не указан') }}
-                                    {% else %}
-                                      {{ current_email_display }}
-                                    {% endif %}
-                                </div>
-                                <button type="button" class="settings-action settings-action-muted" data-toggle-target="email-link-form">
-                                    {{ _('Привязать') if current_email_missing else _('Изменить') }}
-                                </button>
-                            </div>
-                            <form id="email-link-form" class="settings-form hidden border-t border-white/6 pt-4" data-api-form data-endpoint="{{ url_for('api_account_link_email') }}">
-                                <div class="grid gap-3 sm:grid-cols-2">
-                                    <label class="settings-field">
-                                        <span>{{ _('Email') }}</span>
-                                        <input type="email" name="email" autocomplete="email" placeholder="you@example.com" value="{{ '' if current_email_missing else current_email_display }}">
-                                    </label>
-                                    <label class="settings-field">
-                                        <span>{{ _('Текущий пароль') }}</span>
-                                        <input type="password" name="password" autocomplete="current-password">
-                                    </label>
-                                </div>
-                                <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                    <p class="text-sm text-gray-500">{{ _('После проверки пароля мы отправим 6-значный код на этот email для подтверждения.') }}</p>
-                                    <button type="submit" class="settings-action settings-action-primary">{{ _('Сохранить email') }}</button>
-                                </div>
-                                <div class="settings-feedback hidden" data-form-status></div>
-                            </form>
-                            {% if pending_email_change %}
-                              <form class="settings-form settings-form--nested mt-3 space-y-4" method="POST" action="{{ url_for('account_change_email_verify') }}">
-                                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                  <div class="settings-security-method-head">
-                                      <div>
-                                          <h5 class="settings-security-method-title">{{ _('Подтвердите новый email') }}</h5>
-                                          <p class="settings-security-method-text">
-                                              {{ _('Мы отправили код на') }} <span class="font-mono">{{ pending_email_change_masked }}</span>.
-                                              {{ _('Код действует') }} {{ email_change_otp_ttl_minutes }} {{ _('мин.') }}
-                                          </p>
-                                      </div>
-                                  </div>
-                                  <div class="grid gap-3 sm:grid-cols-2">
-                                      <label class="settings-field">
-                                          <span>{{ _('Код подтверждения') }}</span>
-                                          <input type="text" name="otp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required>
-                                      </label>
-                                  </div>
-                                  <div class="settings-action-row">
-                                      <p class="text-sm text-gray-500">{{ _('Если письма нет, проверьте папку Спам и подождите минуту перед повторной отправкой.') }}</p>
-                                      <button type="submit" class="settings-action settings-action-primary">{{ _('Подтвердить email') }}</button>
-                                  </div>
-                              </form>
-                              <div class="settings-action-group mt-3">
-                                  <form method="POST" action="{{ url_for('account_change_email_resend') }}">
-                                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                      <button type="submit" class="settings-action settings-action-muted">{{ _('Отправить код повторно') }}</button>
-                                  </form>
-                                  <form method="POST" action="{{ url_for('account_change_email_cancel') }}">
-                                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                      <button type="submit" class="settings-action settings-action-muted">{{ _('Отмена') }}</button>
-                                  </form>
-                              </div>
-                            {% endif %}
-                            <!-- Telegram row reused -->
-                            <div class="settings-row">
-                                <div class="settings-row-label">
-                                    <span class="inline-flex items-center gap-2">
-                                        <svg class="h-4 w-4 text-cyan-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                            <path d="M9.78 18.65c-.32 0-.27-.12-.38-.42l-.96-3.15 7.35-4.35c.34-.2.59-.09.33.14l-5.95 5.36-.23 3.18c.33 0 .48-.15.66-.33l1.59-1.55 3.3 2.43c.61.34 1.05.16 1.2-.56l2.18-10.28c.21-.88-.33-1.28-.92-1.01L5.08 12.23c-.86.34-.85.82-.15 1.03l3.29 1.03 7.62-4.8c.36-.22.69-.1.42.14"/>
-                                        </svg>
-                                        <span>{{ _('Telegram') }}</span>
-                                    </span>
-                                </div>
-                                <div class="settings-row-value" id="telegram-current-value">
-                                    {% if telegram_account %}
-                                      {% if telegram_account.username %}@{{ telegram_account.username }}{% else %}ID {{ telegram_account.telegram_id }}{% endif %}
-                                    {% else %}
-                                      <span class="text-gray-500">{{ _('Не подключен') }}</span>
-                                    {% endif %}
-                                </div>
-                                {% if telegram_account %}
-                                  <button type="button" class="settings-action settings-action-muted" id="unlink-telegram-btn">{{ _('Отключить') }}</button>
-                                {% elif telegram_auth and telegram_auth.bot_url %}
-                                  <a href="{{ telegram_auth.bot_url }}" target="_blank" rel="noopener noreferrer" class="settings-action settings-action-primary">{{ _('Подключить') }}</a>
-                                {% endif %}
-                            </div>
-                            <div class="settings-feedback hidden" id="telegram-status"></div>
-                            <!-- Language row -->
-                            <div class="settings-row">
-                                <div class="settings-row-label">
-                                    <span class="inline-flex items-center gap-2">
-                                        <svg class="h-4 w-4 text-yellow-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                            <path d="M2 12l9 4 11-4-11-4-9 4z"></path>
-                                            <polyline points="2 12 2 20 11 24 20 20 20 12"></polyline>
-                                            <line x1="11" y1="12" x2="11" y2="24"></line>
-                                        </svg>
-                                        <span>{{ _('Язык интерфейса') }}</span>
-                                    </span>
-                                </div>
-                                <div class="settings-row-value">
-                                    <div class="lang-switch">
-                                        <a href="{{ url_for('set_language', lang='ru', next=request.path) }}" class="{% if get_locale() == 'ru' %}active{% endif %}">RU</a>
-                                        <span class="separator">|</span>
-                                        <a href="{{ url_for('set_language', lang='en', next=request.path) }}" class="{% if get_locale() == 'en' %}active{% endif %}">EN</a>
-                                    </div>
-                                </div>
-                                <div></div>
-                            </div>
-                        </div>
-                    </section>
+                    {% include "account/_account_section.html" %}
                 </div>
                 <!-- Security section -->
                 <div id="section-security" class="settings-content-section">
-                    <section class="settings-section">
-                        <div class="settings-section-head">
-                            <div>
-                                <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Безопасность') }}</h3>
-                                <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Способ восстановления выбирается автоматически: сначала email, если он привязан, иначе Telegram.') }}</p>
-                            </div>
-                        </div>
-                        <div class="settings-security-layout">
-                            {% include "account/_password_reset_panel.html" %}
-
-                            <article class="settings-security-block">
-                                <div class="settings-security-block-head">
-                                    <div>
-                                        <h4 class="settings-security-block-title">{{ _('Смена пароля') }}</h4>
-                                    </div>
-                                </div>
-
-                                <form class="settings-security-change-form space-y-4" method="POST" action="{{ url_for('account_change_password') }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <div class="grid gap-3">
-                                        <label class="settings-field">
-                                          <span>{{ _('Текущий пароль') }}</span>
-                                          <input type="password" name="current_password" autocomplete="current-password" required>
-                                        </label>
-                                        <div class="grid gap-3 sm:grid-cols-2">
-                                            <label class="settings-field">
-                                              <span>{{ _('Новый пароль') }}</span>
-                                              <input type="password" name="new_password" autocomplete="new-password" required>
-                                            </label>
-                                            <label class="settings-field">
-                                              <span>{{ _('Повторите пароль') }}</span>
-                                              <input type="password" name="new_password2" autocomplete="new-password" required>
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="settings-action-row">
-                                        <button type="submit" class="settings-action settings-action-primary">{{ _('Изменить пароль') }}</button>
-                                    </div>
-                                </form>
-                            </article>
-                        </div>
-                    </section>
+                    {% include "account/_security_section.html" %}
                 </div>
                 <!-- Billing section -->
                 <div id="section-billing" class="settings-content-section">
@@ -704,47 +513,7 @@
                 </div>
                 <!-- Devices section -->
                 <div id="section-devices" class="settings-content-section">
-                    <section class="settings-section">
-                        <div class="settings-section-head">
-                            <div>
-                                <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Мои устройства') }}</h3>
-                                <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Список активных сессий веб‑панели.') }}</p>
-                            </div>
-                        </div>
-                        {% if sessions %}
-                        <div class="space-y-3">
-                            {% for s in sessions %}
-                            <div class="settings-session-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                <div class="flex flex-col">
-                                    <span class="font-semibold text-gray-100">{{ s.browser }}</span>
-                                    <span class="text-sm text-gray-400">{{ s.os }}</span>
-                                    <span class="text-xs text-gray-500">{{ _('Локация:') }} {{ s.location or s.ip }}</span>
-                                    <span class="text-xs text-gray-500">{{ _('Последняя активность:') }} {{ s.last_seen_at.strftime('%Y-%m-%d %H:%M') if s.last_seen_at else '—' }}</span>
-                                </div>
-                                <div class="mt-2 sm:mt-0 flex items-center gap-3">
-                                    {% if s.current %}
-                                      <span class="text-emerald-400 text-sm">{{ _('Текущая сессия') }}</span>
-                                    {% else %}
-                                      <form method="POST" action="{{ url_for('api_terminate_session') }}">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <input type="hidden" name="session_id" value="{{ s.id }}">
-                                        <button type="submit" class="settings-action settings-action-muted">{{ _('Завершить') }}</button>
-                                      </form>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <div class="mt-4 flex justify-end">
-                            <form method="POST" action="{{ url_for('api_terminate_sessions_all') }}">
-                              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                              <button type="submit" class="settings-action settings-action-danger">{{ _('Завершить все другие сессии') }}</button>
-                            </form>
-                        </div>
-                        {% else %}
-                        <div class="pill-muted rounded-2xl p-4 text-sm text-gray-300">{{ _('Нет активных сессий.') }}</div>
-                        {% endif %}
-                    </section>
+                    {% include "account/_devices_section.html" %}
                 </div>
                 <!-- Notifications section -->
                 <div id="section-notifications" class="settings-content-section">
@@ -1388,15 +1157,19 @@
     node.classList.remove('is-success', 'is-error', 'is-info');
   }
 
-  async function postJson(url, payload){
+  async function postJson(url, payload, partialTargets = []){
+    const headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    };
+    if (partialTargets.length) {
+      headers['X-Partial-Update'] = partialTargets.join(',');
+    }
     const response = await fetch(url, {
       method: 'POST',
       credentials: 'same-origin',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken,
-      },
+      headers,
       body: JSON.stringify(payload),
     });
     const data = await response.json().catch(() => ({}));
@@ -1458,57 +1231,252 @@
     });
   }
 
-  document.querySelectorAll('[data-toggle-target]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const target = document.getElementById(button.dataset.toggleTarget);
-      if (!target) return;
-      target.classList.toggle('hidden');
-    });
-  });
+  function replaceSectionContent(sectionId, html){
+    if (typeof html !== 'string' || !html.trim()) return;
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+    section.innerHTML = html;
+    bindSettingsInteractions(section);
+  }
 
-  const emailForm = document.getElementById('email-link-form');
-  if (emailForm) {
+  function applySettingsFragments(fragments){
+    if (!fragments || typeof fragments !== 'object') return;
+    Object.entries(fragments).forEach(([sectionId, html]) => {
+      replaceSectionContent(sectionId, html);
+    });
+  }
+
+  async function postSectionForm(form, sectionTargets, submitter){
+    const formData = new FormData(form);
+    const action = submitter?.getAttribute('formaction') || form.getAttribute('action');
+    const response = await fetch(action, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Accept': 'application/json',
+        'X-Partial-Update': sectionTargets.join(','),
+      },
+      body: formData,
+    });
+    return response.json().catch(() => ({
+      ok: false,
+      message: "{{ _('Не удалось выполнить запрос. Попробуйте позже.') }}",
+      category: 'error',
+      fragments: {},
+    }));
+  }
+
+  async function refreshSettingsSections(sectionTargets){
+    const response = await fetch("{{ url_for('dashboard') }}?tab=settings", {
+      credentials: 'same-origin',
+      headers: {
+        'Accept': 'application/json',
+        'X-Partial-Update': sectionTargets.join(','),
+      },
+    });
+    const data = await response.json().catch(() => ({ok: false, fragments: {}}));
+    if (!response.ok || data.ok === false) {
+      throw new Error("{{ _('Не удалось обновить настройки. Попробуйте позже.') }}");
+    }
+    applySettingsFragments(data.fragments);
+    return data;
+  }
+
+  function bindToggleTargets(scope = document){
+    scope.querySelectorAll('[data-toggle-target]').forEach((button) => {
+      if (button.dataset.boundToggle === '1') return;
+      button.dataset.boundToggle = '1';
+      button.addEventListener('click', () => {
+        const target = document.getElementById(button.dataset.toggleTarget);
+        if (!target) return;
+        target.classList.toggle('hidden');
+      });
+    });
+  }
+
+  function bindEmailForm(scope = document){
+    const emailForm = scope.querySelector('#email-link-form');
+    if (!emailForm || emailForm.dataset.boundSubmit === '1') return;
+    emailForm.dataset.boundSubmit = '1';
     emailForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const statusNode = emailForm.querySelector('[data-form-status]');
       clearFormStatus(statusNode);
+      const submitter = event.submitter || emailForm.querySelector('button[type="submit"]');
+      if (submitter) submitter.disabled = true;
       const formData = new FormData(emailForm);
       try {
         const data = await postJson(emailForm.dataset.endpoint, {
           email: formData.get('email'),
           password: formData.get('password'),
-        });
-        if (data.redirect) {
-          window.location.href = data.redirect;
-          return;
-        }
-        showFormStatus(statusNode, data.message, 'success');
+        }, ['section-account']);
+        applySettingsFragments(data.fragments);
+        const accountStatus = document.getElementById('account-settings-status');
+        showFormStatus(accountStatus, data.message, 'success');
       } catch (error) {
         showFormStatus(statusNode, error.message, 'error');
+        if (submitter) submitter.disabled = false;
       }
     });
   }
 
-  bindPasswordResetPanel(document.querySelector('[data-password-reset-panel]'));
+  function bindEmailChangeForms(scope = document){
+    scope.querySelectorAll('[data-email-change-form]').forEach((form) => {
+      if (form.dataset.boundSubmit === '1') return;
+      form.dataset.boundSubmit = '1';
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const submitter = event.submitter || form.querySelector('button[type="submit"]');
+        const buttons = form.querySelectorAll('button[type="submit"]');
+        const statusNode = document.getElementById('account-settings-status');
+        clearFormStatus(statusNode);
+        buttons.forEach((button) => {
+          button.disabled = true;
+        });
+        const targets = form.getAttribute('action')?.includes('/verify')
+          ? ['section-account', 'section-security']
+          : ['section-account'];
+        try {
+          const data = await postSectionForm(form, targets, submitter);
+          applySettingsFragments(data.fragments);
+          const nextStatusNode = document.getElementById('account-settings-status');
+          showFormStatus(nextStatusNode, data.message, data.category || (data.ok ? 'success' : 'error'));
+        } catch (_error) {
+          showFormStatus(statusNode, "{{ _('Не удалось выполнить запрос. Попробуйте позже.') }}", 'error');
+          buttons.forEach((button) => {
+            button.disabled = false;
+          });
+        }
+      });
+    });
+  }
 
-  const unlinkTelegramBtn = document.getElementById('unlink-telegram-btn');
-  if (unlinkTelegramBtn) {
+  function bindPasswordChangeForm(scope = document){
+    const form = scope.querySelector('[data-password-change-form]');
+    if (!form || form.dataset.boundSubmit === '1') return;
+    form.dataset.boundSubmit = '1';
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const statusNode = form.querySelector('[data-form-status]');
+      const submitter = event.submitter || form.querySelector('button[type="submit"]');
+      clearFormStatus(statusNode);
+      if (submitter) submitter.disabled = true;
+      const formData = new FormData(form);
+      try {
+        const data = await postJson("{{ url_for('api_account_change_password') }}", {
+          current_password: formData.get('current_password'),
+          new_password: formData.get('new_password'),
+          new_password2: formData.get('new_password2'),
+        });
+        form.reset();
+        showFormStatus(statusNode, data.message, 'success');
+      } catch (error) {
+        showFormStatus(statusNode, error.message, 'error');
+      } finally {
+        if (submitter) submitter.disabled = false;
+      }
+    });
+  }
+
+  function bindSessionForms(scope = document){
+    scope.querySelectorAll('[data-session-form]').forEach((form) => {
+      if (form.dataset.boundSubmit === '1') return;
+      form.dataset.boundSubmit = '1';
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const submitter = event.submitter || form.querySelector('button[type="submit"]');
+        const statusNode = document.getElementById('devices-settings-status');
+        clearFormStatus(statusNode);
+        if (submitter) submitter.disabled = true;
+        try {
+          const data = await postSectionForm(form, ['section-devices'], submitter);
+          applySettingsFragments(data.fragments);
+          const nextStatusNode = document.getElementById('devices-settings-status');
+          showFormStatus(nextStatusNode, data.message, data.category || (data.ok ? 'success' : 'error'));
+        } catch (_error) {
+          showFormStatus(statusNode, "{{ _('Не удалось выполнить запрос. Попробуйте позже.') }}", 'error');
+          if (submitter) submitter.disabled = false;
+        }
+      });
+    });
+  }
+
+  function bindTelegramControls(scope = document){
+    const unlinkTelegramBtn = scope.querySelector('#unlink-telegram-btn');
+    if (!unlinkTelegramBtn || unlinkTelegramBtn.dataset.boundClick === '1') return;
+    unlinkTelegramBtn.dataset.boundClick = '1';
     unlinkTelegramBtn.addEventListener('click', async () => {
       const statusNode = document.getElementById('telegram-status');
       clearFormStatus(statusNode);
       unlinkTelegramBtn.disabled = true;
       try {
-        const data = await postJson("{{ url_for('api_account_unlink_telegram') }}", {});
-        const telegramValue = document.getElementById('telegram-current-value');
-        if (telegramValue) telegramValue.innerHTML = '<span class="text-gray-500">{{ _("Не подключен") }}</span>';
-        unlinkTelegramBtn.remove();
-        showFormStatus(statusNode, data.message, 'success');
+        const data = await postJson("{{ url_for('api_account_unlink_telegram') }}", {}, ['section-account']);
+        applySettingsFragments(data.fragments);
+        const nextStatusNode = document.getElementById('account-settings-status') || document.getElementById('telegram-status');
+        showFormStatus(nextStatusNode, data.message, 'success');
       } catch (error) {
         showFormStatus(statusNode, error.message, 'error');
         unlinkTelegramBtn.disabled = false;
       }
     });
   }
+
+  function pollTelegramLink(scope = document){
+    const node = scope.querySelector('#tg-link-status');
+    if (!node || node.dataset.polling === '1') return;
+    node.dataset.polling = '1';
+    showFormStatus(node, "{{ _('Подтвердите привязку в Telegram-боте, после чего кабинет обновится автоматически.') }}", 'info');
+    let attempts = 0;
+
+    async function tick(){
+      attempts += 1;
+      try{
+        const resp = await fetch(node.dataset.statusUrl, {credentials: 'same-origin', headers: {'Accept': 'application/json'}});
+        const data = await resp.json();
+        if (data.status === 'ok'){
+          showFormStatus(node, "{{ _('Подтверждение получено. Обновляем настройки…') }}", 'info');
+          await refreshSettingsSections(['section-account', 'section-security']);
+          const accountStatus = document.getElementById('account-settings-status');
+          showFormStatus(accountStatus, "{{ _('Подтверждение получено') }}", 'success');
+          return;
+        }
+        if (data.status === 'expired'){
+          showFormStatus(node, "{{ _('Код истёк. Обновите страницу настроек и получите новый.') }}", 'error');
+          return;
+        }
+        if (data.status === 'declined'){
+          showFormStatus(node, "{{ _('Привязка отклонена в Telegram. Обновите страницу настроек, если хотите создать новый запрос.') }}", 'error');
+          return;
+        }
+        if (data.status === 'merge_requires_support'){
+          showFormStatus(node, "{{ _('Этот Telegram уже привязан к другому полноценному аккаунту. Напишите в поддержку для безопасного объединения.') }}", 'error');
+          return;
+        }
+        if (data.status === 'merge_failed'){
+          showFormStatus(node, "{{ _('Не удалось автоматически объединить аккаунты. Попробуйте ещё раз позже или напишите в поддержку.') }}", 'error');
+          return;
+        }
+      }catch(_error){}
+      if (attempts < 120) {
+        setTimeout(tick, 3000);
+      }
+    }
+
+    setTimeout(tick, 2500);
+  }
+
+  function bindSettingsInteractions(scope = document){
+    bindToggleTargets(scope);
+    bindEmailForm(scope);
+    bindEmailChangeForms(scope);
+    bindPasswordResetPanel(scope.querySelector('[data-password-reset-panel]'));
+    bindPasswordChangeForm(scope);
+    bindSessionForms(scope);
+    bindTelegramControls(scope);
+    pollTelegramLink(scope);
+  }
+
+  bindSettingsInteractions(document);
 
   const deleteForm = document.getElementById('delete-form');
   const deletePassword = document.getElementById('delete-password');
@@ -1584,46 +1552,6 @@
       }
     });
   }
-
-  (function pollTelegramLink(){
-    const node = document.getElementById('tg-link-status');
-    if (!node) return;
-    let attempts = 0;
-
-    async function tick(){
-      attempts += 1;
-      try{
-        const resp = await fetch(node.dataset.statusUrl, {credentials: 'same-origin', headers: {'Accept': 'application/json'}});
-        const data = await resp.json();
-        if (data.status === 'ok'){
-          node.textContent = "{{ _('Привязка подтверждена. Обновляем кабинет…') }}";
-          window.location.href = data.redirect || "{{ url_for('dashboard') }}?tab=settings";
-          return;
-        }
-        if (data.status === 'expired'){
-          node.textContent = "{{ _('Код истёк. Обновите страницу настроек и получите новый.') }}";
-          return;
-        }
-        if (data.status === 'declined'){
-          node.textContent = "{{ _('Привязка отклонена в Telegram. Обновите страницу настроек, если хотите создать новый запрос.') }}";
-          return;
-        }
-        if (data.status === 'merge_requires_support'){
-          node.textContent = "{{ _('Этот Telegram уже привязан к другому полноценному аккаунту. Напишите в поддержку для безопасного объединения.') }}";
-          return;
-        }
-        if (data.status === 'merge_failed'){
-          node.textContent = "{{ _('Не удалось автоматически объединить аккаунты. Попробуйте ещё раз позже или напишите в поддержку.') }}";
-          return;
-        }
-      }catch(e){}
-      if (attempts < 120) {
-        setTimeout(tick, 3000);
-      }
-    }
-
-    setTimeout(tick, 2500);
-  })();
 
 </script>
 {% endblock %}

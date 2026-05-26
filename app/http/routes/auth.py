@@ -134,8 +134,14 @@ def _wants_json() -> bool:
     return request.is_json or request.path.startswith("/api/")
 
 
-def _wants_partial_update() -> bool:
-    return request.headers.get("X-Partial-Update") == "password-reset-panel"
+def _requested_partial_targets() -> list[str]:
+    header = request.headers.get("X-Partial-Update", "")
+    return [target.strip() for target in header.split(",") if target.strip()]
+
+
+def _wants_partial_update(target: str | None = None) -> bool:
+    targets = _requested_partial_targets()
+    return bool(targets) if target is None else target in targets
 
 
 def _respond_success(message: str, *, redirect_to: str | None = None, extra: dict[str, object] | None = None):
@@ -166,8 +172,72 @@ def _render_password_reset_panel() -> str:
     return render_template("account/_password_reset_panel.html", **_dashboard_security_context())
 
 
+def _account_section_context() -> dict[str, object]:
+    security_context = _dashboard_security_context()
+    telegram_account = security_context["telegram_account"]
+    pending_email_change = get_pending_email_change(current_user.id)
+    telegram_auth = None if telegram_account else _telegram_challenge_context(purpose="link", target_user_id=current_user.id)
+    return {
+        "telegram_auth": telegram_auth,
+        "pending_email_change": pending_email_change,
+        "pending_email_change_masked": mask_email(pending_email_change.new_email) if pending_email_change else None,
+        "email_change_otp_ttl_minutes": OTP_TTL_MINUTES,
+        **security_context,
+    }
+
+
+def _devices_section_context() -> dict[str, object]:
+    try:
+        sessions = user_web_sessions(
+            current_user.id,
+            current_token=current_web_session_token(),
+            locale=(current_user.lang or "en"),
+        )
+    except Exception:
+        sessions = []
+    return {"sessions": sessions}
+
+
+def _render_settings_fragment(target: str) -> str | None:
+    if target == "section-account":
+        return render_template("account/_account_section.html", **_account_section_context())
+    if target == "section-security":
+        return render_template("account/_security_section.html", **_dashboard_security_context())
+    if target == "section-devices":
+        return render_template("account/_devices_section.html", **_devices_section_context())
+    return None
+
+
+def _respond_settings_partial(
+    message: str,
+    *,
+    category: str = "success",
+    status_code: int = 200,
+    extra: dict[str, object] | None = None,
+):
+    targets = [target for target in _requested_partial_targets() if target != "password-reset-panel"]
+    if targets:
+        fragments: dict[str, str] = {}
+        for target in targets:
+            html = _render_settings_fragment(target)
+            if html is not None:
+                fragments[target] = html
+        data: dict[str, object] = {
+            "ok": status_code < 400,
+            "message": message,
+            "category": category,
+            "fragments": fragments,
+        }
+        if extra:
+            data.update(extra)
+        return jsonify(data), status_code
+    if status_code >= 400:
+        return _respond_error(message, status_code, category=category, extra=extra)
+    return _respond_success(message, extra=extra)
+
+
 def _respond_password_reset_panel(message: str, *, category: str = "success", status_code: int = 200):
-    if _wants_partial_update():
+    if _wants_partial_update("password-reset-panel"):
         return jsonify(
             {
                 "ok": status_code < 400,
@@ -958,7 +1028,10 @@ def api_account_link_email():
 
     current_email = (current_user.email or "").strip().lower()
     if current_email == email:
-        return _respond_success(translate("Email уже привязан"), extra={"email": email})
+        return _respond_settings_partial(
+            translate("Email уже привязан"),
+            extra={"email": email},
+        )
 
     try:
         start_pending_email_change(user=current_user, new_email=email, lang=_normalized_lang())
@@ -978,9 +1051,8 @@ def api_account_link_email():
         return _respond_error(translate("Не удалось отправить код подтверждения. Попробуйте ещё раз позже."), 500)
 
     throttle_reset("link_email", f"ip:{ip}")
-    return _respond_success(
+    return _respond_settings_partial(
         translate("Мы отправили код подтверждения на новый email."),
-        redirect_to=localized_url("dashboard", tab="settings"),
         extra={"pending_email": email},
     )
 
@@ -1017,14 +1089,11 @@ def api_terminate_session():
     try:
         session_id = int(request.form.get("session_id") or request.json.get("session_id")) if request.is_json else int(request.form.get("session_id") or "0")
     except Exception:
-        flash(translate("Сессия не найдена."), "error")
-        return _settings_redirect()
+        return _respond_settings_partial(translate("Сессия не найдена."), category="error", status_code=400)
     ok = revoke_user_web_session(current_user.id, session_id, current_token=current_web_session_token())
     if ok:
-        flash(translate("Сессия завершена."), "success")
-    else:
-        flash(translate("Не удалось завершить выбранную сессию."), "error")
-    return _settings_redirect()
+        return _respond_settings_partial(translate("Сессия завершена."))
+    return _respond_settings_partial(translate("Не удалось завершить выбранную сессию."), category="error", status_code=400)
 
 
 @login_required
@@ -1034,10 +1103,8 @@ def api_terminate_sessions_all():
     require_csrf()
     revoked = revoke_other_web_sessions(current_user.id, current_token=current_web_session_token())
     if revoked > 0:
-        flash(translate("Все остальные сессии завершены."), "success")
-    else:
-        flash(translate("Других активных сессий не найдено."), "info")
-    return _settings_redirect()
+        return _respond_settings_partial(translate("Все остальные сессии завершены."))
+    return _respond_settings_partial(translate("Других активных сессий не найдено."), category="info")
 
 
 @login_required
@@ -1047,17 +1114,15 @@ def account_change_email_resend():
     require_csrf()
     try:
         resend_pending_email_change(current_user.id)
-        flash(translate("Новый код подтверждения отправлен на новый email."), "success")
+        return _respond_settings_partial(translate("Новый код подтверждения отправлен на новый email."))
     except EmailOtpError as exc:
         reason = str(exc)
         if reason == "not_found":
-            flash(translate("Запрос на смену email не найден. Начните заново."), "error")
+            return _respond_settings_partial(translate("Запрос на смену email не найден. Начните заново."), category="error", status_code=400)
         elif reason == "cooldown":
-            flash(translate("Код уже отправлен. Подождите немного перед повторной отправкой."), "error")
-        else:
-            current_app.logger.exception("Resend pending email change failed")
-            flash(translate("Не удалось отправить код подтверждения. Попробуйте ещё раз позже."), "error")
-    return _settings_redirect()
+            return _respond_settings_partial(translate("Код уже отправлен. Подождите немного перед повторной отправкой."), category="error", status_code=400)
+        current_app.logger.exception("Resend pending email change failed")
+        return _respond_settings_partial(translate("Не удалось отправить код подтверждения. Попробуйте ещё раз позже."), category="error", status_code=500)
 
 
 @login_required
@@ -1066,8 +1131,7 @@ def account_change_email_cancel():
 
     require_csrf()
     delete_pending_email_change(get_pending_email_change(current_user.id))
-    flash(translate("Можно указать другой email."), "info")
-    return _settings_redirect()
+    return _respond_settings_partial(translate("Можно указать другой email."), category="info")
 
 
 @login_required
@@ -1077,25 +1141,21 @@ def account_change_email_verify():
     require_csrf()
     otp_code = (request.form.get("otp_code") or "").strip()
     if not otp_code.isdigit() or len(otp_code) != 6:
-        flash(translate("Введите 6-значный код из письма."), "error")
-        return _settings_redirect()
+        return _respond_settings_partial(translate("Введите 6-значный код из письма."), category="error", status_code=400)
 
     ok, reason, pending = verify_pending_email_change(current_user.id, otp_code)
     if not ok or not pending:
         if reason == "expired":
-            flash(translate("Срок действия кода истёк. Отправьте новый код."), "error")
+            return _respond_settings_partial(translate("Срок действия кода истёк. Отправьте новый код."), category="error", status_code=400)
         elif reason == "too_many_attempts":
-            flash(translate("Слишком много неверных попыток. Запросите новый код."), "error")
+            return _respond_settings_partial(translate("Слишком много неверных попыток. Запросите новый код."), category="error", status_code=400)
         elif reason == "not_found":
-            flash(translate("Запрос на смену email не найден. Начните заново."), "error")
-        else:
-            flash(translate("Неверный код подтверждения."), "error")
-        return _settings_redirect()
+            return _respond_settings_partial(translate("Запрос на смену email не найден. Начните заново."), category="error", status_code=400)
+        return _respond_settings_partial(translate("Неверный код подтверждения."), category="error", status_code=400)
 
     if User.query.filter_by(email=pending.new_email).first():
         delete_pending_email_change(pending)
-        flash(translate("Email уже зарегистрирован"), "error")
-        return _settings_redirect()
+        return _respond_settings_partial(translate("Email уже зарегистрирован"), category="error", status_code=400)
 
     try:
         current_user.email = pending.new_email
@@ -1103,8 +1163,7 @@ def account_change_email_verify():
         delete_pending_email_change(pending)
     except Exception:
         db.session.rollback()
-        flash(translate("Не удалось изменить email. Попробуйте позже."), "error")
-        return _settings_redirect()
+        return _respond_settings_partial(translate("Не удалось изменить email. Попробуйте позже."), category="error", status_code=500)
 
     try:
         cfg = get_remnawave_config()
@@ -1113,8 +1172,7 @@ def account_change_email_verify():
     except Exception:
         current_app.logger.exception("Remnawave sync after email change failed")
 
-    flash(translate("Email успешно изменён"), "success")
-    return _settings_redirect()
+    return _respond_settings_partial(translate("Email успешно изменён"))
 
 
 def register(app) -> None:

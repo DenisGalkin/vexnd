@@ -1,0 +1,42 @@
+<section class="settings-section">
+    <div class="settings-section-head">
+        <div>
+            <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Мои устройства') }}</h3>
+            <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Список активных сессий веб‑панели.') }}</p>
+        </div>
+    </div>
+    <div class="settings-feedback hidden mb-4" id="devices-settings-status"></div>
+    {% if sessions %}
+    <div class="space-y-3">
+        {% for s in sessions %}
+        <div class="settings-session-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div class="flex flex-col">
+                <span class="font-semibold text-gray-100">{{ s.browser }}</span>
+                <span class="text-sm text-gray-400">{{ s.os }}</span>
+                <span class="text-xs text-gray-500">{{ _('Локация:') }} {{ s.location or s.ip }}</span>
+                <span class="text-xs text-gray-500">{{ _('Последняя активность:') }} {{ s.last_seen_at.strftime('%Y-%m-%d %H:%M') if s.last_seen_at else '—' }}</span>
+            </div>
+            <div class="mt-2 sm:mt-0 flex items-center gap-3">
+                {% if s.current %}
+                  <span class="text-emerald-400 text-sm">{{ _('Текущая сессия') }}</span>
+                {% else %}
+                  <form method="POST" action="{{ url_for('api_terminate_session') }}" data-session-form>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="session_id" value="{{ s.id }}">
+                    <button type="submit" class="settings-action settings-action-muted">{{ _('Завершить') }}</button>
+                  </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="mt-4 flex justify-end">
+        <form method="POST" action="{{ url_for('api_terminate_sessions_all') }}" data-session-form>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="settings-action settings-action-danger">{{ _('Завершить все другие сессии') }}</button>
+        </form>
+    </div>
+    {% else %}
+    <div class="pill-muted rounded-2xl p-4 text-sm text-gray-300">{{ _('Нет активных сессий.') }}</div>
+    {% endif %}
+</section>

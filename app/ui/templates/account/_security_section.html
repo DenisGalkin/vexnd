@@ -1,0 +1,44 @@
+<section class="settings-section">
+    <div class="settings-section-head">
+        <div>
+            <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Безопасность') }}</h3>
+            <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Способ восстановления выбирается автоматически: сначала email, если он привязан, иначе Telegram.') }}</p>
+        </div>
+    </div>
+    <div class="settings-feedback hidden mb-4" id="security-settings-status"></div>
+    <div class="settings-security-layout">
+        {% include "account/_password_reset_panel.html" %}
+
+        <article class="settings-security-block">
+            <div class="settings-security-block-head">
+                <div>
+                    <h4 class="settings-security-block-title">{{ _('Смена пароля') }}</h4>
+                </div>
+            </div>
+
+            <form class="settings-security-change-form space-y-4" method="POST" action="{{ url_for('account_change_password') }}" data-password-change-form>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="grid gap-3">
+                    <label class="settings-field">
+                      <span>{{ _('Текущий пароль') }}</span>
+                      <input type="password" name="current_password" autocomplete="current-password" required>
+                    </label>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="settings-field">
+                          <span>{{ _('Новый пароль') }}</span>
+                          <input type="password" name="new_password" autocomplete="new-password" required>
+                        </label>
+                        <label class="settings-field">
+                          <span>{{ _('Повторите пароль') }}</span>
+                          <input type="password" name="new_password2" autocomplete="new-password" required>
+                        </label>
+                    </div>
+                </div>
+                <div class="settings-action-row">
+                    <button type="submit" class="settings-action settings-action-primary">{{ _('Изменить пароль') }}</button>
+                </div>
+                <div class="settings-feedback hidden" data-form-status></div>
+            </form>
+        </article>
+    </div>
+</section>

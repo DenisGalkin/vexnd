@@ -52,6 +52,11 @@ def _dashboard_security_context() -> dict[str, object]:
     }
 
 
+def _requested_partial_targets() -> list[str]:
+    header = request.headers.get("X-Partial-Update", "")
+    return [target.strip() for target in header.split(",") if target.strip()]
+
+
 @login_required
 def dashboard():
     pending_intents = (
@@ -202,6 +207,24 @@ def dashboard():
             "status_url": url_for("telegram_auth_status", code=challenge.code),
             "command": f"/start {start_value}",
         }
+    partial_targets = _requested_partial_targets()
+    if partial_targets:
+        fragments: dict[str, str] = {}
+        account_context = {
+            "telegram_auth": telegram_auth,
+            "pending_email_change": pending_email_change,
+            "pending_email_change_masked": mask_email(pending_email_change.new_email) if pending_email_change else None,
+            "email_change_otp_ttl_minutes": OTP_TTL_MINUTES,
+            **security_context,
+        }
+        for target in partial_targets:
+            if target == "section-account":
+                fragments[target] = render_template("account/_account_section.html", **account_context)
+            elif target == "section-security":
+                fragments[target] = render_template("account/_security_section.html", **security_context)
+            elif target == "section-devices":
+                fragments[target] = render_template("account/_devices_section.html", sessions=sessions)
+        return jsonify({"ok": True, "fragments": fragments})
     return render_template(
         "dashboard.html",
         subscription=subscription,

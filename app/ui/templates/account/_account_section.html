@@ -1,0 +1,151 @@
+<section class="settings-section settings-section--hero mb-4">
+    <div class="max-w-2xl">
+        <div class="dashboard-panel-label">{{ _('Управление аккаунтом') }}</div>
+        <h2 class="mt-3 text-2xl font-bold sm:text-3xl">{{ _('Настройки доступа и профиля') }}</h2>
+        <p class="mt-2 text-sm leading-6 text-gray-400">
+            {{ _('Структурируйте доступ к аккаунту: контакт для входа, связанный Telegram и пароль для защиты учётной записи.') }}
+        </p>
+    </div>
+</section>
+<section class="settings-section">
+    <div class="settings-section-head">
+        <div>
+            <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Аккаунт') }}</h3>
+            <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Контакты для входа и связанные каналы доступа.') }}</p>
+        </div>
+    </div>
+    <div class="settings-feedback hidden mb-4" id="account-settings-status"></div>
+    <div class="settings-list">
+        <div class="settings-row">
+            <div class="settings-row-label">
+                <span class="inline-flex items-center gap-2">
+                    <svg class="h-4 w-4 shrink-0 overflow-visible text-purple-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span>{{ _('ID пользователя') }}</span>
+                </span>
+            </div>
+            <div class="settings-row-value break-anywhere text-purple-100 font-mono">{{ current_user.id }}</div>
+            <button type="button" class="settings-action settings-action-primary" onclick="copyText('{{ current_user.id }}', this)">{{ _('Скопировать') }}</button>
+        </div>
+        <div class="settings-row">
+            <div class="settings-row-label">
+                <span class="inline-flex items-center gap-2">
+                    <svg class="h-4 w-4 text-pink-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path>
+                        <path d="m22 8-8.97 6.35a1.8 1.8 0 0 1-2.06 0L2 8"></path>
+                    </svg>
+                    <span>{{ _('Email') }}</span>
+                </span>
+            </div>
+            <div class="settings-row-value break-anywhere {% if current_email_missing %}text-gray-500{% endif %}" id="email-current-value">
+                {% if current_email_missing %}
+                  {{ _('Не указан') }}
+                {% else %}
+                  {{ current_email_display }}
+                {% endif %}
+            </div>
+            <button type="button" class="settings-action settings-action-muted" data-toggle-target="email-link-form">
+                {{ _('Привязать') if current_email_missing else _('Изменить') }}
+            </button>
+        </div>
+        <form id="email-link-form" class="settings-form hidden border-t border-white/6 pt-4" data-api-form data-endpoint="{{ url_for('api_account_link_email') }}">
+            <div class="grid gap-3 sm:grid-cols-2">
+                <label class="settings-field">
+                    <span>{{ _('Email') }}</span>
+                    <input type="email" name="email" autocomplete="email" placeholder="you@example.com" value="{{ '' if current_email_missing else current_email_display }}">
+                </label>
+                <label class="settings-field">
+                    <span>{{ _('Текущий пароль') }}</span>
+                    <input type="password" name="password" autocomplete="current-password">
+                </label>
+            </div>
+            <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-sm text-gray-500">{{ _('После проверки пароля мы отправим 6-значный код на этот email для подтверждения.') }}</p>
+                <button type="submit" class="settings-action settings-action-primary">{{ _('Сохранить email') }}</button>
+            </div>
+            <div class="settings-feedback hidden" data-form-status></div>
+        </form>
+        {% if pending_email_change %}
+          <form class="settings-form settings-form--nested mt-3 space-y-4" method="POST" action="{{ url_for('account_change_email_verify') }}" data-email-change-form>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <div class="settings-security-method-head">
+                  <div>
+                      <h5 class="settings-security-method-title">{{ _('Подтвердите новый email') }}</h5>
+                      <p class="settings-security-method-text">
+                          {{ _('Мы отправили код на') }} <span class="font-mono">{{ pending_email_change_masked }}</span>.
+                          {{ _('Код действует') }} {{ email_change_otp_ttl_minutes }} {{ _('мин.') }}
+                      </p>
+                  </div>
+              </div>
+              <div class="grid gap-3 sm:grid-cols-2">
+                  <label class="settings-field">
+                      <span>{{ _('Код подтверждения') }}</span>
+                      <input type="text" name="otp_code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required>
+                  </label>
+              </div>
+              <div class="settings-action-row">
+                  <p class="text-sm text-gray-500">{{ _('Если письма нет, проверьте папку Спам и подождите минуту перед повторной отправкой.') }}</p>
+                  <button type="submit" class="settings-action settings-action-primary">{{ _('Подтвердить email') }}</button>
+              </div>
+          </form>
+          <div class="settings-action-group mt-3">
+              <form method="POST" action="{{ url_for('account_change_email_resend') }}" data-email-change-form>
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="settings-action settings-action-muted">{{ _('Отправить код повторно') }}</button>
+              </form>
+              <form method="POST" action="{{ url_for('account_change_email_cancel') }}" data-email-change-form>
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="settings-action settings-action-muted">{{ _('Отмена') }}</button>
+              </form>
+          </div>
+        {% endif %}
+        <div class="settings-row">
+            <div class="settings-row-label">
+                <span class="inline-flex items-center gap-2">
+                    <svg class="h-4 w-4 text-cyan-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M9.78 18.65c-.32 0-.27-.12-.38-.42l-.96-3.15 7.35-4.35c.34-.2.59-.09.33.14l-5.95 5.36-.23 3.18c.33 0 .48-.15.66-.33l1.59-1.55 3.3 2.43c.61.34 1.05.16 1.2-.56l2.18-10.28c.21-.88-.33-1.28-.92-1.01L5.08 12.23c-.86.34-.85.82-.15 1.03l3.29 1.03 7.62-4.8c.36-.22.69-.1.42.14"/>
+                    </svg>
+                    <span>{{ _('Telegram') }}</span>
+                </span>
+            </div>
+            <div class="settings-row-value" id="telegram-current-value">
+                {% if telegram_account %}
+                  {% if telegram_account.username %}@{{ telegram_account.username }}{% else %}ID {{ telegram_account.telegram_id }}{% endif %}
+                {% else %}
+                  <span class="text-gray-500">{{ _('Не подключен') }}</span>
+                {% endif %}
+            </div>
+            {% if telegram_account %}
+              <button type="button" class="settings-action settings-action-muted" id="unlink-telegram-btn">{{ _('Отключить') }}</button>
+            {% elif telegram_auth and telegram_auth.bot_url %}
+              <a href="{{ telegram_auth.bot_url }}" target="_blank" rel="noopener noreferrer" class="settings-action settings-action-primary">{{ _('Подключить') }}</a>
+            {% endif %}
+        </div>
+        <div class="settings-feedback hidden" id="telegram-status"></div>
+        {% if telegram_auth and telegram_auth.status_url %}
+          <div class="settings-feedback hidden" id="tg-link-status" data-status-url="{{ telegram_auth.status_url }}"></div>
+        {% endif %}
+        <div class="settings-row">
+            <div class="settings-row-label">
+                <span class="inline-flex items-center gap-2">
+                    <svg class="h-4 w-4 text-yellow-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M2 12l9 4 11-4-11-4-9 4z"></path>
+                        <polyline points="2 12 2 20 11 24 20 20 20 12"></polyline>
+                        <line x1="11" y1="12" x2="11" y2="24"></line>
+                    </svg>
+                    <span>{{ _('Язык интерфейса') }}</span>
+                </span>
+            </div>
+            <div class="settings-row-value">
+                <div class="lang-switch">
+                    <a href="{{ url_for('set_language', lang='ru', next=request.path) }}" class="{% if get_locale() == 'ru' %}active{% endif %}">RU</a>
+                    <span class="separator">|</span>
+                    <a href="{{ url_for('set_language', lang='en', next=request.path) }}" class="{% if get_locale() == 'en' %}active{% endif %}">EN</a>
+                </div>
+            </div>
+            <div></div>
+        </div>
+    </div>
+</section>
