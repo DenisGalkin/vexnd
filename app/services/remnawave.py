@@ -10,6 +10,8 @@ from requests import HTTPError
 from app.core.config import HTTP, RemnawaveConfig
 from app.domain.models import User
 
+REMNAWAVE_TRAFFIC_LIMIT_BYTES = 2 * 1024 * 1024 * 1024 * 1024
+
 
 def get_remnawave_config() -> RemnawaveConfig:
     base = os.environ.get("REMNAWAVE_BASE_URL", "").strip().rstrip("/")
@@ -264,7 +266,7 @@ def remnawave_create_user(cfg: RemnawaveConfig, user_or_email: User | str | None
         "username": usernames[0] if usernames else None,
         "expireAt": remnawave_datetime(expiry_date),
         "status": "ACTIVE",
-        "trafficLimitBytes": 1099511627776,
+        "trafficLimitBytes": REMNAWAVE_TRAFFIC_LIMIT_BYTES,
         "trafficLimitStrategy": "MONTH",
         "activeInternalSquads": list(cfg.internal_squads),
     }
@@ -347,7 +349,12 @@ def remnawave_extend_user(cfg: RemnawaveConfig, user_uuid: str, extend_days: int
     remnawave_raise_for_status(resp)
 
 
-def remnawave_update_user_traffic(cfg: RemnawaveConfig, user_uuid: str, limit_bytes: int = 1099511627776, strategy: str = "MONTH") -> None:
+def remnawave_update_user_traffic(
+    cfg: RemnawaveConfig,
+    user_uuid: str,
+    limit_bytes: int = REMNAWAVE_TRAFFIC_LIMIT_BYTES,
+    strategy: str = "MONTH",
+) -> None:
     resp = HTTP.patch(
         f"{cfg.base_url}/api/users",
         headers=remnawave_headers(cfg),

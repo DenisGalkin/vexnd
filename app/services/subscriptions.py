@@ -64,6 +64,7 @@ def create_remnawave_subscription_days(user: User, days: int, *, strict: bool = 
         if remote_user and remote_user.get("uuid"):
             remote_user = remnawave_sync_user_identity(cfg, user, remote_user=remote_user) or remote_user
             remnawave_extend_user(cfg, remote_user["uuid"], max(int(days), 1))
+            remnawave_update_user_traffic(cfg, remote_user["uuid"])
         else:
             remote_user = remnawave_create_user(cfg, user, expiry_date)
             if remote_user.get("uuid"):
