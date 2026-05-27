@@ -47,6 +47,7 @@ from app.bot.subscriptions import (
     remnawave_subscription_snapshot,
     schedule_connect_message_refresh,
     schedule_subscription_message_refresh,
+    snapshot_has_missing_remote_subscription,
     user_has_local_subscription_data,
 )
 from app.services.subscriptions import activate_trial_subscription, is_trial_eligible
@@ -193,7 +194,8 @@ def handle_callback(callback: dict[str, object]) -> None:
             snapshot = remnawave_subscription_snapshot(user)
             sub_url = str(snapshot.get("subscription_url") or "").strip()
             if not client or not sub_url:
-                edit_message(chat_id, message_id, t(state, "connect_link_missing"), subscription_keyboard(state))
+                text_key = "subscription_missing" if snapshot_has_missing_remote_subscription(snapshot) else "connect_link_missing"
+                edit_message(chat_id, message_id, t(state, text_key), subscription_keyboard(state))
                 return
             add_url = browser_import_url(user, client, state, sub_url)
             markup = {
@@ -223,11 +225,13 @@ def handle_callback(callback: dict[str, object]) -> None:
             return
         if data == "subscription_qr":
             answer_callback(callback_id)
+            snapshot = remnawave_subscription_snapshot(user)
             _, sub_url = format_subscription(user, state)
             if sub_url:
                 send_photo(chat_id, make_qr_png(sub_url), t(state, "qr_caption"), qr_keyboard(state))
             else:
-                edit_message(chat_id, message_id, t(state, "qr_unavailable"), keyboard([[(t(state, "back"), "subscription")]]))
+                text_key = "subscription_missing" if snapshot_has_missing_remote_subscription(snapshot) else "qr_unavailable"
+                edit_message(chat_id, message_id, t(state, text_key), keyboard([[(t(state, "back"), "subscription")]]))
             return
         if data.startswith("tg_auth_confirm_"):
             answer_callback(callback_id)

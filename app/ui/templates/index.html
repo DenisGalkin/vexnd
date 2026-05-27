@@ -78,7 +78,7 @@
                         </div>
                         <h3 class="mb-2 text-lg sm:text-xl font-semibold text-white">{{ _('Стабильное подключение. Высокая скорость. Чистые IP.') }}</h3>
                         <p class="text-gray-400 text-sm sm:text-[15px] leading-relaxed">
-                            {{ _('Выберите оптимальный план для ваших задач') }}
+                            {{ _('Стабильный аптайм и чистые IP для работы, стриминга и повседневных задач.') }}
                         </p>
                     </div>
 
@@ -109,7 +109,7 @@
                     <div class="grid gap-3 sm:max-w-md">
                         <div class="glass-effect rounded-2xl p-4 border border-white/8">
                             <div class="text-sm font-semibold text-white">{{ _('Без перегруза и сложной настройки') }}</div>
-                            <div class="mt-1 text-sm text-gray-400">{{ _('Один сервис для быстрого подключения, оплаты и импорта конфигурации на любом устройстве.') }}</div>
+                            <div class="mt-1 text-sm text-gray-400">{{ _('Один сервис для быстрого подключения, оплаты и импорта конфигурации на любое устройство.') }}</div>
                         </div>
                         <a href="{{ url_lang('faq_page') }}" class="inline-flex items-center justify-between gap-3 rounded-2xl border border-white/15 px-5 py-4 text-base sm:text-lg text-gray-300 transition-all hover:border-white/30 hover:text-white">
                             {{ _('Частые вопросы') }}
@@ -190,7 +190,7 @@
                             <div class="text-4xl sm:text-5xl mr-4">🇩🇪</div>
                             <div>
                                 <h3 class="text-xl sm:text-2xl font-bold">{{ _('Германия') }}</h3>
-                                <p class="text-sm text-cyan-400 font-semibold">{{ _('Мощный центральноевропейский цифровой узел') }}</p>
+                                <p class="text-sm text-cyan-400 font-semibold">{{ _('Мощный центрально-европейский цифровой узел') }}</p>
                             </div>
                         </div>
                         <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
@@ -239,7 +239,7 @@
                         {% endif %}
                     </div>
                     <ul class="text-left space-y-3 mb-8 text-sm sm:text-base">
-                        {% for feature in plan.features[:5] %}
+                        {% for feature in plan.features[:4] %}
                         <li class="flex items-center text-gray-300">
                             <svg class="w-5 h-5 text-green-500 mr-2 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
@@ -248,11 +248,11 @@
                         </li>
                         {% endfor %}
                     </ul>
-                    {% if plan.features|length > 5 %}
-                    <p class="mb-8 text-left text-sm text-gray-500">{{ _(plan.features[5]) }}</p>
+                    {% if plan.features|length > 4 and plan.features[4] %}
+                    <p class="mb-8 text-left text-sm text-gray-500">{{ _(plan.features[4]) }}</p>
                     {% endif %}
                     <a href="{{ url_for('checkout', plan=plan.months) }}" 
-                       class="block w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg text-center font-semibold transition-all hover-glow">
+                       class="block w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-2xl text-center font-semibold transition-all hover-glow">
                         {{ _('Купить') }}
                     </a>
                 </div>
@@ -288,6 +288,7 @@
                     <p class="text-gray-400 leading-relaxed">{{ _('Мы принимаем криптовалюты, СБП и баланс lolz.guru.') }}</p>
                 </div>
                 <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center">
+                    <h3 class="text-xl font-bold text-white mb-2">{{ _('Что делать, если VPN не работает?') }}</h3>
                     <p class="text-gray-400">{{ _('Сначала проверьте страницу инструкций и убедитесь, что ваш клиент настроен правильно. Если проблема остаётся, свяжитесь с поддержкой и кратко опишите проблему, ваше устройство или клиент и что именно не работает.') }}</p>
                 </div>
             </div>

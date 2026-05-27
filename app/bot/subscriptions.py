@@ -38,6 +38,7 @@ from app.services.subscriptions import ensure_remnawave_subscription_url, get_tr
 
 
 REMNAWAVE_SNAPSHOT_TTL_SECONDS = 30
+REMNAWAVE_MISSING_RETRY_SECONDS = 300
 _REMNAWAVE_SNAPSHOT_CACHE: dict[int, dict[str, Any]] = {}
 _REMNAWAVE_REFRESH_IN_FLIGHT: set[int] = set()
 _REMNAWAVE_REFRESH_LOCK = threading.Lock()
@@ -72,6 +73,7 @@ def local_subscription_snapshot(user: User) -> tuple[Subscription | None, dict[s
         "subscription_url": (subscription.subscription_url or "").strip() if subscription else "",
         "used_bytes": None,
         "limit_bytes": None,
+        "remote_missing": False,
     }
     return subscription, snapshot
 
@@ -83,6 +85,21 @@ def has_local_subscription_data(snapshot: dict[str, Any]) -> bool:
 def user_has_local_subscription_data(user: User) -> bool:
     _subscription, snapshot = local_subscription_snapshot(user)
     return has_local_subscription_data(snapshot)
+
+
+def snapshot_has_missing_remote_subscription(snapshot: dict[str, Any]) -> bool:
+    return bool(snapshot.get("remote_missing") and not (snapshot.get("subscription_url") or "").strip())
+
+
+def snapshot_without_subscription(snapshot: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(snapshot)
+    normalized["active"] = False
+    normalized["expiry_date"] = None
+    normalized["subscription_url"] = ""
+    normalized["used_bytes"] = None
+    normalized["limit_bytes"] = None
+    normalized["remote_missing"] = True
+    return normalized
 
 
 def snapshot_from_remote_user(local_snapshot: dict[str, Any], remote_user: dict | None) -> dict[str, Any]:
@@ -103,8 +120,9 @@ def snapshot_from_remote_user(local_snapshot: dict[str, Any], remote_user: dict 
 
 def render_subscription_text(snapshot: dict[str, Any], state: BotUserState) -> tuple[str, str | None]:
     expiry = snapshot.get("expiry_date")
-    status_key = "subscription_status_active" if snapshot["active"] else "subscription_status_inactive"
-    status_icon = "🟢" if snapshot["active"] else "🔴"
+    is_active = bool(snapshot.get("active"))
+    status_key = "subscription_status_active" if is_active else "subscription_status_inactive"
+    status_icon = "🟢" if is_active else "🔴"
     traffic_text = t(state, "traffic_unknown")
     if snapshot.get("limit_bytes") is not None or snapshot.get("used_bytes") is not None:
         traffic_text = f"{format_bytes(snapshot.get('used_bytes'))} / {format_bytes(snapshot.get('limit_bytes'))}"
@@ -128,8 +146,9 @@ def render_subscription_text(snapshot: dict[str, Any], state: BotUserState) -> t
 def render_connect_text(user: User, state: BotUserState, *, schedule_async_refresh: bool = True) -> tuple[str, dict[str, Any]]:
     from app.bot.keyboards import connect_device_keyboard, keyboard
 
-    _text, sub_url = format_subscription(user, state, schedule_async_refresh=schedule_async_refresh)
-    if not get_active_subscription(user):
+    snapshot = remnawave_subscription_snapshot(user, schedule_async_refresh=schedule_async_refresh)
+    _text, sub_url = render_subscription_text(snapshot, state)
+    if not get_active_subscription(user) or snapshot_has_missing_remote_subscription(snapshot):
         return (
             f"{t(state, 'connect_title')}\n\n{t(state, 'connect_need_subscription')}",
             keyboard([[(t(state, "subscription_buy"), "plans")], [(t(state, "back_menu"), "menu")]]),
@@ -173,6 +192,22 @@ def refresh_remnawave_snapshot_async(
                 _subscription, local_snapshot = local_subscription_snapshot(user)
                 remote_user = remnawave_find_user(cfg, user)
                 if not isinstance(remote_user, dict):
+                    local_snapshot = snapshot_without_subscription(local_snapshot)
+                    _REMNAWAVE_SNAPSHOT_CACHE[user_id] = {
+                        "ts": time.time(),
+                        "signature": signature,
+                        "snapshot": local_snapshot,
+                    }
+                    if chat_id and message_id and telegram_id:
+                        state = BotUserState.query.filter_by(telegram_id=telegram_id).first()
+                        if state:
+                            if render_mode == "connect":
+                                refreshed_text, refreshed_markup = render_connect_text(user, state, schedule_async_refresh=False)
+                            else:
+                                refreshed_text, _sub_url = render_subscription_text(local_snapshot, state)
+                                refreshed_markup = subscription_keyboard(state)
+                            if refreshed_text != (previous_text or ""):
+                                edit_message(chat_id, message_id, refreshed_text, refreshed_markup)
                     return
                 restore_local_subscription_state(user, remote_user)
                 refreshed_snapshot = snapshot_from_remote_user(local_snapshot, remote_user)
@@ -214,6 +249,14 @@ def remnawave_subscription_snapshot(user: User, *, force_refresh: bool = False, 
     now_ts = time.time()
     if not force_refresh and cached and cached.get("signature") == signature and now_ts - float(cached.get("ts") or 0) < REMNAWAVE_SNAPSHOT_TTL_SECONDS:
         return dict(cached["snapshot"])
+    if (
+        not force_refresh
+        and cached
+        and cached.get("signature") == signature
+        and snapshot_has_missing_remote_subscription(cached.get("snapshot") or {})
+        and now_ts - float(cached.get("ts") or 0) < REMNAWAVE_MISSING_RETRY_SECONDS
+    ):
+        return dict(cached["snapshot"])
     if not force_refresh and schedule_async_refresh and has_local_subscription_data(snapshot):
         refresh_remnawave_snapshot_async(user.id, signature)
         return snapshot
@@ -223,6 +266,7 @@ def remnawave_subscription_snapshot(user: User, *, force_refresh: bool = False, 
         print(f"Remnawave snapshot lookup failed: {exc}")
         return snapshot
     if not isinstance(remote_user, dict):
+        snapshot = snapshot_without_subscription(snapshot)
         _REMNAWAVE_SNAPSHOT_CACHE[cache_key] = {"ts": now_ts, "signature": subscription_cache_signature(subscription), "snapshot": dict(snapshot)}
         return snapshot
     restore_local_subscription_state(user, remote_user)

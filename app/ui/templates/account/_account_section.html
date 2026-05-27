@@ -15,8 +15,8 @@
         </div>
     </div>
     <div class="settings-feedback hidden mb-4" id="account-settings-status"></div>
-    <div class="settings-list">
-        <div class="settings-row">
+    <div class="settings-list settings-list--account">
+        <div class="settings-row settings-row--account">
             <div class="settings-row-label">
                 <span class="inline-flex items-center gap-2">
                     <svg class="h-4 w-4 shrink-0 overflow-visible text-purple-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -29,7 +29,7 @@
             <div class="settings-row-value break-anywhere text-purple-100 font-mono">{{ current_user.id }}</div>
             <button type="button" class="settings-action settings-action-primary" onclick="copyText('{{ current_user.id }}', this)">{{ _('Скопировать') }}</button>
         </div>
-        <div class="settings-row">
+        <div class="settings-row settings-row--account">
             <div class="settings-row-label">
                 <span class="inline-flex items-center gap-2">
                     <svg class="h-4 w-4 text-pink-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -101,7 +101,7 @@
               </form>
           </div>
         {% endif %}
-        <div class="settings-row">
+        <div class="settings-row settings-row--account">
             <div class="settings-row-label">
                 <span class="inline-flex items-center gap-2">
                     <svg class="h-4 w-4 text-cyan-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -127,25 +127,5 @@
         {% if telegram_auth and telegram_auth.status_url %}
           <div class="settings-feedback hidden" id="tg-link-status" data-status-url="{{ telegram_auth.status_url }}"></div>
         {% endif %}
-        <div class="settings-row">
-            <div class="settings-row-label">
-                <span class="inline-flex items-center gap-2">
-                    <svg class="h-4 w-4 text-yellow-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M2 12l9 4 11-4-11-4-9 4z"></path>
-                        <polyline points="2 12 2 20 11 24 20 20 20 12"></polyline>
-                        <line x1="11" y1="12" x2="11" y2="24"></line>
-                    </svg>
-                    <span>{{ _('Язык интерфейса') }}</span>
-                </span>
-            </div>
-            <div class="settings-row-value">
-                <div class="lang-switch">
-                    <a href="{{ url_for('set_language', lang='ru', next=request.path) }}" class="{% if get_locale() == 'ru' %}active{% endif %}">RU</a>
-                    <span class="separator">|</span>
-                    <a href="{{ url_for('set_language', lang='en', next=request.path) }}" class="{% if get_locale() == 'en' %}active{% endif %}">EN</a>
-                </div>
-            </div>
-            <div></div>
-        </div>
     </div>
 </section>

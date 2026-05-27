@@ -7,34 +7,10 @@
 {% endblock %}
 
 {% block content %}
-{% set is_active = subscription and subscription.is_active and subscription.expiry_date and subscription.expiry_date > now %}
-{% set days_left = remaining_days if remaining_days is not none and remaining_days > 0 else (((subscription.expiry_date - now).total_seconds() / 86400)|round(0, 'ceil')|int if subscription and subscription.expiry_date and subscription.expiry_date > now else 0) %}
-{% set expiry_date = subscription.expiry_date.strftime('%d.%m.%Y') if subscription and subscription.expiry_date else '—' %}
-
 <div class="dashboard-shell max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
   <div class="dashboard-surface space-y-6">
-    <section class="glass-effect dashboard-banner rounded-[1.75rem] p-5 sm:p-6 overflow-hidden">
-      <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-        <div class="min-w-0 max-w-3xl">
-          <div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-300">
-            <span class="inline-block h-2 w-2 rounded-full {{ 'bg-emerald-400' if is_active else 'bg-amber-400' }}"></span>
-            {{ _('VEXND Account') }}
-          </div>
-          <div class="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div class="min-w-0">
-              <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">{{ _('Личный кабинет') }}</h1>
-              <p class="mt-2 text-sm sm:text-base text-gray-400">
-                {{ _('Аккаунт:') }}
-                <span class="text-gray-100 font-semibold break-anywhere">{{ current_user.email }}</span>
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div class="dashboard-status-pill {{ 'is-active' if is_active else 'is-inactive' }}">
-          {{ _('Подписка активна') if is_active else _('Ожидает оплаты') }}
-        </div>
-      </div>
+    <section id="dashboard-banner" class="glass-effect dashboard-banner rounded-[1.75rem] p-5 sm:p-6 overflow-hidden">
+      {% include "dashboard/_banner.html" %}
     </section>
 
     <div class="glass-effect dashboard-surface-card dashboard-surface-card--compact rounded-2xl p-2">
@@ -54,198 +30,14 @@
       </div>
     </div>
 
-    <div id="tab-sub" role="tabpanel" aria-labelledby="tab-btn-sub" class="space-y-6">
+    <div id="tab-sub" role="tabpanel" aria-labelledby="tab-btn-sub" class="space-y-6" data-has-local-subscription="{{ '1' if has_subscription_record else '0' }}">
       <div class="dashboard-subscription-grid grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)]">
-        <section class="glass-effect subscription-panel subscription-panel--info rounded-[1.75rem] p-5 sm:p-6">
-          {% if is_active %}
-            <div class="space-y-6">
-              <div class="dashboard-panel-card dashboard-panel-card--hero">
-                <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                  <div class="min-w-0">
-                    <div class="dashboard-panel-label">{{ _('Детали подписки') }}</div>
-                    <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3">
-                      <div class="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-sm font-semibold text-emerald-100">
-                        <span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>
-                        {{ _('Активна') }}
-                      </div>
-                      <p class="text-base font-semibold text-white">{{ _('Ваша подписка активна') }}</p>
-                    </div>
-                  </div>
-                  <a href="{{ url_lang('index') }}#pricing"
-                     class="dashboard-ghost-btn inline-flex items-center justify-center rounded-2xl px-5 py-3 font-semibold transition tap-target">
-                    {{ _('Продлить') }}
-                  </a>
-                </div>
-              </div>
-
-              <div class="dashboard-panel-card">
-                <div class="dashboard-panel-label">{{ _('Срок действия') }}</div>
-                <div class="mt-5 flex items-end gap-3">
-                  <span class="dashboard-meter-number">{{ days_left }}</span>
-                  <span class="pb-2 text-lg font-semibold text-gray-300">{{ _('дней') }}</span>
-                </div>
-                <p class="mt-3 text-sm text-gray-400">{{ _('Подписка действует до') }} <span class="font-semibold text-gray-100">{{ expiry_date }}</span></p>
-              </div>
-
-              <div class="dashboard-panel-card">
-                <div class="flex items-center justify-between gap-3">
-                  <div class="dashboard-panel-label">{{ _('Использование трафика') }}</div>
-                  <div class="text-right text-sm font-semibold text-white">
-                    {% if limit_bytes is not none or used_bytes is not none %}
-                      {{ used_bytes_text }} / {{ limit_bytes_text }}
-                    {% else %}
-                      {{ _('Синхронизация...') }}
-                    {% endif %}
-                  </div>
-                </div>
-                <div class="dashboard-traffic-track mt-4" aria-hidden="true">
-                  <span class="dashboard-traffic-fill" style="width: {{ traffic_progress if traffic_progress is not none else 8 }}%;"></span>
-                </div>
-                <p class="mt-3 text-sm text-gray-500">
-                  {{ _('При достижении лимита дополнительный трафик предоставляется по запросу.') }}
-                </p>
-              </div>
-
-              <div class="grid gap-3 sm:grid-cols-3">
-                <a href="{{ url_lang('setup') }}" class="dashboard-action rounded-2xl p-4 transition">
-                  <div class="text-lg font-semibold text-white">{{ _('Инструкции') }}</div>
-                  <div class="mt-1 text-sm text-gray-400">{{ _('iOS • Android • Windows') }}</div>
-                </a>
-                <a href="{{ url_lang('faq_page') }}" class="dashboard-action rounded-2xl p-4 transition">
-                  <div class="text-lg font-semibold text-white">{{ _('FAQ') }}</div>
-                  <div class="mt-1 text-sm text-gray-400">{{ _('Частые вопросы') }}</div>
-                </a>
-                <a href="{{ url_lang('index') }}#pricing" class="dashboard-action rounded-2xl p-4 transition">
-                  <div class="text-lg font-semibold text-white">{{ _('Тарифы') }}</div>
-                  <div class="mt-1 text-sm text-gray-400">{{ _('Продление и смена плана') }}</div>
-                </a>
-              </div>
-            </div>
-          {% else %}
-            <div class="space-y-5">
-              <div class="flex items-start gap-3.5">
-                <span class="dashboard-expired-icon shrink-0">!</span>
-                <div>
-                  <h2 class="text-2xl sm:text-3xl font-bold text-red-100">{{ _('Подписка истекла') }}</h2>
-                  <p class="mt-2 max-w-2xl text-sm leading-6 text-gray-400">{{ _('Доступ к серверам временно ограничен.') }}</p>
-                </div>
-              </div>
-
-              <div class="dashboard-expired-meta">
-                <div class="dashboard-detail-row">
-                  <span class="dashboard-label">{{ _('Платформа') }}</span>
-                  <span class="text-sm font-semibold text-white">VLESS Reality</span>
-                </div>
-                <div class="dashboard-detail-row">
-                  <span class="dashboard-label">{{ _('Активация') }}</span>
-                  <span class="text-sm font-semibold text-white">{{ _('Мгновенно после оплаты') }}</span>
-                </div>
-              </div>
-
-              <a href="{{ url_lang('index') }}#pricing"
-                 class="dashboard-expired-cta tap-target">
-                {{ _('Выбрать тариф') }}
-              </a>
-            </div>
-          {% endif %}
+        <section id="subscription-overview" class="glass-effect subscription-panel subscription-panel--info rounded-[1.75rem] p-5 sm:p-6">
+          {% include "dashboard/_subscription_overview.html" %}
         </section>
 
-        <aside class="glass-effect subscription-panel subscription-panel--action rounded-[1.75rem] p-5 sm:p-6 overflow-hidden">
-          {% if is_active %}
-            <div class="dashboard-action-column space-y-5">
-              <div class="dashboard-panel-card dashboard-panel-card--hero">
-                <div class="dashboard-panel-label">{{ _('Быстрое подключение') }}</div>
-                <h2 class="mt-4 text-2xl font-bold">{{ _('QR и быстрый импорт') }}</h2>
-                <p class="mt-2 text-sm leading-6 text-gray-400">
-                  {{ _('Отсканируйте QR‑код или скопируйте ссылку подписки для ручного импорта в приложение.') }}
-                </p>
-              </div>
-
-              {% if qr_code %}
-                <div class="dashboard-panel-card">
-                  <div class="dashboard-qr-shell">
-                    <div class="dashboard-qr-frame">
-                      <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="dashboard-qr-image">
-                    </div>
-                  </div>
-                </div>
-              {% else %}
-                <div class="dashboard-panel-card">
-                  <div class="pill-muted rounded-2xl p-4 text-sm text-gray-300">
-                    {{ _('QR-код появится, как только система завершит генерацию конфига.') }}
-                  </div>
-                </div>
-              {% endif %}
-
-              {% if subscription_url %}
-                <div class="dashboard-panel-card space-y-3">
-                  <label class="block text-sm text-gray-400">{{ _('Ссылка на подписку') }}</label>
-                  <a href="{{ subscription_url }}"
-                     class="dashboard-link block rounded-2xl px-4 py-4 text-sm font-mono text-purple-200 break-anywhere transition"
-                     title="{{ _('Открыть ссылку') }}"
-                     target="_blank" rel="noopener noreferrer">
-                    {{ subscription_url }}
-                  </a>
-                  <div class="grid gap-2 sm:grid-cols-2">
-                    <button type="button"
-                            class="dashboard-accent-btn inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 font-semibold text-white transition tap-target"
-                            onclick="copyText('{{ subscription_url|e }}', this)">
-                      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                      </svg>
-                      <span>{{ _('Скопировать') }}</span>
-                    </button>
-                    <a href="{{ subscription_url }}"
-                       class="dashboard-ghost-btn inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 font-semibold transition tap-target"
-                       target="_blank" rel="noopener noreferrer">
-                      <span>{{ _('Открыть импорт') }}</span>
-                    </a>
-                  </div>
-                </div>
-              {% endif %}
-            </div>
-          {% else %}
-            <div class="space-y-5">
-              <div>
-                <h2 class="text-2xl font-bold">{{ _('Доступ после оплаты') }}</h2>
-                <p class="mt-2 text-sm leading-6 text-gray-400">
-                  {{ _('После оплаты здесь появятся QR‑код, ссылка для импорта и кнопка копирования конфига.') }}
-                </p>
-              </div>
-
-              <div class="grid gap-3">
-                <a href="{{ url_lang('setup') }}" class="group dashboard-action dashboard-action-card rounded-2xl p-4 transition">
-                  <span class="dashboard-action-icon" aria-hidden="true">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M12 3v18"></path>
-                      <path d="M5 8h14"></path>
-                      <path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"></path>
-                    </svg>
-                  </span>
-                  <span class="min-w-0 flex-1">
-                    <span class="block text-lg font-semibold text-white">{{ _('Инструкции') }}</span>
-                    <span class="mt-1 block text-sm text-gray-400">{{ _('iOS • Android • Windows') }}</span>
-                  </span>
-                  <span class="text-gray-500 transition group-hover:text-white" aria-hidden="true">→</span>
-                </a>
-                <a href="{{ url_lang('faq_page') }}" class="group dashboard-action dashboard-action-card rounded-2xl p-4 transition">
-                  <span class="dashboard-action-icon" aria-hidden="true">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="12" cy="12" r="9"></circle>
-                      <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4"></path>
-                      <path d="M12 17h.01"></path>
-                    </svg>
-                  </span>
-                  <span class="min-w-0 flex-1">
-                    <span class="block text-lg font-semibold text-white">{{ _('FAQ') }}</span>
-                    <span class="mt-1 block text-sm text-gray-400">{{ _('Частые вопросы') }}</span>
-                  </span>
-                  <span class="text-gray-500 transition group-hover:text-white" aria-hidden="true">→</span>
-                </a>
-              </div>
-            </div>
-          {% endif %}
+        <aside id="subscription-access" class="glass-effect subscription-panel subscription-panel--action rounded-[1.75rem] p-5 sm:p-6 overflow-hidden">
+          {% include "dashboard/_subscription_access.html" %}
         </aside>
       </div>
     </div>
@@ -375,6 +167,9 @@
     flex-direction: column;
     gap: .85rem;
   }
+  .settings-list--account {
+    gap: 1rem;
+  }
   .settings-row {
     display: grid;
     grid-template-columns: minmax(0, 180px) minmax(0, 1fr) auto;
@@ -382,6 +177,12 @@
     align-items: center;
     padding: 1rem 1.1rem;
     border-radius: 1.15rem;
+  }
+  .settings-row--account {
+    grid-template-columns: minmax(0, 220px) minmax(0, 1fr) auto;
+    gap: 1.25rem;
+    align-items: center;
+    padding: 1.15rem 1.2rem;
   }
   .settings-row-label {
     font-size: .95rem;
@@ -393,6 +194,28 @@
     text-align: center;
     font-size: .95rem;
     color: rgba(229,231,235,.92);
+  }
+  .settings-row--account .settings-row-label {
+    display: flex;
+    min-width: 0;
+  }
+  .settings-row--account .settings-row-label > span {
+    display: inline-flex;
+    align-items: center;
+    gap: .7rem;
+    min-width: 0;
+  }
+  .settings-row--account .settings-row-value {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    text-align: left;
+    line-height: 1.55;
+  }
+  .settings-row--account .settings-action,
+  .settings-row--account > a.settings-action,
+  .settings-row--account > div:last-child {
+    align-self: center;
   }
 
   .settings-notification-card {
@@ -520,9 +343,10 @@
   .settings-security-method-title { font-size: 1rem; line-height: 1.35; font-weight: 700; color: #fff; }
   .settings-security-method-text { margin-top: .35rem; font-size: .92rem; line-height: 1.55; color: rgba(156,163,175,.94); }
   .settings-security-change-form { gap: 1rem; }
-  .settings-password-reset-actions { display: flex; flex-wrap: wrap; gap: .9rem 1rem; align-items: flex-start; justify-content: space-between; }
+  .settings-password-reset-actions { display: flex; flex-direction: column; align-items: stretch; gap: .9rem; margin-top: .25rem; }
+  .settings-password-reset-actions--compact { margin-top: .5rem; }
   .settings-password-reset-note { flex: 1 1 260px; margin: 0; font-size: .9rem; line-height: 1.55; color: rgba(156,163,175,.94); }
-  .settings-action-group--reset { justify-content: flex-end; align-items: stretch; gap: .75rem; }
+  .settings-action-group--reset { justify-content: flex-start; align-items: stretch; gap: .75rem; }
   .settings-action-group--reset .settings-action { min-height: 2.75rem; }
   .referral-link-frame {
     position: relative;
@@ -556,6 +380,20 @@
     .settings-security-block { padding: 1rem; border-radius: 1.15rem; }
     .settings-row { grid-template-columns: 1fr; text-align: left; }
     .settings-row-value { text-align: left; }
+    .settings-row--account {
+      gap: .75rem;
+      padding: 1rem;
+    }
+    .settings-row--account .settings-row-value {
+      min-height: 0;
+      padding: 0;
+    }
+    .settings-row--account .settings-action,
+    .settings-row--account > a.settings-action,
+    .settings-row--account > div:last-child {
+      width: 100%;
+      justify-content: flex-start;
+    }
     .settings-notification-card { grid-template-columns: 1fr; gap: 1rem; padding: 1rem; }
     .settings-notification-text { max-width: none; }
     .settings-notification-control { width: 100%; min-width: 0; justify-content: space-between; }
@@ -758,6 +596,48 @@
   if (tabBtnSettings) tabBtnSettings.addEventListener('click', () => { void setTab('settings'); });
   if (tabBtnRef) tabBtnRef.addEventListener('click', () => { void setTab('ref'); });
 
+  async function refreshSubscriptionStateInBackground(){
+    const tab = document.getElementById('tab-sub');
+    if (!tab || tab.dataset.hasLocalSubscription !== '0') return;
+
+    try {
+      const response = await fetch(`${window.location.pathname}?sync_subscription=1`, {
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json',
+          'X-Partial-Update': 'dashboard-banner,subscription-overview,subscription-access,section-billing',
+        },
+      });
+      const data = await response.json().catch(() => ({ ok: false, fragments: {} }));
+      if (!response.ok || data.ok === false) {
+        return;
+      }
+      const banner = data.fragments?.['dashboard-banner'];
+      const overview = data.fragments?.['subscription-overview'];
+      const access = data.fragments?.['subscription-access'];
+      const billing = data.fragments?.['section-billing'];
+      if (typeof banner === 'string' && banner.trim()) {
+        document.getElementById('dashboard-banner').innerHTML = banner;
+      }
+      if (typeof overview === 'string' && overview.trim()) {
+        document.getElementById('subscription-overview').innerHTML = overview;
+      }
+      if (typeof access === 'string' && access.trim()) {
+        document.getElementById('subscription-access').innerHTML = access;
+      }
+      if (typeof billing === 'string' && billing.trim()) {
+        const billingSection = document.getElementById('section-billing');
+        if (billingSection) {
+          billingSection.innerHTML = billing;
+        }
+      }
+      if (typeof overview === 'string' || typeof access === 'string') {
+        tab.dataset.hasLocalSubscription = '1';
+      }
+    } catch (_error) {
+    }
+  }
+
   try {
     const params = new URLSearchParams(window.location.search);
     const forced = params.get('tab');
@@ -772,6 +652,10 @@
       void setTab('sub');
     }
   } catch(e) {}
+
+  window.setTimeout(() => {
+    void refreshSubscriptionStateInBackground();
+  }, 0);
 
   function bindSettingsShell(scope = document){
     const navButtons = scope.querySelectorAll('.settings-nav-button');
@@ -1113,7 +997,6 @@
     const node = scope.querySelector('#tg-link-status');
     if (!node || node.dataset.polling === '1') return;
     node.dataset.polling = '1';
-    showFormStatus(node, "{{ _('Подтвердите привязку в Telegram-боте, после чего кабинет обновится автоматически.') }}", 'info');
     let attempts = 0;
 
     async function tick(){

@@ -5,6 +5,7 @@ import io
 import math
 import os
 from datetime import datetime, timedelta
+from typing import Any
 
 import qrcode
 from flask import flash, jsonify, redirect, render_template, request, session, url_for
@@ -13,7 +14,7 @@ from sqlalchemy import func
 
 from app.bot.common import format_bytes
 from app.bot.models import TelegramAccount
-from app.bot.subscriptions import remnawave_subscription_snapshot
+from app.bot.subscriptions import local_subscription_snapshot, remnawave_subscription_snapshot, snapshot_has_missing_remote_subscription
 from app.core.extensions import db
 from app.domain.models import PaymentIntent, ReferralSignup, Subscription, User
 from app.domain.plans import format_usd_amount, plan_details, plan_duration_label
@@ -25,7 +26,6 @@ from app.services.payments.reconcile import process_payment_intent
 from app.services.referrals import get_or_create_referral_code, mask_email
 from app.services.remnawave import is_telegram_placeholder_email
 from app.services.security import require_csrf, rotate_csrf_token
-from app.services.subscriptions import ensure_remnawave_subscription_url
 from app.services.telegram_auth import CHALLENGE_TTL_MINUTES, create_telegram_auth_challenge, get_active_challenge
 from app.services.telegram_links import telegram_bot_deeplink
 from app.services.web_sessions import current_web_session_token, user_web_sessions
@@ -180,6 +180,89 @@ def _build_dashboard_settings_context() -> dict[str, object]:
     }
 
 
+def _subscription_qr_code(subscription_url: str | None) -> str | None:
+    if not subscription_url:
+        return None
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(subscription_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffered = io.BytesIO()
+    img.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode()
+
+
+def _build_dashboard_subscription_context(*, force_remote_refresh: bool = False) -> dict[str, Any]:
+    now = datetime.utcnow()
+    subscription, local_snapshot = local_subscription_snapshot(current_user)
+    snapshot = dict(local_snapshot)
+    if force_remote_refresh:
+        try:
+            snapshot = remnawave_subscription_snapshot(current_user, force_refresh=True, schedule_async_refresh=False)
+        except Exception:
+            snapshot = dict(local_snapshot)
+        subscription = Subscription.query.filter_by(user_id=current_user.id).first()
+
+    subscription_missing_remote = snapshot_has_missing_remote_subscription(snapshot)
+    if subscription_missing_remote:
+        subscription = None
+
+    expiry_date = snapshot.get("expiry_date") or (subscription.expiry_date if subscription else None)
+    is_active = bool(snapshot.get("active"))
+    if expiry_date is not None:
+        is_active = bool(expiry_date > now and (subscription.is_active if subscription else snapshot.get("active", False)))
+    has_subscription_record = bool(subscription)
+    remaining_days = None
+    if expiry_date:
+        try:
+            delta = (expiry_date - now).total_seconds()
+            remaining_days = int(math.ceil(delta / 86400.0)) if delta > 0 else 0
+        except Exception:
+            remaining_days = None
+
+    subscription_url = (snapshot.get("subscription_url") or "").strip()
+    if not subscription_url and subscription:
+        subscription_url = (subscription.subscription_url or "").strip()
+    subscription_url = subscription_url or None
+
+    used_bytes = snapshot.get("used_bytes")
+    limit_bytes = snapshot.get("limit_bytes")
+    traffic_progress = None
+    if isinstance(limit_bytes, int) and limit_bytes > 0 and isinstance(used_bytes, int) and used_bytes >= 0:
+        traffic_progress = max(0, min(100, round((used_bytes / limit_bytes) * 100, 1)))
+
+    return {
+        "subscription": subscription,
+        "now": now,
+        "remaining_days": remaining_days,
+        "subscription_url": subscription_url,
+        "subscription_missing_remote": subscription_missing_remote,
+        "used_bytes": used_bytes,
+        "limit_bytes": limit_bytes,
+        "used_bytes_text": format_bytes(used_bytes),
+        "limit_bytes_text": format_bytes(limit_bytes),
+        "traffic_progress": traffic_progress,
+        "qr_code": _subscription_qr_code(subscription_url),
+        "has_subscription_record": has_subscription_record,
+        "is_active": is_active,
+    }
+
+
+def _render_dashboard_billing_section(
+    subscription_context: dict[str, Any] | None = None,
+    settings_context: dict[str, Any] | None = None,
+) -> str:
+    if subscription_context is None:
+        subscription_context = _build_dashboard_subscription_context()
+    if settings_context is None:
+        settings_context = _build_dashboard_settings_context()
+    return render_template(
+        "dashboard/_billing_section.html",
+        **subscription_context,
+        **settings_context,
+    )
+
+
 @login_required
 def dashboard():
     partial_targets = _requested_partial_targets()
@@ -205,38 +288,8 @@ def dashboard():
                 db.session.rollback()
             except Exception:
                 pass
-    subscription = Subscription.query.filter_by(user_id=current_user.id).first()
-    subscription_url = subscription.subscription_url if subscription else None
-    now = datetime.utcnow()
-    remaining_days = None
-    subscription_snapshot = {"used_bytes": None, "limit_bytes": None}
-    if subscription and subscription.expiry_date:
-        try:
-            delta = (subscription.expiry_date - now).total_seconds()
-            remaining_days = int(math.ceil(delta / 86400.0)) if delta > 0 else 0
-        except Exception:
-            remaining_days = None
-    if subscription and subscription.is_active and subscription.expiry_date and subscription.expiry_date > datetime.utcnow() and not subscription_url:
-        subscription_url = ensure_remnawave_subscription_url(current_user, subscription) or None
-    if subscription:
-        try:
-            subscription_snapshot = remnawave_subscription_snapshot(current_user, schedule_async_refresh=False)
-        except Exception:
-            subscription_snapshot = {"used_bytes": None, "limit_bytes": None}
-    used_bytes = subscription_snapshot.get("used_bytes")
-    limit_bytes = subscription_snapshot.get("limit_bytes")
-    traffic_progress = None
-    if isinstance(limit_bytes, int) and limit_bytes > 0 and isinstance(used_bytes, int) and used_bytes >= 0:
-        traffic_progress = max(0, min(100, round((used_bytes / limit_bytes) * 100, 1)))
-    qr_code = None
-    if subscription_url:
-        qr = qrcode.QRCode(version=1, box_size=10, border=4)
-        qr.add_data(subscription_url)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
-        buffered = io.BytesIO()
-        img.save(buffered, format="PNG")
-        qr_code = base64.b64encode(buffered.getvalue()).decode()
+    force_remote_refresh = request.args.get("sync_subscription") == "1"
+    subscription_context = _build_dashboard_subscription_context(force_remote_refresh=force_remote_refresh)
     if partial_targets:
         fragments: dict[str, str] = {}
         referral_context: dict[str, object] | None = None
@@ -251,16 +304,19 @@ def dashboard():
                     settings_context = _build_dashboard_settings_context()
                 fragments[target] = render_template(
                     "dashboard/_settings_tab.html",
-                    subscription=subscription,
-                    now=now,
-                    remaining_days=remaining_days,
-                    used_bytes=used_bytes,
-                    limit_bytes=limit_bytes,
-                    used_bytes_text=format_bytes(used_bytes),
-                    limit_bytes_text=format_bytes(limit_bytes),
-                    traffic_progress=traffic_progress,
+                    **subscription_context,
                     **settings_context,
                 )
+            elif target == "dashboard-banner":
+                fragments[target] = render_template("dashboard/_banner.html", **subscription_context)
+            elif target == "subscription-overview":
+                fragments[target] = render_template("dashboard/_subscription_overview.html", **subscription_context)
+            elif target == "subscription-access":
+                fragments[target] = render_template("dashboard/_subscription_access.html", **subscription_context)
+            elif target == "section-billing":
+                if settings_context is None:
+                    settings_context = _build_dashboard_settings_context()
+                fragments[target] = _render_dashboard_billing_section(subscription_context, settings_context)
             elif target == "section-account":
                 if settings_context is None:
                     settings_context = _build_dashboard_settings_context()
@@ -283,19 +339,10 @@ def dashboard():
         return jsonify({"ok": True, "fragments": fragments})
     return render_template(
         "dashboard.html",
-        subscription=subscription,
-        subscription_url=subscription_url,
-        qr_code=qr_code,
-        now=now,
-        remaining_days=remaining_days,
-        used_bytes=used_bytes,
-        limit_bytes=limit_bytes,
-        used_bytes_text=format_bytes(used_bytes),
-        limit_bytes_text=format_bytes(limit_bytes),
-        traffic_progress=traffic_progress,
         notify_expiry=False,
         notify_maintenance=False,
         notify_news=False,
+        **subscription_context,
     )
 
 

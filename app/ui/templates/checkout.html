@@ -211,12 +211,14 @@
                 <div id="included-list" class="mt-4 hidden">
                     <ul class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                         {% for feature in plan_features %}
+                        {% if feature %}
                         <li class="flex items-center">
                             <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                             </svg>
                             {{ _(feature) }}
                         </li>
+                        {% endif %}
                         {% endfor %}
                     </ul>
                     <div class="mt-4 text-xs text-gray-400">
