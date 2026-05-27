@@ -52,12 +52,26 @@ def render_policy_page(template_name: str, ru_filename: str, en_filename: str):
 
 
 def index():
-    plans = [{"months": plan["months"], "price": format_usd_amount(plan["price"]), "features": plan["features"]} for plan in plan_catalog().values()]
-    return render_template("index.html", plans=plans)
+    return render_template("index.html", plans=_pricing_plans())
 
 
 def index_en():
     return index()
+
+
+def _pricing_plans() -> list[dict[str, object]]:
+    return [
+        {
+            "months": plan["months"],
+            "price": format_usd_amount(plan["price"]),
+            "features": plan["features"],
+        }
+        for plan in plan_catalog().values()
+    ]
+
+
+def pricing():
+    return render_template("pricing.html", plans=_pricing_plans())
 
 
 def set_language(lang):
@@ -146,6 +160,8 @@ def register(app) -> None:
     app.add_url_rule("/", endpoint="index", view_func=index, methods=["GET"])
     app.add_url_rule("/en", endpoint="index_en", view_func=index_en, methods=["GET"])
     app.add_url_rule("/en/", endpoint="index_en_slash", view_func=index_en, methods=["GET"])
+    app.add_url_rule("/pricing", endpoint="pricing", view_func=pricing, methods=["GET"])
+    app.add_url_rule("/en/pricing", endpoint="pricing_en", view_func=pricing, methods=["GET"])
     app.add_url_rule("/set_language/<lang>", endpoint="set_language", view_func=set_language, methods=["GET", "POST"])
     app.add_url_rule("/setup", endpoint="setup", view_func=setup, methods=["GET"])
     app.add_url_rule("/en/setup", endpoint="setup_en", view_func=setup, methods=["GET"])

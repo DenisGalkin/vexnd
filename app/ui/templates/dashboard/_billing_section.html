@@ -19,7 +19,7 @@
             <p class="text-base font-semibold text-white">{{ subscription_plan_name if subscription_plan_name else 'VEXND Premium' }}</p>
           </div>
         </div>
-        <a href="{{ url_lang('index') }}#pricing" class="dashboard-ghost-btn inline-flex items-center justify-center rounded-2xl px-5 py-3 font-semibold transition tap-target">
+        <a href="{{ url_lang('pricing') }}" class="dashboard-ghost-btn inline-flex items-center justify-center rounded-2xl px-5 py-3 font-semibold transition tap-target">
           {{ _('Продлить') }}
         </a>
       </div>
@@ -39,7 +39,7 @@
           <p class="mt-4 text-xl font-semibold text-white">{{ _('Подписка не активна') if has_subscription_record else _('Нет подписки') }}</p>
           <p class="mt-2 max-w-2xl text-sm leading-6 text-gray-400">{{ _('Подключите тариф, чтобы получить доступ ко всем возможностям VEXND.') }}</p>
         </div>
-        <a href="{{ url_lang('index') }}#pricing" class="dashboard-ghost-btn inline-flex items-center justify-center rounded-2xl px-5 py-3 font-semibold transition tap-target">
+        <a href="{{ url_lang('pricing') }}" class="dashboard-ghost-btn inline-flex items-center justify-center rounded-2xl px-5 py-3 font-semibold transition tap-target">
           {{ _('Выбрать тариф') }}
         </a>
       </div>

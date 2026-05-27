@@ -44,14 +44,14 @@
                        class="form-input">
             </div>
             
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <input type="checkbox" id="remember_me" name="remember_me" 
-                           class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-600 rounded bg-gray-800">
-                    <label for="remember_me" class="ml-2 block text-sm text-gray-300">
+            <div class="flex items-center justify-between gap-4">
+                <label for="remember_me" class="inline-flex cursor-pointer items-center text-sm text-gray-300 select-none">
+                    <input type="checkbox" id="remember_me" name="remember_me" value="1"
+                           class="h-4 w-4 shrink-0 cursor-pointer rounded border-gray-600 bg-gray-800 text-purple-600 focus:ring-purple-500">
+                    <span class="ml-2 block">
                         {{ _('Запомнить меня') }}
-                    </label>
-                </div>
+                    </span>
+                </label>
                 <button type="button" id="forgot-password-toggle" class="text-sm text-purple-400 hover:text-purple-300">
                     {{ _('Забыли пароль?') }}
                 </button>
