@@ -30,7 +30,12 @@
       </div>
     </div>
 
-    <div id="tab-sub" role="tabpanel" aria-labelledby="tab-btn-sub" class="space-y-6" data-has-local-subscription="{{ '1' if has_subscription_record else '0' }}">
+    <div id="tab-sub"
+         role="tabpanel"
+         aria-labelledby="tab-btn-sub"
+         class="space-y-6"
+         data-has-local-subscription="{{ '1' if has_subscription_record else '0' }}"
+         data-subscription-sync-pending="{{ '1' if subscription_sync_pending else '0' }}">
       <div class="dashboard-subscription-grid grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)]">
         <section id="subscription-overview" class="glass-effect subscription-panel subscription-panel--info rounded-[1.75rem] p-5 sm:p-6">
           {% include "dashboard/_subscription_overview.html" %}
@@ -596,10 +601,24 @@
   if (tabBtnSettings) tabBtnSettings.addEventListener('click', () => { void setTab('settings'); });
   if (tabBtnRef) tabBtnRef.addEventListener('click', () => { void setTab('ref'); });
 
+  let subscriptionSyncTimer = null;
+  let subscriptionSyncInFlight = false;
+  let subscriptionSyncAttempts = 0;
+
+  function scheduleSubscriptionRefresh(delayMs){
+    if (subscriptionSyncTimer) {
+      window.clearTimeout(subscriptionSyncTimer);
+    }
+    subscriptionSyncTimer = window.setTimeout(() => {
+      void refreshSubscriptionStateInBackground();
+    }, delayMs);
+  }
+
   async function refreshSubscriptionStateInBackground(){
     const tab = document.getElementById('tab-sub');
-    if (!tab || tab.dataset.hasLocalSubscription !== '0') return;
+    if (!tab || tab.dataset.subscriptionSyncPending !== '1' || subscriptionSyncInFlight) return;
 
+    subscriptionSyncInFlight = true;
     try {
       const response = await fetch(`${window.location.pathname}?sync_subscription=1`, {
         credentials: 'same-origin',
@@ -610,6 +629,8 @@
       });
       const data = await response.json().catch(() => ({ ok: false, fragments: {} }));
       if (!response.ok || data.ok === false) {
+        subscriptionSyncAttempts += 1;
+        scheduleSubscriptionRefresh(Math.min(1500 * subscriptionSyncAttempts, 10000));
         return;
       }
       const banner = data.fragments?.['dashboard-banner'];
@@ -631,10 +652,20 @@
           billingSection.innerHTML = billing;
         }
       }
-      if (typeof overview === 'string' || typeof access === 'string') {
-        tab.dataset.hasLocalSubscription = '1';
+      const syncPending = data.subscription_sync_pending === true;
+      tab.dataset.hasLocalSubscription = syncPending ? '0' : '1';
+      tab.dataset.subscriptionSyncPending = syncPending ? '1' : '0';
+      if (syncPending) {
+        subscriptionSyncAttempts += 1;
+        scheduleSubscriptionRefresh(Math.min(1500 * subscriptionSyncAttempts, 10000));
+      } else {
+        subscriptionSyncAttempts = 0;
       }
     } catch (_error) {
+      subscriptionSyncAttempts += 1;
+      scheduleSubscriptionRefresh(Math.min(1500 * subscriptionSyncAttempts, 10000));
+    } finally {
+      subscriptionSyncInFlight = false;
     }
   }
 

@@ -120,6 +120,9 @@ def deactivate_local_subscription(subscription: Subscription | None) -> None:
     if subscription.is_active:
         subscription.is_active = False
         changed = True
+    if subscription.expiry_date is not None:
+        subscription.expiry_date = None
+        changed = True
     if subscription.subscription_url:
         subscription.subscription_url = ""
         changed = True

@@ -34,7 +34,14 @@ from app.services.remnawave import (
     rw_username_from_email,
     rw_username_from_telegram,
 )
-from app.services.subscriptions import ensure_remnawave_subscription_url, get_trial_grant, has_processed_plan_payment, is_trial_eligible, restore_local_subscription_state
+from app.services.subscriptions import (
+    deactivate_local_subscription,
+    ensure_remnawave_subscription_url,
+    get_trial_grant,
+    has_processed_plan_payment,
+    is_trial_eligible,
+    restore_local_subscription_state,
+)
 
 
 REMNAWAVE_SNAPSHOT_TTL_SECONDS = 30
@@ -192,6 +199,7 @@ def refresh_remnawave_snapshot_async(
                 _subscription, local_snapshot = local_subscription_snapshot(user)
                 remote_user = remnawave_find_user(cfg, user)
                 if not isinstance(remote_user, dict):
+                    deactivate_local_subscription(_subscription)
                     local_snapshot = snapshot_without_subscription(local_snapshot)
                     _REMNAWAVE_SNAPSHOT_CACHE[user_id] = {
                         "ts": time.time(),
@@ -266,6 +274,7 @@ def remnawave_subscription_snapshot(user: User, *, force_refresh: bool = False, 
         print(f"Remnawave snapshot lookup failed: {exc}")
         return snapshot
     if not isinstance(remote_user, dict):
+        deactivate_local_subscription(subscription)
         snapshot = snapshot_without_subscription(snapshot)
         _REMNAWAVE_SNAPSHOT_CACHE[cache_key] = {"ts": now_ts, "signature": subscription_cache_signature(subscription), "snapshot": dict(snapshot)}
         return snapshot

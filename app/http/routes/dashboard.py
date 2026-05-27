@@ -57,6 +57,18 @@ def _requested_partial_targets() -> list[str]:
     return [target.strip() for target in header.split(",") if target.strip()]
 
 
+def _partials_require_subscription_refresh(partial_targets: list[str]) -> bool:
+    return bool(
+        {
+            "tab-settings",
+            "dashboard-banner",
+            "subscription-overview",
+            "subscription-access",
+            "section-billing",
+        }.intersection(partial_targets)
+    )
+
+
 def _build_dashboard_referrals_context() -> dict[str, object]:
     referral_code = get_or_create_referral_code(current_user)
     referral_link = public_url("referral", code=referral_code, canonical=True)
@@ -211,7 +223,7 @@ def _build_dashboard_subscription_context(*, force_remote_refresh: bool = False)
     is_active = bool(snapshot.get("active"))
     if expiry_date is not None:
         is_active = bool(expiry_date > now and (subscription.is_active if subscription else snapshot.get("active", False)))
-    has_subscription_record = bool(subscription)
+    has_subscription_record = bool(subscription) and not subscription_missing_remote
     remaining_days = None
     if expiry_date:
         try:
@@ -230,6 +242,13 @@ def _build_dashboard_subscription_context(*, force_remote_refresh: bool = False)
     traffic_progress = None
     if isinstance(limit_bytes, int) and limit_bytes > 0 and isinstance(used_bytes, int) and used_bytes >= 0:
         traffic_progress = max(0, min(100, round((used_bytes / limit_bytes) * 100, 1)))
+    subscription_sync_pending = bool(
+        is_active and (
+            not subscription_url
+            or used_bytes is None
+            or limit_bytes is None
+        )
+    )
 
     return {
         "subscription": subscription,
@@ -242,6 +261,7 @@ def _build_dashboard_subscription_context(*, force_remote_refresh: bool = False)
         "used_bytes_text": format_bytes(used_bytes),
         "limit_bytes_text": format_bytes(limit_bytes),
         "traffic_progress": traffic_progress,
+        "subscription_sync_pending": subscription_sync_pending,
         "qr_code": _subscription_qr_code(subscription_url),
         "has_subscription_record": has_subscription_record,
         "is_active": is_active,
@@ -288,7 +308,11 @@ def dashboard():
                 db.session.rollback()
             except Exception:
                 pass
-    force_remote_refresh = request.args.get("sync_subscription") == "1"
+    force_remote_refresh = (
+        request.args.get("sync_subscription") == "1"
+        or not partial_targets
+        or _partials_require_subscription_refresh(partial_targets)
+    )
     subscription_context = _build_dashboard_subscription_context(force_remote_refresh=force_remote_refresh)
     if partial_targets:
         fragments: dict[str, str] = {}
@@ -336,7 +360,13 @@ def dashboard():
                 if settings_context is None:
                     settings_context = _build_dashboard_settings_context()
                 fragments[target] = render_template("account/_devices_section.html", sessions=settings_context["sessions"])
-        return jsonify({"ok": True, "fragments": fragments})
+        return jsonify(
+            {
+                "ok": True,
+                "fragments": fragments,
+                "subscription_sync_pending": bool(subscription_context.get("subscription_sync_pending")),
+            }
+        )
     return render_template(
         "dashboard.html",
         notify_expiry=False,
