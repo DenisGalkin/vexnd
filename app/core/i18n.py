@@ -3182,6 +3182,7 @@ translations['en'].update({
     'Сбросить пароль через email': 'Reset password via email',
     'Сначала привяжите email, чтобы сбрасывать пароль через код.': 'Link an email first to reset your password with a code.',
     'Мы отправили код для сброса пароля на ваш email.': 'We sent a password reset code to your email.',
+    'Мы отправили код для сброса пароля в Telegram.': 'We sent a password reset code in Telegram.',
     'Запрос на сброс пароля не найден. Начните заново.': 'The password reset request was not found. Start again.',
     'Новый код для сброса пароля отправлен на email.': 'A new password reset code has been sent to your email.',
     'Сброс пароля отменён.': 'Password reset canceled.',
