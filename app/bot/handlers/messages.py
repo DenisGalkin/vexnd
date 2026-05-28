@@ -6,11 +6,13 @@ from app.bot.common import (
     ensure_telegram_user_password,
     get_or_create_account,
     get_or_create_state,
+    h,
     send_message,
     t,
     utc_now,
 )
 from app.bot.keyboards import (
+    admin_panel_keyboard,
     first_language_keyboard,
     help_keyboard,
     keyboard,
@@ -21,9 +23,32 @@ from app.bot.keyboards import (
     telegram_auth_confirm_keyboard,
 )
 from app.bot.subscriptions import capture_bot_referral, format_subscription, schedule_subscription_message_refresh, user_has_local_subscription_data
+from app.services.bot_admin_links import create_tracked_link, is_bot_admin, register_tracked_link_start, tracked_link_report, tracked_link_url
 from app.services.coupons import bot_coupon_benefits, normalize_coupon_code, record_coupon_redemption
 from app.services.subscriptions import create_remnawave_subscription
 from app.services.telegram_auth import approve_telegram_auth_challenge
+
+
+def _admin_panel_text(state) -> str:
+    items = tracked_link_report(limit=20)
+    if not items:
+        return f"{t(state, 'admin_title')}\n\n{t(state, 'admin_empty')}"
+
+    lines = [t(state, "admin_title"), ""]
+    for item in items:
+        lines.append(
+            t(
+                state,
+                "admin_stats_line",
+                name=h(item["name"]),
+                total=item["total_starts"],
+                unique=item["unique_starts"],
+            )
+        )
+        if item["url"]:
+            lines.append(f"<code>{h(item['url'])}</code>")
+        lines.append("")
+    return "\n".join(lines).strip()
 
 
 def handle_promo_code(chat_id: int, user, state, raw_code: str) -> None:
@@ -68,12 +93,15 @@ def handle_message(message: dict[str, object]) -> None:
     with app.app_context():
         account, user = get_or_create_account(tg_user)
         state = get_or_create_state(tg_user)
+        is_admin = is_bot_admin(account.telegram_id, account.username)
 
         if start_arg.startswith("ref_"):
             result_key = capture_bot_referral(user, start_arg.removeprefix("ref_"))
             if result_key:
                 send_message(chat_id, t(state, result_key))
-        elif start_arg.startswith("login_") or start_arg.startswith("link_") or start_arg.startswith("password_reset_"):
+        else:
+            register_tracked_link_start(start_arg, account.telegram_id)
+        if start_arg.startswith("login_") or start_arg.startswith("link_") or start_arg.startswith("password_reset_"):
             if start_arg.startswith("password_reset_"):
                 purpose = "password_reset"
                 code = start_arg.removeprefix("password_reset_")
@@ -95,6 +123,35 @@ def handle_message(message: dict[str, object]) -> None:
         if state.pending_action == "promo" and text and not text.startswith("/"):
             handle_promo_code(chat_id, user, state, text)
             return
+        if state.pending_action == "admin_link_name" and text and not text.startswith("/"):
+            if not is_admin:
+                state.pending_action = None
+                state.updated_at = utc_now()
+                db.session.commit()
+                send_message(chat_id, t(state, "admin_access_denied"), main_menu(state, user))
+                return
+            try:
+                link = create_tracked_link(name=text, created_by_telegram_id=account.telegram_id)
+            except ValueError as exc:
+                error_key = "admin_name_too_long" if str(exc) == "name_too_long" else "admin_name_empty"
+                send_message(chat_id, t(state, error_key), admin_panel_keyboard(state))
+                return
+            state.pending_action = None
+            state.updated_at = utc_now()
+            db.session.commit()
+            send_message(
+                chat_id,
+                t(
+                    state,
+                    "admin_create_success",
+                    name=h(link.name),
+                    total=link.total_starts,
+                    unique=link.unique_starts,
+                    url=h(tracked_link_url(link) or f"/start trk_{link.token}"),
+                ),
+                admin_panel_keyboard(state),
+            )
+            return
 
         if text.startswith("/login "):
             ok, reason, challenge = approve_telegram_auth_challenge(text.split(maxsplit=1)[1], account.telegram_id)
@@ -106,6 +163,12 @@ def handle_message(message: dict[str, object]) -> None:
 
         if text.startswith("/start"):
             send_message(chat_id, t(state, "menu_title"), main_menu(state, user))
+            return
+        if text.startswith("/admin"):
+            if not is_admin:
+                send_message(chat_id, t(state, "admin_access_denied"), main_menu(state, user))
+                return
+            send_message(chat_id, _admin_panel_text(state), admin_panel_keyboard(state))
             return
         if text.startswith("/plans"):
             send_message(chat_id, t(state, "choose_plan"), plans_keyboard(state, user))

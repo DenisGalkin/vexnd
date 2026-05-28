@@ -56,3 +56,31 @@ class BotPromoRedemption(db.Model):
     __table_args__ = (
         db.UniqueConstraint("promo_id", "telegram_id", name="uq_bot_promo_redemption_once"),
     )
+
+
+class BotTrackedLink(db.Model):
+    __tablename__ = "bot_tracked_link"
+
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(80), nullable=False)
+    created_by_telegram_id = db.Column(db.Integer, nullable=False, index=True)
+    total_starts = db.Column(db.Integer, nullable=False, default=0)
+    unique_starts = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+    last_started_at = db.Column(db.DateTime, nullable=True, index=True)
+
+
+class BotTrackedLinkVisit(db.Model):
+    __tablename__ = "bot_tracked_link_visit"
+
+    id = db.Column(db.Integer, primary_key=True)
+    link_id = db.Column(db.Integer, db.ForeignKey("bot_tracked_link.id"), nullable=False, index=True)
+    telegram_id = db.Column(db.Integer, nullable=False, index=True)
+    starts_count = db.Column(db.Integer, nullable=False, default=1)
+    first_started_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+    last_started_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("link_id", "telegram_id", name="uq_bot_tracked_link_visit_once"),
+    )

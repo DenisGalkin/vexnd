@@ -21,6 +21,8 @@ from app.bot.common import (
     get_or_create_state,
 )
 from app.bot.keyboards import (
+    admin_link_name_keyboard,
+    admin_panel_keyboard,
     connect_client_keyboard,
     connect_install_keyboard,
     help_keyboard,
@@ -34,6 +36,7 @@ from app.bot.keyboards import (
     referral_keyboard,
     subscription_keyboard,
 )
+from app.services.bot_admin_links import is_bot_admin, tracked_link_report
 from app.bot.payments import (
     handle_payment_check,
     handle_payment_method,
@@ -52,6 +55,28 @@ from app.bot.subscriptions import (
 )
 from app.services.subscriptions import activate_trial_subscription, is_trial_eligible
 from app.services.telegram_auth import approve_telegram_auth_challenge, decline_telegram_auth_challenge
+
+
+def _admin_panel_text(state) -> str:
+    items = tracked_link_report(limit=20)
+    if not items:
+        return f"{t(state, 'admin_title')}\n\n{t(state, 'admin_empty')}"
+
+    lines = [t(state, "admin_title"), ""]
+    for item in items:
+        lines.append(
+            t(
+                state,
+                "admin_stats_line",
+                name=h(item["name"]),
+                total=item["total_starts"],
+                unique=item["unique_starts"],
+            )
+        )
+        if item["url"]:
+            lines.append(f"<code>{h(item['url'])}</code>")
+        lines.append("")
+    return "\n".join(lines).strip()
 
 
 def handle_buy(chat_id: int, message_id: int, user, state, data: str) -> None:
@@ -106,11 +131,30 @@ def handle_callback(callback: dict[str, object]) -> None:
     with app.app_context():
         account, user = get_or_create_account(tg_user)
         state = get_or_create_state(tg_user)
+        is_admin = is_bot_admin(account.telegram_id, account.username)
 
         if data == "menu":
             answer_callback(callback_id)
             clear_pending_action(state)
             edit_message(chat_id, message_id, t(state, "menu_title"), main_menu(state, user))
+            return
+        if data == "admin_panel":
+            answer_callback(callback_id)
+            if not is_admin:
+                edit_message(chat_id, message_id, t(state, "admin_access_denied"), main_menu(state, user))
+                return
+            clear_pending_action(state)
+            edit_message(chat_id, message_id, _admin_panel_text(state), admin_panel_keyboard(state))
+            return
+        if data == "admin_create_link":
+            answer_callback(callback_id)
+            if not is_admin:
+                edit_message(chat_id, message_id, t(state, "admin_access_denied"), main_menu(state, user))
+                return
+            state.pending_action = "admin_link_name"
+            state.updated_at = utc_now()
+            db.session.commit()
+            edit_message(chat_id, message_id, t(state, "admin_create_prompt"), admin_link_name_keyboard(state))
             return
         if data == "plans":
             answer_callback(callback_id)

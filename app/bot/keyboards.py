@@ -18,7 +18,8 @@ from app.bot.common import (
 )
 from app.domain.models import User
 from app.services.subscriptions import is_trial_eligible
-from app.bot.models import BotUserState
+from app.services.bot_admin_links import is_bot_admin
+from app.bot.models import BotUserState, TelegramAccount
 
 
 def keyboard(rows: list[list[tuple[str, str]]]) -> dict[str, object]:
@@ -43,6 +44,9 @@ def main_menu(state: BotUserState, user: User | None = None) -> dict[str, object
     if user is not None and is_trial_eligible(user):
         rows.append([{"text": t(state, "trial_offer"), "callback_data": "trial_activate"}])
     rows.append([{"text": t(state, "buy"), "callback_data": "plans"}, {"text": t(state, "referrals"), "callback_data": "referrals"}])
+    account = TelegramAccount.query.filter_by(user_id=user.id).first() if user is not None else None
+    if is_bot_admin(getattr(account, "telegram_id", None), getattr(account, "username", None)):
+        rows.append([{"text": t(state, "admin_panel"), "callback_data": "admin_panel"}])
     rows.append([{"text": t(state, "support"), "callback_data": "help"}])
     return {"inline_keyboard": rows}
 
@@ -167,3 +171,17 @@ def telegram_auth_confirm_keyboard(code: str, state: BotUserState) -> dict[str, 
             [(t(state, "back_menu"), "menu")],
         ]
     )
+
+
+def admin_panel_keyboard(state: BotUserState) -> dict[str, object]:
+    return keyboard(
+        [
+            [(t(state, "admin_create_link"), "admin_create_link")],
+            [(t(state, "admin_refresh_stats"), "admin_panel")],
+            [(t(state, "back_menu"), "menu")],
+        ]
+    )
+
+
+def admin_link_name_keyboard(state: BotUserState) -> dict[str, object]:
+    return keyboard([[(t(state, "back_menu"), "menu")]])
