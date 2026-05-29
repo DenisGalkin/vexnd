@@ -19,10 +19,16 @@ from app.bot.keyboards import (
     main_menu,
     plans_keyboard,
     profile_keyboard,
-    subscription_keyboard,
     telegram_auth_confirm_keyboard,
 )
-from app.bot.subscriptions import capture_bot_referral, format_subscription, schedule_subscription_message_refresh, user_has_local_subscription_data
+from app.bot.subscriptions import (
+    capture_bot_referral,
+    remnawave_subscription_snapshot,
+    render_subscription_text,
+    schedule_subscription_message_refresh,
+    subscription_markup,
+    user_has_local_subscription_data,
+)
 from app.services.bot_admin_links import create_tracked_link, is_bot_admin, register_tracked_link_start, tracked_link_report, tracked_link_url
 from app.services.coupons import bot_coupon_benefits, normalize_coupon_code, record_coupon_redemption
 from app.services.subscriptions import create_remnawave_subscription
@@ -177,9 +183,11 @@ def handle_message(message: dict[str, object]) -> None:
             send_message(chat_id, t(state, "help_text"), help_keyboard(state))
             return
         if text.startswith("/profile") or text.startswith("/subscription"):
-            text_out, _ = format_subscription(user, state, schedule_async_refresh=not user_has_local_subscription_data(user))
-            result = send_message(chat_id, text_out, subscription_keyboard(state))
-            if user_has_local_subscription_data(user):
+            has_local_data = user_has_local_subscription_data(user)
+            snapshot = remnawave_subscription_snapshot(user, schedule_async_refresh=not has_local_data)
+            text_out, _ = render_subscription_text(snapshot, state)
+            result = send_message(chat_id, text_out, subscription_markup(snapshot, state))
+            if has_local_data:
                 message = (result or {}).get("result") if isinstance(result, dict) else None
                 message_id = (message or {}).get("message_id") if isinstance(message, dict) else None
                 if message_id:

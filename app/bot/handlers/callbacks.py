@@ -45,12 +45,13 @@ from app.bot.subscriptions import (
     build_bot_referral_link,
     connect_intro_text,
     format_referral_text,
-    format_subscription,
     invalidate_remnawave_snapshot,
     remnawave_subscription_snapshot,
+    render_subscription_text,
     schedule_connect_message_refresh,
     schedule_subscription_message_refresh,
     snapshot_has_missing_remote_subscription,
+    subscription_markup,
     user_has_local_subscription_data,
 )
 from app.services.subscriptions import activate_trial_subscription, is_trial_eligible
@@ -173,8 +174,9 @@ def handle_callback(callback: dict[str, object]) -> None:
             has_local_data = user_has_local_subscription_data(user)
             if not force_refresh and not has_local_data:
                 show_loading(chat_id, message_id, state)
-            text_out, _ = format_subscription(user, state, force_refresh=force_refresh, schedule_async_refresh=not has_local_data)
-            edit_message(chat_id, message_id, text_out, subscription_keyboard(state))
+            snapshot = remnawave_subscription_snapshot(user, force_refresh=force_refresh, schedule_async_refresh=not has_local_data)
+            text_out, _ = render_subscription_text(snapshot, state)
+            edit_message(chat_id, message_id, text_out, subscription_markup(snapshot, state))
             if not force_refresh and has_local_data:
                 schedule_subscription_message_refresh(user, state, chat_id, message_id, text_out)
             return
@@ -239,7 +241,7 @@ def handle_callback(callback: dict[str, object]) -> None:
             sub_url = str(snapshot.get("subscription_url") or "").strip()
             if not client or not sub_url:
                 text_key = "subscription_missing" if snapshot_has_missing_remote_subscription(snapshot) else "connect_link_missing"
-                edit_message(chat_id, message_id, t(state, text_key), subscription_keyboard(state))
+                edit_message(chat_id, message_id, t(state, text_key), subscription_markup(snapshot, state))
                 return
             add_url = browser_import_url(user, client, state, sub_url)
             markup = {
@@ -270,7 +272,7 @@ def handle_callback(callback: dict[str, object]) -> None:
         if data == "subscription_qr":
             answer_callback(callback_id)
             snapshot = remnawave_subscription_snapshot(user)
-            _, sub_url = format_subscription(user, state)
+            _, sub_url = render_subscription_text(snapshot, state)
             if sub_url:
                 send_photo(chat_id, make_qr_png(sub_url), t(state, "qr_caption"), qr_keyboard(state))
             else:

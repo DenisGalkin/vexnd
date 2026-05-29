@@ -114,6 +114,17 @@ class UserSecurity(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 
+class UserNotificationPreference(db.Model):
+    __tablename__ = "user_notification_preference"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, unique=True, index=True)
+    notify_expiry = db.Column(db.Boolean, nullable=False, default=False)
+    notify_maintenance = db.Column(db.Boolean, nullable=False, default=False)
+    notify_news = db.Column(db.Boolean, nullable=False, default=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
 class WebSession(db.Model):
     __tablename__ = "web_session"
 

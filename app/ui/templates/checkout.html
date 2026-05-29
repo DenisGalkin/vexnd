@@ -31,7 +31,7 @@
         
         <!-- Filter Tabs -->
         <div class="flex gap-2 mb-6 sm:mb-8 overflow-x-auto pb-2 -mx-1 px-1">
-            <button onclick="filterPayments('all', event)" class="filter-btn active px-3 sm:px-4 py-2 rounded-lg bg-purple-600 text-white font-medium transition-all whitespace-nowrap shrink-0">
+            <button onclick="filterPayments('all', event)" class="filter-btn active px-3 sm:px-4 py-2 rounded-lg bg-blue-600 text-white font-medium transition-all whitespace-nowrap shrink-0">
                 {{ _('Все') }}
             </button>
             <button onclick="filterPayments('crypto', event)" class="filter-btn px-3 sm:px-4 py-2 rounded-lg glass-effect hover:bg-white/10 font-medium transition-all whitespace-nowrap shrink-0">
@@ -66,7 +66,7 @@
                     {% set target = url_for('start_payment', method='heleket', plan=plan) %}
                 {% endif %}
                 <button type="button"
-                        class="payment-item {{ method.class }} glass-effect p-4 sm:p-6 rounded-xl md:hover:scale-105 transition-all cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70"
+                        class="payment-item {{ method.class }} glass-effect p-4 sm:p-6 rounded-xl md:hover:scale-105 transition-all cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
                         data-target="{{ target }}"
                         data-name="{{ method.name }}"
                         data-icon="{{ method.icon }}"
@@ -92,7 +92,7 @@
 
                         <div class="pm-actions ml-auto flex items-center justify-end gap-2">
                           {% if method.preferred %}
-                            <span class="pm-badge shrink-0 whitespace-nowrap text-[11px] font-semibold px-2 py-1 rounded-lg bg-purple-500/15 border border-purple-400/30 text-purple-200">
+                            <span class="pm-badge shrink-0 whitespace-nowrap text-[11px] font-semibold px-2 py-1 rounded-lg bg-blue-500/15 border border-blue-400/30 text-blue-200">
                               {{ _('Рекомендуем') }}
                             </span>
                           {% endif %}
@@ -135,7 +135,7 @@
                     </div>
                     <div class="text-right">
                         <div class="text-xs font-semibold tracking-widest text-gray-400 uppercase">{{ _('К оплате') }}</div>
-                        <div id="summary-price" class="text-3xl font-extrabold text-purple-400 mt-1">${{ price }}</div>
+                        <div id="summary-price" class="text-3xl font-extrabold text-blue-400 mt-1">${{ price }}</div>
                         <div id="summary-original-wrap" class="text-sm text-gray-500 mt-1 {% if not coupon_applied %}hidden{% endif %}">
                             <span class="line-through">$<span id="summary-original-price">{{ original_price }}</span></span>
                         </div>
@@ -152,7 +152,7 @@
                 <div class="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-3">{{ _('Промокод') }}</div>
                 <div class="flex flex-col sm:flex-row gap-3">
                     <input id="coupon-input" type="text" value="{{ coupon_code }}" placeholder="{{ _('Введите промокод') }}"
-                           class="flex-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white placeholder:text-gray-500 outline-none focus:border-purple-500/60">
+                           class="flex-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white placeholder:text-gray-500 outline-none focus:border-blue-500/60">
                     <button id="coupon-apply-btn" type="button"
                             class="px-5 py-3 rounded-xl glass-effect hover:bg-white/10 transition-all font-semibold"
                             onclick="applyCoupon()">
@@ -189,7 +189,7 @@
                 </div>
                 <div class="mt-4 text-xs text-gray-400 leading-relaxed">
                     {{ _('Подписка активируется после успешной оплаты. Даты указаны предварительно и могут отличаться на несколько минут.') }}
-                    <a href="{{ url_lang('refund_policy_page') }}" class="text-purple-400 hover:text-purple-300 underline underline-offset-2 ml-1">{{ _('Политика возврата') }}</a>
+                    <a href="{{ url_lang('refund_policy_page') }}" class="text-blue-400 hover:text-blue-300 underline underline-offset-2 ml-1">{{ _('Политика возврата') }}</a>
                 </div>
             </div>
 
@@ -233,7 +233,7 @@
             <form id="pay-form" method="POST" action="#">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="coupon_code" id="coupon-code-hidden" value="{{ coupon_code }}">
-                <button id="pay-btn" type="submit" class="w-full text-center bg-purple-600 hover:bg-purple-700 px-6 py-4 rounded-2xl font-semibold transition-all tap-target">
+                <button id="pay-btn" type="submit" class="w-full text-center bg-blue-600 hover:bg-blue-700 px-6 py-4 rounded-2xl font-semibold transition-all tap-target">
                     {{ _('Перейти к оплате') }}
                 </button>
             </form>
@@ -247,13 +247,13 @@ const checkoutPlan = {{ plan|int }};
 
 function filterPayments(type, ev) {
     document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.classList.remove('active', 'bg-purple-600');
+        btn.classList.remove('active', 'bg-blue-600');
         btn.classList.add('glass-effect');
     });
     const t = (ev && ev.currentTarget) ? ev.currentTarget : null;
     if (t) {
         t.classList.remove('glass-effect');
-        t.classList.add('active', 'bg-purple-600');
+        t.classList.add('active', 'bg-blue-600');
     }
     
     const items = document.querySelectorAll('.payment-item');
@@ -269,9 +269,9 @@ function filterPayments(type, ev) {
 function selectPayment(el) {
     // Visual selection
     document.querySelectorAll('.payment-item').forEach(item => {
-        item.classList.remove('ring-2', 'ring-purple-500');
+        item.classList.remove('ring-2', 'ring-blue-500');
     });
-    el.classList.add('ring-2', 'ring-purple-500');
+    el.classList.add('ring-2', 'ring-blue-500');
 
     // Fill summary
     const name = el.dataset.name || '';
@@ -365,7 +365,7 @@ async function applyCoupon() {
 
 function resetSelection() {
     document.querySelectorAll('.payment-item').forEach(item => {
-        item.classList.remove('ring-2', 'ring-purple-500');
+        item.classList.remove('ring-2', 'ring-blue-500');
     });
     const summary = document.getElementById('order-summary');
     summary.classList.add('hidden');

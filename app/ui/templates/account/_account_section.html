@@ -1,3 +1,4 @@
+{% if show_settings_hero | default(True) %}
 <section class="settings-section settings-section--hero mb-4">
     <div class="max-w-2xl">
         <div class="dashboard-panel-label">{{ _('Управление аккаунтом') }}</div>
@@ -7,32 +8,38 @@
         </p>
     </div>
 </section>
+{% endif %}
 <section class="settings-section">
+    {% if show_account_section_head | default(True) %}
     <div class="settings-section-head">
         <div>
             <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Аккаунт') }}</h3>
             <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Контакты для входа и связанные каналы доступа.') }}</p>
         </div>
     </div>
+    {% endif %}
     <div class="settings-feedback hidden mb-4" id="account-settings-status"></div>
     <div class="settings-list settings-list--account">
         <div class="settings-row settings-row--account">
             <div class="settings-row-label">
                 <span class="inline-flex items-center gap-2">
-                    <svg class="h-4 w-4 shrink-0 overflow-visible text-purple-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <!-- Updated to use the new blue accent instead of purple -->
+                    <svg class="h-4 w-4 shrink-0 overflow-visible text-blue-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                         <circle cx="12" cy="7" r="4"></circle>
                     </svg>
                     <span>{{ _('ID пользователя') }}</span>
                 </span>
             </div>
-            <div class="settings-row-value break-anywhere text-purple-100 font-mono">{{ current_user.id }}</div>
+            <!-- Updated text colour to harmonise with new palette -->
+            <div class="settings-row-value break-anywhere text-blue-100 font-mono">{{ current_user.id }}</div>
             <button type="button" class="settings-action settings-action-primary" onclick="copyText('{{ current_user.id }}', this)">{{ _('Скопировать') }}</button>
         </div>
         <div class="settings-row settings-row--account">
             <div class="settings-row-label">
                 <span class="inline-flex items-center gap-2">
-                    <svg class="h-4 w-4 text-pink-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <!-- Updated email icon colour to align with the blue palette -->
+                    <svg class="h-4 w-4 text-blue-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path>
                         <path d="m22 8-8.97 6.35a1.8 1.8 0 0 1-2.06 0L2 8"></path>
                     </svg>
@@ -104,7 +111,8 @@
         <div class="settings-row settings-row--account">
             <div class="settings-row-label">
                 <span class="inline-flex items-center gap-2">
-                    <svg class="h-4 w-4 text-cyan-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <!-- Updated Telegram icon colour to align with the blue palette -->
+                    <svg class="h-4 w-4 text-blue-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M9.78 18.65c-.32 0-.27-.12-.38-.42l-.96-3.15 7.35-4.35c.34-.2.59-.09.33.14l-5.95 5.36-.23 3.18c.33 0 .48-.15.66-.33l1.59-1.55 3.3 2.43c.61.34 1.05.16 1.2-.56l2.18-10.28c.21-.88-.33-1.28-.92-1.01L5.08 12.23c-.86.34-.85.82-.15 1.03l3.29 1.03 7.62-4.8c.36-.22.69-.1.42.14"/>
                     </svg>
                     <span>{{ _('Telegram') }}</span>

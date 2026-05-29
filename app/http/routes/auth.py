@@ -10,7 +10,7 @@ from werkzeug.security import check_password_hash
 from app.bot.models import TelegramAccount
 from app.core.extensions import db
 from app.services.account_deletion import delete_user_account
-from app.domain.models import PendingRegistration, ReferralCode, ReferralFingerprint, ReferralSignup, User, UserSecurity
+from app.domain.models import PendingRegistration, ReferralCode, ReferralFingerprint, ReferralSignup, User, UserNotificationPreference, UserSecurity
 from app.services.email_change_otp import (
     delete_pending_email_change,
     get_pending_email_change,
@@ -203,6 +203,8 @@ def _render_settings_fragment(target: str) -> str | None:
         return render_template("account/_account_section.html", **_account_section_context())
     if target == "section-security":
         return render_template("account/_security_section.html", **_dashboard_security_context())
+    if target == "password-reset-panel":
+        return _render_password_reset_panel()
     if target == "section-devices":
         return render_template("account/_devices_section.html", **_devices_section_context())
     return None
@@ -215,7 +217,7 @@ def _respond_settings_partial(
     status_code: int = 200,
     extra: dict[str, object] | None = None,
 ):
-    targets = [target for target in _requested_partial_targets() if target != "password-reset-panel"]
+    targets = _requested_partial_targets()
     if targets:
         fragments: dict[str, str] = {}
         for target in targets:
@@ -258,6 +260,14 @@ def _normalize_email_input(value: str | None) -> str:
 
 def _password_is_valid(user: User, password: str | None) -> bool:
     return bool(user.password_hash and password and check_password_hash(user.password_hash, password))
+
+
+def _as_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
 
 
 def _sync_identity_safe(user: User) -> None:
@@ -734,7 +744,7 @@ def account_password_reset_start():
     try:
         start_pending_password_reset(email=current_email, lang=_normalized_lang())
         if password_reset_uses_telegram(current_email):
-            return _respond_password_reset_panel(translate("Мы отправили код для сброса пароля в Telegram."))
+            return _respond_password_reset_panel("")
         else:
             return _respond_password_reset_panel(translate("Мы отправили код для сброса пароля на ваш email."))
     except EmailOtpError as exc:
@@ -808,7 +818,7 @@ def account_password_reset_cancel():
     if current_email:
         delete_pending_password_reset(get_pending_password_reset(current_email))
     session.pop(_telegram_session_key("password_reset"), None)
-    return _respond_password_reset_panel(translate("Сброс пароля отменён."), category="info")
+    return _respond_password_reset_panel("", category="info")
 
 
 @login_required
@@ -997,6 +1007,35 @@ def api_account_change_password():
     except Exception:
         db.session.rollback()
         return _respond_error(translate("Не удалось изменить пароль. Попробуйте позже."), 500)
+
+
+@login_required
+def api_account_notifications():
+    from app.services.security import require_csrf
+
+    require_csrf()
+    payload = _request_payload()
+    notify_expiry = _as_bool(payload.get("expiry"))
+    notify_maintenance = _as_bool(payload.get("maintenance"))
+    notify_news = _as_bool(payload.get("news"))
+
+    preferences = UserNotificationPreference.query.filter_by(user_id=current_user.id).first()
+    if preferences is None:
+        preferences = UserNotificationPreference(user_id=current_user.id)
+        db.session.add(preferences)
+
+    preferences.notify_expiry = notify_expiry
+    preferences.notify_maintenance = notify_maintenance
+    preferences.notify_news = notify_news
+    preferences.updated_at = datetime.utcnow()
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return _respond_error(translate("Не удалось сохранить настройки уведомлений. Попробуйте позже."), 500)
+
+    return _respond_success(translate("Настройки уведомлений сохранены"))
 
 
 @login_required
@@ -1197,6 +1236,7 @@ def register(app) -> None:
     app.add_url_rule("/account/delete", endpoint="account_delete", view_func=account_delete, methods=["POST"])
     app.add_url_rule("/api/account/verify-password", endpoint="api_account_verify_password", view_func=api_account_verify_password, methods=["POST"])
     app.add_url_rule("/api/account/change-password", endpoint="api_account_change_password", view_func=api_account_change_password, methods=["POST"])
+    app.add_url_rule("/api/account/notifications", endpoint="api_account_notifications", view_func=api_account_notifications, methods=["POST"])
     app.add_url_rule("/api/account/link-email", endpoint="api_account_link_email", view_func=api_account_link_email, methods=["POST"])
     app.add_url_rule("/api/account/unlink-telegram", endpoint="api_account_unlink_telegram", view_func=api_account_unlink_telegram, methods=["POST"])
     app.add_url_rule("/api/account/delete", endpoint="api_account_delete", view_func=account_delete, methods=["POST"])

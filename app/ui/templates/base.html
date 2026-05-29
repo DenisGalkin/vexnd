@@ -70,24 +70,24 @@
                     {% if current_user.is_authenticated %}
                         <a href="{{ url_lang('index') }}" class="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition-colors relative group">
                             {{ _('Главная') }}
-                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
                         </a>
                         <a href="{{ url_lang('dashboard') }}" class="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition-colors relative group">
                             {{ _('Личный кабинет') }}
-                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
                         </a>
                         <a href="{{ url_lang('setup') }}" class="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition-colors relative group">
                             {{ _('Инструкции') }}
-                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
                         </a>
                     {% else %}
                         <a href="{{ url_lang('login') }}" class="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition-colors relative group">
                             {{ _('Войти') }}
-                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
                         </a>
                         <a href="{{ url_lang('register') }}" class="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition-colors relative group">
                             {{ _('Регистрация') }}
-                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
                         </a>
                     {% endif %}
                 </div>
@@ -284,6 +284,52 @@
             const el = document.getElementById('mobile-menu');
             if (!el) return;
             el.classList.toggle('open');
+        }
+
+        async function copyText(value, button) {
+            const text = String(value ?? '');
+            const originalLabel = button ? button.textContent.trim() : '';
+
+            async function copyWithFallback() {
+                const probe = document.createElement('textarea');
+                probe.value = text;
+                probe.setAttribute('readonly', '');
+                probe.style.position = 'absolute';
+                probe.style.left = '-9999px';
+                document.body.appendChild(probe);
+                probe.select();
+                probe.setSelectionRange(0, probe.value.length);
+                try {
+                    const ok = document.execCommand('copy');
+                    document.body.removeChild(probe);
+                    if (!ok) throw new Error('copy-failed');
+                } catch (error) {
+                    document.body.removeChild(probe);
+                    throw error;
+                }
+            }
+
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    await copyWithFallback();
+                }
+
+                if (button) {
+                    button.textContent = "{{ _('Скопировано') }}";
+                    window.setTimeout(() => {
+                        button.textContent = originalLabel || "{{ _('Скопировать') }}";
+                    }, 1600);
+                }
+            } catch (_error) {
+                if (button) {
+                    button.textContent = "{{ _('Не удалось скопировать. Скопируйте вручную.') }}";
+                    window.setTimeout(() => {
+                        button.textContent = originalLabel || "{{ _('Скопировать') }}";
+                    }, 2200);
+                }
+            }
         }
 
         // -----------------------------------------------------------------

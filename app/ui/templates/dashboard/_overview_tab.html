@@ -1,0 +1,60 @@
+{%- set plan_name = subscription_plan_name if subscription_plan_name else '—' -%}
+{%- set status_label = (_('Активна') if is_active else (_('Ожидает оплаты') if has_subscription_record else _('Нет подписки'))) -%}
+{%- set status_text = (_('Доступ ко всем серверам открыт') if is_active else (_('Завершите оплату, чтобы восстановить доступ') if has_subscription_record else _('Оформите тариф, чтобы получить доступ к VEXND'))) -%}
+{%- set days_left_val = remaining_days if remaining_days is not none and remaining_days > 0 else (((subscription.expiry_date - now).total_seconds() / 86400)|round(0, 'ceil')|int if subscription and subscription.expiry_date and subscription.expiry_date > now else 0) -%}
+{%- set plan_hint = (plan_name if is_active and subscription_plan_name else (_('Ожидает оплаты') if has_subscription_record else _('Нет тарифа'))) -%}
+{%- set primary_cta = (_('Подключение') if is_active else (_('Оплатить тариф') if has_subscription_record else _('Выбрать тариф'))) -%}
+{%- set primary_cta_target = ('connection' if is_active else 'subscription') -%}
+
+<div class="overview-shell">
+  <section class="overview-panel glass-effect">
+    <div class="overview-panel__eyebrow">{{ _('Личный кабинет VEXND') }}</div>
+    <h2 class="overview-panel__title">{{ _('Добро пожаловать') }}</h2>
+    <p class="overview-panel__meta break-anywhere">{{ current_user.email }}</p>
+
+    <div class="overview-status">
+      <span class="overview-status__dot {% if is_active %}is-active{% elif has_subscription_record %}is-pending{% else %}is-idle{% endif %}"></span>
+      <div class="overview-status__content">
+        <div class="overview-status__title">{{ status_label }}</div>
+        <p class="overview-status__text">{{ status_text }}</p>
+      </div>
+    </div>
+
+    <div class="overview-panel__actions">
+      {% if primary_cta_target == 'connection' %}
+        <button type="button" class="overview-chip overview-chip--primary" data-dashboard-target="connection">{{ primary_cta }}</button>
+      {% else %}
+        <a href="{{ url_lang('pricing') }}" class="overview-chip overview-chip--primary">{{ primary_cta }}</a>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="overview-metrics" aria-label="{{ _('Ключевые показатели') }}">
+    <article class="overview-metric glass-effect">
+      <div class="overview-metric__label">{{ _('Баланс') }}</div>
+      <div class="overview-metric__value">0</div>
+      <p class="overview-metric__hint">{{ _('Скоро') }}</p>
+    </article>
+
+    <article class="overview-metric glass-effect">
+      <div class="overview-metric__label">{{ _('Осталось') }}</div>
+      <div class="overview-metric__value">{{ days_left_val }} {{ _('дней') }}</div>
+      <p class="overview-metric__hint">{{ plan_hint }}</p>
+    </article>
+
+    <article class="overview-metric glass-effect">
+      <div class="overview-metric__label">{{ _('Рефералы') }}</div>
+      <div class="overview-metric__value">{{ referrals_total or 0 }}</div>
+      <p class="overview-metric__hint">{{ _('Приглашено') }}</p>
+    </article>
+  </section>
+
+  <section class="overview-panel overview-panel--next glass-effect">
+    <h3 class="overview-panel__section-title">{{ _('Что дальше?') }}</h3>
+    <div class="overview-shortcuts">
+      <button type="button" class="overview-chip" data-dashboard-target="connection">{{ _('Подключение') }}</button>
+      <button type="button" class="overview-chip" data-dashboard-target="referrals">{{ _('Рефералы') }}</button>
+      <button type="button" class="overview-chip" data-dashboard-target="settings">{{ _('Настройки') }}</button>
+    </div>
+  </section>
+</div>

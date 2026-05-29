@@ -1,106 +1,125 @@
-<section class="glass-effect dashboard-surface-card rounded-2xl p-5 sm:p-6 space-y-5">
-  <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-    <div class="max-w-2xl">
-      <h2 class="text-2xl font-bold">{{ _('Реферальная программа') }}</h2>
-      <p class="mt-2 text-sm text-gray-400">
-        {{ _('Приглашайте друзей: им +3 дня к первой оплате, вам +5 дней после их первой оплаты.') }}
-      </p>
-    </div>
-    <div class="grid gap-3 sm:grid-cols-2 lg:min-w-[18rem]">
-      <div class="dashboard-card rounded-2xl p-4">
-        <div class="dashboard-label">{{ _('Приглашено:') }}</div>
-        <div class="mt-2 text-xl font-semibold text-white">{{ referrals_total or 0 }}</div>
-      </div>
-      <div class="dashboard-card rounded-2xl p-4">
-        <div class="dashboard-label">{{ _('Оплатили:') }}</div>
-        <div class="mt-2 text-xl font-semibold text-white">{{ referrals_paid or 0 }}</div>
-      </div>
-    </div>
-  </div>
+{%- set total_invited = referrals_total or 0 -%}
+{%- set total_paid = referrals_paid or 0 -%}
+{%- set bonus_days = total_paid * 5 -%}
 
-  <div class="space-y-3">
-    <label class="block text-sm text-gray-400">{{ _('Ваша реферальная ссылка') }}</label>
-    <div class="dashboard-link referral-link-frame rounded-2xl">
-      <input type="text" readonly value="{{ referral_link }}"
-             class="referral-link-input text-sm font-mono text-purple-200 focus:outline-none"
-             aria-label="{{ _('Реферальная ссылка') }}">
-      <button type="button"
-              class="dashboard-accent-btn referral-copy-btn inline-flex items-center justify-center gap-2 rounded-xl transition font-semibold tap-target"
-              onclick="copyText('{{ referral_link|e }}', this)">
-        <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-          <path d="M8 2a2 2 0 0 0-2 2v2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h2a2 2 0 0 0 2-2V7l-5-5H8z" />
-        </svg>
-        <span>{{ _('Скопировать') }}</span>
-      </button>
-    </div>
-    <div class="text-sm text-gray-400">
-      <span class="text-gray-200 font-semibold">{{ _('Важно:') }}</span>
-      {{ _('Бонусы начисляются один раз — после первой успешной оплаты приглашённого пользователя.') }}
-    </div>
-  </div>
-</section>
+<div class="overview-shell referrals-shell">
+  <section class="overview-panel glass-effect referrals-hero">
+    <div class="referrals-hero__copy">
+      <div class="overview-panel__eyebrow">{{ _('Рефералы') }}</div>
+      <h2 class="overview-panel__title referrals-hero__title">{{ _('Получайте бонусы за друзей') }}</h2>
+      <p class="overview-panel__meta">{{ _('Вы получаете +5 дней после первой оплаты друга. Друг получает +3 дня к первой подписке.') }}</p>
 
-<section class="glass-effect dashboard-surface-card rounded-2xl p-5 sm:p-6">
-  <div class="flex items-center justify-between gap-3 mb-4">
-    <h3 class="text-xl font-bold">{{ _('Ваши рефералы') }}</h3>
-    <div class="text-sm text-gray-400">{{ _('Всего:') }} <span class="font-semibold text-gray-200">{{ referrals_total or 0 }}</span></div>
-  </div>
-
-  {% if referrals_list and referrals_list|length > 0 %}
-    <div class="space-y-3 md:hidden">
-      {% for r in referrals_list %}
-        {% set paid = r.bonuses_applied_at %}
-        <div class="pill-muted rounded-2xl p-4">
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <div class="font-mono text-sm text-purple-200 break-anywhere">{{ r.email_masked }}</div>
-              <div class="mt-2 text-xs text-gray-500">{{ _('Регистрация:') }} {{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '—' }}</div>
-              <div class="mt-1 text-xs text-gray-500">{{ _('Первая оплата:') }} {{ r.first_paid_at.strftime('%Y-%m-%d') if r.first_paid_at else '—' }}</div>
-            </div>
-            {% if paid %}
-              <span class="px-2.5 py-1 rounded-xl bg-green-500/15 text-green-400 border border-green-500/25 shrink-0">{{ _('Оплатил') }}</span>
-            {% else %}
-              <span class="px-2.5 py-1 rounded-xl bg-white/5 text-gray-200 border border-white/10 shrink-0">{{ _('Ожидает') }}</span>
-            {% endif %}
-          </div>
+      <div class="overview-status">
+        <span class="overview-status__dot is-active"></span>
+        <div class="overview-status__content">
+          <div class="overview-status__title">{{ _('Бонус начисляется автоматически') }}</div>
+          <p class="overview-status__text">{{ _('Отправьте ссылку другу, а мы добавим бонусные дни сразу после его первой успешной оплаты.') }}</p>
         </div>
-      {% endfor %}
+      </div>
     </div>
-    <div class="dashboard-table-wrap hidden md:block overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="text-left text-gray-400 border-b border-white/10 bg-white/[0.03]">
-            <th class="py-2 pr-4">{{ _('Реферал') }}</th>
-            <th class="py-2 pr-4">{{ _('Статус') }}</th>
-            <th class="py-2 pr-4">{{ _('Регистрация') }}</th>
-            <th class="py-2">{{ _('Первая оплата') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in referrals_list %}
-            {% set paid = r.bonuses_applied_at %}
-            <tr class="border-b border-white/5">
-              <td class="py-3 pr-4 font-mono text-purple-200">{{ r.email_masked }}</td>
-              <td class="py-3 pr-4">
-                {% if paid %}
-                  <span class="px-2.5 py-1 rounded-xl bg-green-500/15 text-green-400 border border-green-500/25">{{ _('Оплатил') }}</span>
-                {% else %}
-                  <span class="px-2.5 py-1 rounded-xl bg-white/5 text-gray-200 border border-white/10">{{ _('Зарегистрировался') }}</span>
-                {% endif %}
-              </td>
-              <td class="py-3 pr-4 text-gray-300">{{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '—' }}</td>
-              <td class="py-3 text-gray-300">{{ r.first_paid_at.strftime('%Y-%m-%d') if r.first_paid_at else '—' }}</td>
+  </section>
+
+  <section class="overview-metrics referrals-metrics" aria-label="{{ _('Статистика рефералов') }}">
+    <article class="overview-metric glass-effect">
+      <div class="overview-metric__label">{{ _('Приглашено') }}</div>
+      <div class="overview-metric__value">{{ total_invited }}</div>
+      <p class="overview-metric__hint">{{ _('По вашей ссылке') }}</p>
+    </article>
+
+    <article class="overview-metric glass-effect">
+      <div class="overview-metric__label">{{ _('Оплатили') }}</div>
+      <div class="overview-metric__value">{{ total_paid }}</div>
+      <p class="overview-metric__hint">{{ _('Активировали подписку') }}</p>
+    </article>
+
+    <article class="overview-metric glass-effect">
+      <div class="overview-metric__label">{{ _('Бонусы') }}</div>
+      <div class="overview-metric__value">{{ bonus_days }} {{ _('дней') }}</div>
+      <p class="overview-metric__hint">{{ _('Получено') }}</p>
+    </article>
+  </section>
+
+  <section class="overview-panel overview-panel--next glass-effect">
+    <div class="referrals-link-section">
+      <div>
+        <h3 class="overview-panel__section-title">{{ _('Ваша ссылка') }}</h3>
+        <p class="overview-status__text">{{ _('Отправьте её другу, и бонус начислится автоматически.') }}</p>
+      </div>
+      <div class="referrals-link-card">
+        <div class="referrals-link-card__field">
+          <div class="referrals-link-card__value break-anywhere">{{ referral_link }}</div>
+          <button type="button" class="overview-chip overview-chip--primary referrals-link-card__button" onclick="copyText('{{ referral_link|e }}', this)">
+            {{ _('Скопировать') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="overview-panel overview-panel--next glass-effect">
+    <div class="referrals-list-head">
+      <div>
+        <h3 class="overview-panel__section-title">{{ _('Приглашённые пользователи') }}</h3>
+        <p class="overview-status__text">{{ _('Здесь появятся все регистрации и оплаты по вашей ссылке.') }}</p>
+      </div>
+      <div class="referrals-list-head__meta">{{ _('Всего:') }} <span>{{ total_invited }}</span></div>
+    </div>
+
+    {% if referrals_list and referrals_list|length > 0 %}
+      <div class="referrals-list-mobile md:hidden">
+        {% for r in referrals_list %}
+          {% set paid = r.bonuses_applied_at %}
+          <article class="referrals-user-card">
+            <div class="referrals-user-card__top">
+              <div class="referrals-user-card__email font-mono break-anywhere">{{ r.email_masked }}</div>
+              <span class="referrals-status-pill {% if paid %}is-paid{% else %}is-pending{% endif %}">
+                {{ _('Оплатил') if paid else _('Ожидает') }}
+              </span>
+            </div>
+            <div class="referrals-user-card__meta">
+              <div>{{ _('Регистрация:') }} {{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '—' }}</div>
+              <div>{{ _('Первая оплата:') }} {{ r.first_paid_at.strftime('%Y-%m-%d') if r.first_paid_at else '—' }}</div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+
+      <div class="referrals-table-wrap hidden md:block overflow-x-auto">
+        <table class="referrals-table">
+          <thead>
+            <tr>
+              <th>{{ _('Реферал') }}</th>
+              <th>{{ _('Статус') }}</th>
+              <th>{{ _('Регистрация') }}</th>
+              <th>{{ _('Первая оплата') }}</th>
             </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div class="mt-3 text-xs text-gray-500">
-      {{ _('Для защиты от абуза система учитывает устройство/браузер и не даёт использовать рефералку повторно с одного устройства.') }}
-    </div>
-  {% else %}
-    <div class="text-gray-400">
-      {{ _('Пока нет рефералов. Поделитесь ссылкой — и они появятся здесь.') }}
-    </div>
-  {% endif %}
-</section>
+          </thead>
+          <tbody>
+            {% for r in referrals_list %}
+              {% set paid = r.bonuses_applied_at %}
+              <tr>
+                <td class="font-mono text-blue-200">{{ r.email_masked }}</td>
+                <td>
+                  <span class="referrals-status-pill {% if paid %}is-paid{% else %}is-pending{% endif %}">
+                    {{ _('Оплатил') if paid else _('Зарегистрировался') }}
+                  </span>
+                </td>
+                <td>{{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '—' }}</td>
+                <td>{{ r.first_paid_at.strftime('%Y-%m-%d') if r.first_paid_at else '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <p class="referrals-note">
+        {{ _('Для защиты от абуза система учитывает устройство и браузер и не даёт использовать реферальную ссылку повторно с одного устройства.') }}
+      </p>
+    {% else %}
+      <div class="referrals-empty-state">
+        <div class="overview-metric__label">{{ _('Пока пусто') }}</div>
+        <p class="referrals-empty-state__text">{{ _('Пока нет рефералов. Поделитесь ссылкой, и новые приглашения появятся здесь.') }}</p>
+      </div>
+    {% endif %}
+  </section>
+</div>

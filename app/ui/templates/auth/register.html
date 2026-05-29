@@ -22,8 +22,8 @@
         #}
         
         {% if referrer_email %}
-        <div class="mb-6 rounded-xl border border-purple-500/25 bg-purple-500/10 p-4">
-            <div class="font-semibold text-purple-200">{{ _('Вы перешли по реферальной ссылке') }}</div>
+        <div class="mb-6 rounded-xl border border-blue-500/25 bg-blue-500/10 p-4">
+            <div class="font-semibold text-blue-200">{{ _('Вы перешли по реферальной ссылке') }}</div>
             <div class="text-sm text-gray-300 mt-1">
                 {{ _('Пригласил:') }} <span class="font-mono">{{ referrer_email }}</span><br>
                 {{ _('После первой оплаты вы получите +3 дня к периоду подписки.') }}
@@ -32,8 +32,8 @@
         {% endif %}
 
         {% if verification_pending %}
-        <div class="mb-6 rounded-xl border border-purple-500/25 bg-purple-500/10 p-4">
-            <div class="font-semibold text-purple-200">{{ _('Подтвердите email') }}</div>
+        <div class="mb-6 rounded-xl border border-blue-500/25 bg-blue-500/10 p-4">
+            <div class="font-semibold text-blue-200">{{ _('Подтвердите email') }}</div>
             <div class="text-sm text-gray-300 mt-1">
                 {{ _('Мы отправили 6-значный код на адрес:') }} <span class="font-mono">{{ masked_pending_email }}</span><br>
                 {{ _('Введите код ниже. Он действует') }} {{ otp_ttl_minutes }} {{ _('минут') }}.
@@ -108,7 +108,7 @@
         <div class="text-center mt-6">
             <p class="text-gray-400">
                 {{ _('Уже есть аккаунт?') }}
-                <a href="{{ url_lang('login') }}" class="text-purple-400 hover:text-purple-300 font-semibold">
+                <a href="{{ url_lang('login') }}" class="text-blue-400 hover:text-blue-300 font-semibold">
                     {{ _('Войти') }}
                 </a>
             </p>

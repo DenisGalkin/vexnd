@@ -1,0 +1,199 @@
+<div class="settings-flow" id="settings-flow">
+  <section class="settings-flow__screen is-active" data-settings-screen="hub">
+    <section class="settings-hub">
+      <header class="settings-hub__hero overview-panel glass-effect">
+        <div class="overview-panel__eyebrow">{{ _('Личный кабинет VEXND') }}</div>
+        <h2 class="settings-hub__hero-title">{{ _('Настройки') }}</h2>
+        <p class="settings-hub__hero-text">{{ _('Аккаунт, безопасность и уведомления') }}</p>
+      </header>
+
+      <div class="settings-hub__grid settings-hub__grid--paired">
+        <button type="button" class="settings-hub__tile settings-hub__tile--wide overview-metric glass-effect" data-settings-category="account">
+          <span class="settings-hub__tile-copy">
+            <span class="settings-hub__tile-title">{{ _('Аккаунт') }}</span>
+            <span class="settings-hub__tile-meta">{{ _('ID / Email / Telegram') }}</span>
+          </span>
+          <span class="settings-hub__tile-art" aria-hidden="true" style="--settings-art: url('{{ url_for('static', filename='images/settings/custom/user.png') }}');"></span>
+        </button>
+
+        <button type="button" class="settings-hub__tile settings-hub__tile--wide overview-metric glass-effect" data-settings-category="security">
+          <span class="settings-hub__tile-copy">
+            <span class="settings-hub__tile-title">{{ _('Безопасность') }}</span>
+            <span class="settings-hub__tile-meta">{{ _('Восстановление / пароль') }}</span>
+          </span>
+          <span class="settings-hub__tile-art" aria-hidden="true" style="--settings-art: url('{{ url_for('static', filename='images/settings/custom/security.png') }}');"></span>
+        </button>
+
+        <button type="button" class="settings-hub__tile settings-hub__tile--wide overview-metric glass-effect" data-settings-category="devices">
+          <span class="settings-hub__tile-copy">
+            <span class="settings-hub__tile-title">{{ _('Мои устройства') }}</span>
+            <span class="settings-hub__tile-meta">{{ _('Список активных сессий') }}</span>
+          </span>
+          <span class="settings-hub__tile-art" aria-hidden="true" style="--settings-art: url('{{ url_for('static', filename='images/settings/custom/responsive.png') }}');"></span>
+        </button>
+
+        <button type="button" class="settings-hub__tile settings-hub__tile--wide overview-metric glass-effect" data-settings-category="notifications">
+          <span class="settings-hub__tile-copy">
+            <span class="settings-hub__tile-title">{{ _('Уведомления') }}</span>
+            <span class="settings-hub__tile-meta">{{ _('3 переключателя') }}</span>
+          </span>
+          <span class="settings-hub__tile-art" aria-hidden="true" style="--settings-art: url('{{ url_for('static', filename='images/settings/custom/notification.png') }}');"></span>
+        </button>
+      </div>
+
+      <div class="settings-hub__grid">
+        <button type="button" class="settings-hub__tile settings-hub__tile--danger overview-metric glass-effect" data-settings-category="danger">
+          <span class="settings-hub__tile-copy">
+            <span class="settings-hub__tile-title">{{ _('Опасная зона') }}</span>
+            <span class="settings-hub__tile-meta">{{ _('Удаление аккаунта') }}</span>
+          </span>
+          <span class="settings-hub__tile-art settings-hub__tile-art--danger" aria-hidden="true" style="--settings-art: url('{{ url_for('static', filename='images/settings/custom/danger.png') }}');"></span>
+        </button>
+      </div>
+    </section>
+  </section>
+
+  <section class="settings-flow__screen" data-settings-screen="account">
+    <header class="settings-detail__header settings-section settings-section--hero">
+      <button type="button" class="settings-detail__back" data-settings-back>
+        <span aria-hidden="true">←</span>
+        <span>{{ _('Настройки') }}</span>
+      </button>
+      <h2 class="settings-detail__title">{{ _('Аккаунт') }}</h2>
+      <p class="settings-detail__subtitle">{{ _('Контакты для входа и связанные каналы доступа') }}</p>
+    </header>
+    <div id="section-account">
+      {% with show_settings_hero=False, show_account_section_head=False %}
+        {% include "account/_account_section.html" %}
+      {% endwith %}
+    </div>
+  </section>
+
+  <section class="settings-flow__screen" data-settings-screen="security">
+    <header class="settings-detail__header settings-section settings-section--hero">
+      <button type="button" class="settings-detail__back" data-settings-back>
+        <span aria-hidden="true">←</span>
+        <span>{{ _('Настройки') }}</span>
+      </button>
+      <h2 class="settings-detail__title">{{ _('Безопасность') }}</h2>
+      <p class="settings-detail__subtitle">{{ _('Восстановление доступа и смена пароля') }}</p>
+    </header>
+    <div id="section-security">
+      {% with show_security_section_head=False %}
+        {% include "account/_security_section.html" %}
+      {% endwith %}
+    </div>
+  </section>
+
+  <section class="settings-flow__screen" data-settings-screen="devices">
+    <header class="settings-detail__header settings-section settings-section--hero">
+      <button type="button" class="settings-detail__back" data-settings-back>
+        <span aria-hidden="true">←</span>
+        <span>{{ _('Настройки') }}</span>
+      </button>
+      <h2 class="settings-detail__title">{{ _('Мои устройства') }}</h2>
+      <p class="settings-detail__subtitle">{{ _('Активные сессии веб-панели') }}</p>
+    </header>
+    <div id="section-devices">
+      {% include "account/_devices_section.html" %}
+    </div>
+  </section>
+
+  <section class="settings-flow__screen" data-settings-screen="notifications">
+    <header class="settings-detail__header settings-section settings-section--hero">
+      <button type="button" class="settings-detail__back" data-settings-back>
+        <span aria-hidden="true">←</span>
+        <span>{{ _('Настройки') }}</span>
+      </button>
+      <h2 class="settings-detail__title">{{ _('Уведомления') }}</h2>
+      <p class="settings-detail__subtitle">{{ _('Управляйте сервисными сообщениями') }}</p>
+    </header>
+    <section class="settings-section">
+      <div class="settings-feedback hidden mb-4" id="notifications-settings-status"></div>
+      <div class="settings-list settings-list--notifications">
+        <label class="settings-notification-card" for="notify-expiry">
+          <div class="settings-notification-copy">
+            <div class="settings-notification-title">{{ _('Окончание подписки') }}</div>
+            <p class="settings-notification-text">{{ _('Напомним заранее, чтобы вы успели продлить доступ без паузы.') }}</p>
+            <div class="settings-notification-meta">{{ _('За 3 дня и за 24 часа') }}</div>
+          </div>
+          <div class="settings-notification-control">
+            <span class="settings-notification-state">{{ _('Включено') if notify_expiry else _('Выключено') }}</span>
+            <span class="settings-switch">
+              <input type="checkbox" name="notify_expiry" id="notify-expiry" {% if notify_expiry %}checked{% endif %}>
+              <span class="settings-switch-ui" aria-hidden="true"></span>
+            </span>
+          </div>
+        </label>
+
+        <label class="settings-notification-card" for="notify-maintenance">
+          <div class="settings-notification-copy">
+            <div class="settings-notification-title">{{ _('Технические работы') }}</div>
+            <p class="settings-notification-text">{{ _('Сообщим о плановых работах и важных изменениях в доступности сервиса.') }}</p>
+            <div class="settings-notification-meta">{{ _('Только важные сервисные уведомления') }}</div>
+          </div>
+          <div class="settings-notification-control">
+            <span class="settings-notification-state">{{ _('Включено') if notify_maintenance else _('Выключено') }}</span>
+            <span class="settings-switch">
+              <input type="checkbox" name="notify_maintenance" id="notify-maintenance" {% if notify_maintenance %}checked{% endif %}>
+              <span class="settings-switch-ui" aria-hidden="true"></span>
+            </span>
+          </div>
+        </label>
+
+        <label class="settings-notification-card" for="notify-news">
+          <div class="settings-notification-copy">
+            <div class="settings-notification-title">{{ _('Новости и промокоды') }}</div>
+            <p class="settings-notification-text">{{ _('Получайте новости сервиса, информацию о новых локациях и специальные предложения.') }}</p>
+            <div class="settings-notification-meta">{{ _('Обновления продукта и промокампании') }}</div>
+          </div>
+          <div class="settings-notification-control">
+            <span class="settings-notification-state">{{ _('Включено') if notify_news else _('Выключено') }}</span>
+            <span class="settings-switch">
+              <input type="checkbox" name="notify_news" id="notify-news" {% if notify_news %}checked{% endif %}>
+              <span class="settings-switch-ui" aria-hidden="true"></span>
+            </span>
+          </div>
+        </label>
+      </div>
+    </section>
+  </section>
+
+  <section class="settings-flow__screen" data-settings-screen="danger">
+    <header class="settings-detail__header settings-section settings-section--hero">
+      <button type="button" class="settings-detail__back" data-settings-back>
+        <span aria-hidden="true">←</span>
+        <span>{{ _('Настройки') }}</span>
+      </button>
+      <h2 class="settings-detail__title">{{ _('Опасная зона') }}</h2>
+      <p class="settings-detail__subtitle">{{ _('Удаление аккаунта') }}</p>
+    </header>
+    <section class="settings-section">
+      <div class="settings-section-head">
+        <div>
+          <h3 class="text-lg font-semibold text-red-100 sm:text-xl">{{ _('Удалить аккаунт') }}</h3>
+          <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Это действие нельзя отменить. Аккаунт, настройки и данные доступа будут удалены.') }}</p>
+        </div>
+      </div>
+      <form id="delete-form" class="settings-form space-y-4" data-api-form data-endpoint="{{ url_for('api_account_delete') }}">
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="settings-field">
+            <span>{{ _('Текущий пароль') }}</span>
+            <input type="password" name="password" id="delete-password" autocomplete="current-password" required>
+          </label>
+          <label class="settings-field">
+            <span>{{ _('Введите DELETE') }}</span>
+            <input type="text" name="confirm_word" id="delete-confirm-word" placeholder="DELETE" autocomplete="off" required>
+          </label>
+        </div>
+        <div class="settings-note settings-note--danger rounded-2xl px-4 py-3 text-sm text-gray-400" id="delete-hint">
+          {{ _('Кнопка активируется только после проверки текущего пароля и точного ввода слова DELETE.') }}
+        </div>
+        <div class="flex justify-end">
+          <button type="submit" id="delete-submit" class="settings-action settings-action-danger" disabled>{{ _('Удалить аккаунт') }}</button>
+        </div>
+        <div class="settings-feedback hidden" data-form-status></div>
+      </form>
+    </section>
+  </section>
+</div>

@@ -1,10 +1,12 @@
 <section class="settings-section">
+    {% if show_security_section_head | default(True) %}
     <div class="settings-section-head">
         <div>
             <h3 class="text-lg font-semibold text-white sm:text-xl">{{ _('Безопасность') }}</h3>
             <p class="mt-1 text-sm leading-6 text-gray-400">{{ _('Способ восстановления выбирается автоматически: сначала email, если он привязан, иначе Telegram.') }}</p>
         </div>
     </div>
+    {% endif %}
     <div class="settings-feedback hidden mb-4" id="security-settings-status"></div>
     <div class="settings-security-layout">
         {% include "account/_password_reset_panel.html" %}

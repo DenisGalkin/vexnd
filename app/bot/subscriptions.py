@@ -128,8 +128,11 @@ def snapshot_from_remote_user(local_snapshot: dict[str, Any], remote_user: dict 
 def render_subscription_text(snapshot: dict[str, Any], state: BotUserState) -> tuple[str, str | None]:
     expiry = snapshot.get("expiry_date")
     is_active = bool(snapshot.get("active"))
-    status_key = "subscription_status_active" if is_active else "subscription_status_inactive"
-    status_icon = "🟢" if is_active else "🔴"
+    if not is_active:
+        return f"{t(state, 'subscription_title')}\n\n{t(state, 'subscription_missing')}", None
+
+    status_key = "subscription_status_active"
+    status_icon = "🟢"
     traffic_text = t(state, "traffic_unknown")
     if snapshot.get("limit_bytes") is not None or snapshot.get("used_bytes") is not None:
         traffic_text = f"{format_bytes(snapshot.get('used_bytes'))} / {format_bytes(snapshot.get('limit_bytes'))}"
@@ -143,11 +146,13 @@ def render_subscription_text(snapshot: dict[str, Any], state: BotUserState) -> t
     sub_url = (snapshot.get("subscription_url") or "").strip() or None
     if sub_url:
         text += f"\n\n🔗 <b>{t(state, 'sub_link')}</b>\n<code>{h(sub_url)}</code>"
-    elif snapshot["active"]:
-        text += "\n\n" + t(state, "syncing")
     else:
-        text += f"\n\n{t(state, 'subscription_missing')}"
+        text += "\n\n" + t(state, "syncing")
     return text, sub_url
+
+
+def subscription_markup(snapshot: dict[str, Any], state: BotUserState) -> dict[str, object]:
+    return subscription_keyboard(state, has_active_subscription=bool(snapshot.get("active")))
 
 
 def render_connect_text(user: User, state: BotUserState, *, schedule_async_refresh: bool = True) -> tuple[str, dict[str, Any]]:
@@ -213,7 +218,7 @@ def refresh_remnawave_snapshot_async(
                                 refreshed_text, refreshed_markup = render_connect_text(user, state, schedule_async_refresh=False)
                             else:
                                 refreshed_text, _sub_url = render_subscription_text(local_snapshot, state)
-                                refreshed_markup = subscription_keyboard(state)
+                                refreshed_markup = subscription_markup(local_snapshot, state)
                             if refreshed_text != (previous_text or ""):
                                 edit_message(chat_id, message_id, refreshed_text, refreshed_markup)
                     return
@@ -231,7 +236,7 @@ def refresh_remnawave_snapshot_async(
                             refreshed_text, refreshed_markup = render_connect_text(user, state, schedule_async_refresh=False)
                         else:
                             refreshed_text, _sub_url = render_subscription_text(refreshed_snapshot, state)
-                            refreshed_markup = subscription_keyboard(state)
+                            refreshed_markup = subscription_markup(refreshed_snapshot, state)
                         if refreshed_text != (previous_text or ""):
                             edit_message(chat_id, message_id, refreshed_text, refreshed_markup)
         except Exception as exc:

@@ -25,9 +25,13 @@ from app.bot.keyboards import (
     payment_link_keyboard,
     payment_methods_keyboard,
     plans_keyboard,
-    subscription_keyboard,
 )
-from app.bot.subscriptions import format_subscription, invalidate_remnawave_snapshot
+from app.bot.subscriptions import (
+    invalidate_remnawave_snapshot,
+    remnawave_subscription_snapshot,
+    render_subscription_text,
+    subscription_markup,
+)
 from app.domain.models import PaymentIntent, User
 from app.services.payments.crystalpay import crystal_credentials, crystal_invoice_info, crystalpay_process_paid_invoice
 from app.services.payments.cryptobot import cryptobot_api_base, cryptobot_get_invoice_by_id, cryptobot_process_paid_invoice
@@ -235,5 +239,6 @@ def handle_payment_check(chat_id: int, message_id: int, user: User, state: BotUs
         edit_message(chat_id, message_id, t(state, "payment_pending"), keyboard([[(t(state, "check_payment"), f"checkpay_{intent.id}")], [(t(state, "back_menu"), "menu")]]))
         return
     invalidate_remnawave_snapshot(user.id)
-    text_out, _ = format_subscription(user, state, force_refresh=True)
-    edit_message(chat_id, message_id, f"{t(state, 'payment_ok')}\n\n{t(state, 'sub_activated')}\n\n" + text_out, subscription_keyboard(state))
+    snapshot = remnawave_subscription_snapshot(user, force_refresh=True)
+    text_out, _ = render_subscription_text(snapshot, state)
+    edit_message(chat_id, message_id, f"{t(state, 'payment_ok')}\n\n{t(state, 'sub_activated')}\n\n" + text_out, subscription_markup(snapshot, state))

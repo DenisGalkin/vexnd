@@ -1,0 +1,428 @@
+{%- set happ_url = 'https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973' if html_lang.startswith('ru') else 'https://apps.apple.com/us/app/happ-proxy-utility/id6504287215' -%}
+{%- set happ_url_ru = 'https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973' -%}
+{%- set happ_url_global = 'https://apps.apple.com/us/app/happ-proxy-utility/id6504287215' -%}
+{%- set devices = {
+  'ios': {
+    'code': 'ios',
+    'name': 'iOS',
+    'title': 'iOS',
+    'badge': 'iOS',
+    'app_name': 'Happ',
+    'download_url': happ_url,
+    'download_url_ru': happ_url_ru,
+    'download_url_global': happ_url_global,
+    'deep_link_scheme': 'happ',
+    'download_label': _('Скачать в App Store'),
+    'instruction': _('Установите Happ, затем вернитесь сюда и добавьте подписку одной кнопкой.'),
+    'final_hint': _('Откройте Happ, выберите сервер и нажмите «Подключиться».'),
+  },
+  'android': {
+    'code': 'android',
+    'name': 'Android',
+    'title': _('Android'),
+    'badge': 'Android',
+    'app_name': 'v2RayTun',
+    'app_store': 'Google Play',
+    'download_url': 'https://play.google.com/store/apps/details?id=com.v2raytun.android',
+    'deep_link_scheme': 'v2raytun',
+    'download_label': _('Скачать в Google Play'),
+    'instruction': _('Установите v2RayTun и импортируйте подписку через диплинк.'),
+    'final_hint': _('Откройте v2RayTun, выберите сервер и нажмите «Подключиться».'),
+  },
+  'windows': {
+    'code': 'windows',
+    'name': 'Windows',
+    'title': _('Windows'),
+    'badge': 'Windows',
+    'app_name': 'FlClashX',
+    'app_store': 'Windows',
+    'download_url': 'https://github.com/pluralplay/FlClashX/releases/latest/download/FlClashX-windows-amd64-setup.exe',
+    'deep_link_scheme': 'flclashx',
+    'download_label': _('Скачать для Windows'),
+    'instruction': _('Установите FlClashX, затем добавьте подписку автоматически по кнопке.'),
+    'final_hint': _('Откройте FlClashX, выберите сервер и нажмите «Подключиться».'),
+  },
+  'macos': {
+    'code': 'macos',
+    'name': 'macOS',
+    'title': _('macOS'),
+    'badge': 'macOS',
+    'app_name': 'FlClashX',
+    'app_store': 'macOS',
+    'download_url': 'https://github.com/pluralplay/FlClashX/releases/download/v0.3.2/FlClashX-macos-arm64.dmg',
+    'deep_link_scheme': 'flclashx',
+    'download_label': _('Скачать для macOS'),
+    'instruction': _('Установите FlClashX и импортируйте подписку через системный диплинк.'),
+    'final_hint': _('Откройте FlClashX, выберите сервер и нажмите «Подключиться».'),
+  },
+  'linux': {
+    'code': 'linux',
+    'name': 'Linux',
+    'title': _('Linux'),
+    'badge': 'Linux',
+    'app_name': 'FlClashX',
+    'app_store': 'Linux',
+    'download_url': 'https://github.com/pluralplay/FlClashX/releases',
+    'deep_link_scheme': 'flclashx',
+    'download_label': _('Открыть релизы для Linux'),
+    'instruction': _('Скачайте Linux-версию FlClashX из релизов и вернитесь, чтобы добавить подписку.'),
+    'final_hint': _('Откройте FlClashX, выберите сервер и нажмите «Подключиться».'),
+  },
+} -%}
+{%- set wizard_config = {
+  'hasActiveSubscription': is_active and subscription_url,
+  'subscriptionUrl': subscription_url or '',
+  'pricingUrl': url_lang('pricing'),
+  'openAppUrl': url_for('open_app'),
+  'devices': devices,
+  'labels': {
+    'deviceDetected': _('Мы определили'),
+    'deviceManual': _('Выберите вручную, если определили неверно'),
+    'stepContinue': _('Продолжить'),
+    'stepBack': _('Назад'),
+    'stepInstalled': _('Приложение установлено'),
+    'stepImported': _('Подписка добавлена'),
+    'stepAdd': _('Добавить подписку'),
+    'stepCopy': _('Скопировать ссылку'),
+    'stepHelp': _('Если кнопка не сработала, скопируйте ссылку и импортируйте ее вручную в приложении.'),
+    'stepReadyTitle': _('Готово'),
+    'stepReadyBody': _('Подписка добавлена. Остался последний шаг.'),
+    'stepInactiveTitle': _('Подписка не активна'),
+    'stepInactiveBody': _('Чтобы добавить подписку в приложение, сначала выберите тариф.'),
+    'stepInactiveCta': _('Выбрать тариф'),
+    'step1Title': _('Ваше устройство'),
+    'step2Title': _('Рекомендуемое приложение'),
+    'step3Title': _('Добавление подписки'),
+    'step4Title': _('Подключение завершено'),
+    'stepperDevice': _('Устройство'),
+    'stepperApp': _('Приложение'),
+    'stepperSubscription': _('Подписка'),
+    'stepperDone': _('Готово'),
+    'detectedSuffix': _('определено автоматически'),
+    'manualSelected': _('выбрано вручную'),
+    'copied': _('Ссылка скопирована'),
+    'copyDefault': _('Скопировать ссылку'),
+  },
+} -%}
+
+<div
+  class="overview-shell connection-shell"
+  data-connection-wizard
+  data-config='{{ wizard_config|tojson|safe }}'
+>
+  <section class="overview-panel glass-effect connection-wizard__hero">
+    <div>
+      <p class="overview-panel__eyebrow connection-wizard__eyebrow">{{ _('Подключение') }}</p>
+      <h2 class="overview-panel__title connection-wizard__title">{{ _('Настройте устройство в несколько шагов') }}</h2>
+      <p class="overview-panel__meta connection-wizard__subtitle">{{ _('Просто следуйте шагам и все получится!') }}</p>
+    </div>
+  </section>
+
+  <section class="overview-panel overview-panel--next glass-effect connection-wizard__stepper-panel">
+    <h3 class="overview-panel__section-title">{{ _('Шаги подключения') }}</h3>
+    <div class="connection-wizard__stepper" aria-label="{{ _('Шаги подключения') }}">
+      <button type="button" class="connection-step is-current" data-stepper-item data-step="1">
+        <span class="connection-step__marker"><span class="connection-step__index">1</span><span class="connection-step__check">✓</span></span>
+        <span class="connection-step__label">{{ _('Устройство') }}</span>
+      </button>
+      <span class="connection-step__line"></span>
+      <button type="button" class="connection-step" data-stepper-item data-step="2">
+        <span class="connection-step__marker"><span class="connection-step__index">2</span><span class="connection-step__check">✓</span></span>
+        <span class="connection-step__label">{{ _('Приложение') }}</span>
+      </button>
+      <span class="connection-step__line"></span>
+      <button type="button" class="connection-step" data-stepper-item data-step="3">
+        <span class="connection-step__marker"><span class="connection-step__index">3</span><span class="connection-step__check">✓</span></span>
+        <span class="connection-step__label">{{ _('Подписка') }}</span>
+      </button>
+      <span class="connection-step__line"></span>
+      <button type="button" class="connection-step" data-stepper-item data-step="4">
+        <span class="connection-step__marker"><span class="connection-step__index">4</span><span class="connection-step__check">✓</span></span>
+        <span class="connection-step__label">{{ _('Готово') }}</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="overview-panel glass-effect connection-wizard__panel">
+    <div class="connection-wizard__screen" data-wizard-screen="1">
+      <div class="connection-screen__header">
+        <p class="connection-screen__kicker">{{ _('Шаг 1') }}</p>
+        <h3 class="connection-screen__title">{{ _('Ваше устройство') }}</h3>
+      </div>
+
+      <div class="connection-empty-state" data-inactive-step1-card hidden>
+        <div class="connection-empty-state__icon">!</div>
+        <h4 class="connection-empty-state__title">{{ _('Подписка не активна') }}</h4>
+        <p class="connection-empty-state__text">{{ _('Чтобы добавить подписку в приложение, сначала выберите тариф.') }}</p>
+        <div class="connection-screen__actions connection-screen__actions--spaced">
+          <a href="{{ url_lang('pricing') }}" class="overview-chip overview-chip--primary connection-action" data-choose-plan>{{ _('Выбрать тариф') }}</a>
+        </div>
+      </div>
+
+      <div data-active-step1-content>
+        <div class="connection-device-card">
+          <div class="connection-device-card__eyebrow">{{ _('Текущее устройство') }}</div>
+          <div class="connection-device-card__title" data-device-title>{{ _('macOS') }}</div>
+          <div class="connection-device-card__meta" data-device-source>{{ _('определено автоматически') }}</div>
+        </div>
+        <div class="connection-choice-block">
+          <p class="connection-choice-block__label">{{ _('Выберите вручную, если определили неверно') }}</p>
+          <div class="connection-device-grid">
+            {% for code, device in devices.items() %}
+              <button type="button" class="connection-device-chip{% if code == 'macos' %} is-selected{% endif %}" data-device-option data-device="{{ code }}">
+                {{ device.name }}
+              </button>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="connection-screen__actions">
+          <button type="button" class="overview-chip overview-chip--primary connection-action" data-step-next>{{ _('Продолжить') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="connection-wizard__screen" data-wizard-screen="2" hidden>
+      <div class="connection-screen__header">
+        <p class="connection-screen__kicker">{{ _('Шаг 2') }}</p>
+        <h3 class="connection-screen__title">{{ _('Рекомендуемое приложение') }}</h3>
+      </div>
+      <div class="connection-app-card">
+        <div class="connection-app-card__top">
+          <div>
+            <div class="connection-app-card__label">{{ _('Для вашего устройства') }}</div>
+            <div class="connection-app-card__name" data-app-name>FlClashX</div>
+          </div>
+          <div class="connection-app-card__badge" data-app-badge>macOS</div>
+        </div>
+        <p class="connection-app-card__text" data-app-instruction>{{ _('Установите приложение и вернитесь к следующему шагу.') }}</p>
+        <div class="connection-app-card__actions">
+          <a href="{{ devices['macos']['download_url'] }}" target="_blank" rel="noopener noreferrer" class="overview-chip overview-chip--primary connection-action" data-download-link>{{ _('Скачать для macOS') }}</a>
+          <a href="{{ happ_url_ru }}" target="_blank" rel="noopener noreferrer" class="overview-chip connection-action" data-download-link-ru hidden>App Store RU</a>
+          <a href="{{ happ_url_global }}" target="_blank" rel="noopener noreferrer" class="overview-chip connection-action" data-download-link-global hidden>App Store Global</a>
+        </div>
+      </div>
+      <div class="connection-screen__actions">
+        <button type="button" class="overview-chip connection-action" data-step-prev>{{ _('Назад') }}</button>
+        <button type="button" class="overview-chip connection-action" data-step-next>{{ _('Приложение установлено') }}</button>
+      </div>
+    </div>
+
+    <div class="connection-wizard__screen" data-wizard-screen="3" hidden>
+      <div class="connection-screen__header">
+        <p class="connection-screen__kicker">{{ _('Шаг 3') }}</p>
+        <h3 class="connection-screen__title">{{ _('Добавление подписки') }}</h3>
+      </div>
+      <div class="connection-subscription-card" data-active-subscription-card>
+        <div class="connection-subscription-card__title">{{ _('Откройте приложение и импортируйте подписку') }}</div>
+        <p class="connection-subscription-card__text">{{ _('Кнопка ниже откроет выбранное приложение и передаст в него вашу ссылку подписки.') }}</p>
+        <div class="connection-subscription-card__link" data-subscription-value>{{ subscription_url or '—' }}</div>
+        <p class="connection-subscription-card__hint">{{ _('Если кнопка не сработала, скопируйте ссылку и импортируйте ее вручную в приложении.') }}</p>
+        <div class="connection-screen__actions">
+          <a href="{{ subscription_url or '#' }}" class="overview-chip overview-chip--primary connection-action" data-import-link target="_blank" rel="noopener noreferrer">{{ _('Добавить подписку') }}</a>
+          <button type="button" class="overview-chip connection-action" data-copy-subscription>{{ _('Скопировать ссылку') }}</button>
+          <button type="button" class="overview-chip connection-action" data-step-next>{{ _('Подписка добавлена') }}</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="connection-wizard__screen" data-wizard-screen="4" hidden>
+      <div class="connection-screen__header">
+        <p class="connection-screen__kicker">{{ _('Шаг 4') }}</p>
+        <h3 class="connection-screen__title">{{ _('Готово') }}</h3>
+      </div>
+      <div class="connection-ready-card">
+        <div class="connection-ready-card__check">✓</div>
+        <div>
+          <div class="connection-ready-card__title">{{ _('Подключение почти завершено') }}</div>
+          <p class="connection-ready-card__text" data-ready-hint>{{ _('Откройте приложение, выберите сервер и нажмите «Подключиться».') }}</p>
+        </div>
+      </div>
+      <div class="connection-screen__actions">
+        <button type="button" class="overview-chip connection-action" data-step-prev>{{ _('Назад') }}</button>
+        <a href="{{ url_lang('setup') }}" class="overview-chip connection-action">{{ _('Подробная инструкция') }}</a>
+        <a href="{{ url_lang('faq_page') }}" class="overview-chip overview-chip--primary connection-action">{{ _('Нужна помощь') }}</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-connection-wizard]').forEach(function (wizard) {
+      if (wizard.dataset.initialized === 'true') return;
+      wizard.dataset.initialized = 'true';
+
+      const config = JSON.parse(wizard.dataset.config || '{}');
+      const devices = config.devices || {};
+      const labels = config.labels || {};
+      const screens = Array.from(wizard.querySelectorAll('[data-wizard-screen]'));
+      const stepperItems = Array.from(wizard.querySelectorAll('[data-stepper-item]'));
+      const deviceButtons = Array.from(wizard.querySelectorAll('[data-device-option]'));
+      const activeSubscriptionCard = wizard.querySelector('[data-active-subscription-card]');
+      const inactiveStep1Card = wizard.querySelector('[data-inactive-step1-card]');
+      const activeStep1Content = wizard.querySelector('[data-active-step1-content]');
+      const deviceSource = wizard.querySelector('[data-device-source]');
+      const deviceTitle = wizard.querySelector('[data-device-title]');
+      const appName = wizard.querySelector('[data-app-name]');
+      const appBadge = wizard.querySelector('[data-app-badge]');
+      const appInstruction = wizard.querySelector('[data-app-instruction]');
+      const downloadLink = wizard.querySelector('[data-download-link]');
+      const downloadLinkRu = wizard.querySelector('[data-download-link-ru]');
+      const downloadLinkGlobal = wizard.querySelector('[data-download-link-global]');
+      const importLink = wizard.querySelector('[data-import-link]');
+      const subscriptionValue = wizard.querySelector('[data-subscription-value]');
+      const copyButton = wizard.querySelector('[data-copy-subscription]');
+      const readyHint = wizard.querySelector('[data-ready-hint]');
+      const openAppUrl = config.openAppUrl || '';
+      const subscriptionUrl = config.subscriptionUrl || '';
+      const hasActiveSubscription = Boolean(config.hasActiveSubscription);
+      let selectedDevice = detectDevice();
+      let selectedManually = false;
+      let currentStep = 1;
+
+      function detectDevice() {
+        const ua = navigator.userAgent || '';
+        const platform = navigator.platform || '';
+        if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
+        if (/Android/i.test(ua)) return 'android';
+        if (/Win/i.test(platform) || /Windows/i.test(ua)) return 'windows';
+        if (/Mac/i.test(platform) || /Mac OS X/i.test(ua)) return 'macos';
+        if (/Linux/i.test(platform) || /Linux/i.test(ua) || /X11/i.test(platform)) return 'linux';
+        return 'macos';
+      }
+
+      function deepLinkFor(device) {
+        const deviceMeta = devices[device] || devices.macos;
+        if (!subscriptionUrl) return '#';
+        if (deviceMeta.deep_link_scheme === 'happ') {
+          return 'happ://add/' + subscriptionUrl;
+        }
+        if (deviceMeta.deep_link_scheme === 'v2raytun') {
+          return 'v2raytun://import/' + subscriptionUrl;
+        }
+        if (deviceMeta.deep_link_scheme === 'flclashx') {
+          return 'flclashx://install-config?url=' + encodeURIComponent(subscriptionUrl);
+        }
+        return subscriptionUrl;
+      }
+
+      function openAppLink(device) {
+        const deviceMeta = devices[device] || devices.macos;
+        const target = deepLinkFor(device);
+        const params = new URLSearchParams();
+        params.set('target', target);
+        if (deviceMeta.download_url) params.set('fallback', deviceMeta.download_url);
+        return openAppUrl + '?' + params.toString();
+      }
+
+      function renderDevice() {
+        const deviceMeta = devices[selectedDevice] || devices.macos;
+        deviceSource.textContent = selectedManually ? labels.manualSelected : labels.detectedSuffix;
+        deviceTitle.textContent = deviceMeta.title;
+        appName.textContent = deviceMeta.app_name;
+        appBadge.textContent = deviceMeta.badge;
+        appInstruction.textContent = deviceMeta.instruction;
+        if (deviceMeta.download_url_ru && deviceMeta.download_url_global) {
+          downloadLink.hidden = true;
+          downloadLinkRu.hidden = false;
+          downloadLinkGlobal.hidden = false;
+          downloadLinkRu.href = deviceMeta.download_url_ru;
+          downloadLinkGlobal.href = deviceMeta.download_url_global;
+        } else {
+          downloadLink.hidden = false;
+          downloadLink.href = deviceMeta.download_url;
+          downloadLink.textContent = deviceMeta.download_label;
+          downloadLinkRu.hidden = true;
+          downloadLinkGlobal.hidden = true;
+        }
+        readyHint.textContent = deviceMeta.final_hint;
+        subscriptionValue.textContent = subscriptionUrl || '—';
+        if (importLink) importLink.href = openAppLink(selectedDevice);
+
+        deviceButtons.forEach(function (button) {
+          button.classList.toggle('is-selected', button.dataset.device === selectedDevice);
+        });
+      }
+
+      function maxReachableStep() {
+        return hasActiveSubscription ? 4 : 1;
+      }
+
+      function renderStep(step) {
+        currentStep = Math.max(1, Math.min(step, maxReachableStep()));
+
+        screens.forEach(function (screen) {
+          screen.hidden = Number(screen.dataset.wizardScreen) !== currentStep;
+        });
+
+        stepperItems.forEach(function (item) {
+          const stepNumber = Number(item.dataset.step);
+          const isDisabled = !hasActiveSubscription && stepNumber > 1;
+          item.disabled = isDisabled;
+          item.classList.toggle('is-disabled', isDisabled);
+          item.classList.toggle('is-complete', stepNumber < currentStep);
+          item.classList.toggle('is-current', stepNumber === currentStep);
+          item.classList.toggle('is-future', stepNumber > currentStep);
+        });
+
+        if (activeSubscriptionCard) {
+          activeSubscriptionCard.hidden = !hasActiveSubscription;
+        }
+        if (inactiveStep1Card) {
+          inactiveStep1Card.hidden = hasActiveSubscription;
+        }
+        if (activeStep1Content) {
+          activeStep1Content.hidden = !hasActiveSubscription;
+        }
+      }
+
+      deviceButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+          selectedDevice = button.dataset.device;
+          selectedManually = true;
+          renderDevice();
+        });
+      });
+
+      stepperItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+          const step = Number(item.dataset.step);
+          if (!item.disabled && step <= maxReachableStep()) {
+            renderStep(step);
+          }
+        });
+      });
+
+      wizard.querySelectorAll('[data-step-next]').forEach(function (control) {
+        control.addEventListener('click', function () {
+          renderStep(currentStep + 1);
+        });
+      });
+
+      wizard.querySelectorAll('[data-step-prev]').forEach(function (control) {
+        control.addEventListener('click', function () {
+          renderStep(currentStep - 1);
+        });
+      });
+
+      if (copyButton) {
+        copyButton.addEventListener('click', async function () {
+          if (!subscriptionUrl) return;
+          try {
+            await navigator.clipboard.writeText(subscriptionUrl);
+            copyButton.textContent = labels.copied || 'Copied';
+            window.setTimeout(function () {
+              copyButton.textContent = labels.copyDefault || 'Copy';
+            }, 1800);
+          } catch (_error) {
+            if (typeof copyText === 'function') copyText(subscriptionUrl, copyButton);
+          }
+        });
+      }
+
+      renderDevice();
+      renderStep(currentStep);
+    });
+  });
+</script>

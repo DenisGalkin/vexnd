@@ -73,8 +73,22 @@ def plans_keyboard(state: BotUserState, user: User | None = None) -> dict[str, o
     return keyboard(rows)
 
 
-def subscription_keyboard(state: BotUserState) -> dict[str, object]:
-    return keyboard([[(t(state, "subscription_connect"), "connect"), (t(state, "subscription_qr"), "subscription_qr")], [(t(state, "subscription_refresh"), "subscription_refresh")], [(t(state, "back_menu"), "menu")]])
+def subscription_keyboard(state: BotUserState, has_active_subscription: bool = True) -> dict[str, object]:
+    if not has_active_subscription:
+        return keyboard(
+            [
+                [(t(state, "subscription_buy"), "plans")],
+                [(t(state, "subscription_refresh"), "subscription_refresh")],
+                [(t(state, "back_menu"), "menu")],
+            ]
+        )
+    return keyboard(
+        [
+            [(t(state, "subscription_connect"), "connect"), (t(state, "subscription_qr"), "subscription_qr")],
+            [(t(state, "subscription_refresh"), "subscription_refresh")],
+            [(t(state, "back_menu"), "menu")],
+        ]
+    )
 
 
 def qr_keyboard(state: BotUserState) -> dict[str, object]:

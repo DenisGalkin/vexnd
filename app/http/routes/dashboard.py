@@ -16,7 +16,7 @@ from app.bot.common import format_bytes
 from app.bot.models import TelegramAccount
 from app.bot.subscriptions import local_subscription_snapshot, remnawave_subscription_snapshot, snapshot_has_missing_remote_subscription
 from app.core.extensions import db
-from app.domain.models import PaymentIntent, ReferralSignup, Subscription, User
+from app.domain.models import PaymentIntent, ReferralSignup, Subscription, User, UserNotificationPreference
 from app.domain.plans import format_usd_amount, plan_details, plan_duration_label
 from app.services.coupons import coupon_pricing, intent_pricing, normalize_coupon_code
 from app.services.email_change_otp import get_pending_email_change
@@ -55,18 +55,6 @@ def _dashboard_security_context() -> dict[str, object]:
 def _requested_partial_targets() -> list[str]:
     header = request.headers.get("X-Partial-Update", "")
     return [target.strip() for target in header.split(",") if target.strip()]
-
-
-def _partials_require_subscription_refresh(partial_targets: list[str]) -> bool:
-    return bool(
-        {
-            "tab-settings",
-            "dashboard-banner",
-            "subscription-overview",
-            "subscription-access",
-            "section-billing",
-        }.intersection(partial_targets)
-    )
 
 
 def _build_dashboard_referrals_context() -> dict[str, object]:
@@ -177,6 +165,8 @@ def _build_dashboard_settings_context() -> dict[str, object]:
             "command": f"/start {start_value}",
         }
 
+    notification_preferences = UserNotificationPreference.query.filter_by(user_id=current_user.id).first()
+
     return {
         "transactions": transactions,
         "sessions": sessions,
@@ -185,9 +175,9 @@ def _build_dashboard_settings_context() -> dict[str, object]:
         "pending_email_change": pending_email_change,
         "pending_email_change_masked": mask_email(pending_email_change.new_email) if pending_email_change else None,
         "email_change_otp_ttl_minutes": OTP_TTL_MINUTES,
-        "notify_expiry": False,
-        "notify_maintenance": False,
-        "notify_news": False,
+        "notify_expiry": bool(notification_preferences.notify_expiry) if notification_preferences else False,
+        "notify_maintenance": bool(notification_preferences.notify_maintenance) if notification_preferences else False,
+        "notify_news": bool(notification_preferences.notify_news) if notification_preferences else False,
         **security_context,
     }
 
@@ -266,23 +256,6 @@ def _build_dashboard_subscription_context(*, force_remote_refresh: bool = False)
         "has_subscription_record": has_subscription_record,
         "is_active": is_active,
     }
-
-
-def _render_dashboard_billing_section(
-    subscription_context: dict[str, Any] | None = None,
-    settings_context: dict[str, Any] | None = None,
-) -> str:
-    if subscription_context is None:
-        subscription_context = _build_dashboard_subscription_context()
-    if settings_context is None:
-        settings_context = _build_dashboard_settings_context()
-    return render_template(
-        "dashboard/_billing_section.html",
-        **subscription_context,
-        **settings_context,
-    )
-
-
 @login_required
 def dashboard():
     partial_targets = _requested_partial_targets()
@@ -308,12 +281,6 @@ def dashboard():
                 db.session.rollback()
             except Exception:
                 pass
-    force_remote_refresh = (
-        request.args.get("sync_subscription") == "1"
-        or not partial_targets
-        or _partials_require_subscription_refresh(partial_targets)
-    )
-    subscription_context = _build_dashboard_subscription_context(force_remote_refresh=force_remote_refresh)
     if partial_targets:
         fragments: dict[str, str] = {}
         referral_context: dict[str, object] | None = None
@@ -323,39 +290,18 @@ def dashboard():
                 if referral_context is None:
                     referral_context = _build_dashboard_referrals_context()
                 fragments[target] = render_template("dashboard/_referrals_tab.html", **referral_context)
-            elif target == "tab-settings":
-                if settings_context is None:
-                    settings_context = _build_dashboard_settings_context()
-                fragments[target] = render_template(
-                    "dashboard/_settings_tab.html",
-                    **subscription_context,
-                    **settings_context,
-                )
-            elif target == "dashboard-banner":
-                fragments[target] = render_template("dashboard/_banner.html", **subscription_context)
-            elif target == "subscription-overview":
-                fragments[target] = render_template("dashboard/_subscription_overview.html", **subscription_context)
-            elif target == "subscription-access":
-                fragments[target] = render_template("dashboard/_subscription_access.html", **subscription_context)
-            elif target == "section-billing":
-                if settings_context is None:
-                    settings_context = _build_dashboard_settings_context()
-                fragments[target] = _render_dashboard_billing_section(subscription_context, settings_context)
             elif target == "section-account":
                 if settings_context is None:
                     settings_context = _build_dashboard_settings_context()
-                account_context = {
-                    "telegram_auth": settings_context["telegram_auth"],
-                    "pending_email_change": settings_context["pending_email_change"],
-                    "pending_email_change_masked": settings_context["pending_email_change_masked"],
-                    "email_change_otp_ttl_minutes": settings_context["email_change_otp_ttl_minutes"],
-                    **settings_context,
-                }
-                fragments[target] = render_template("account/_account_section.html", **account_context)
+                fragments[target] = render_template("account/_account_section.html", **settings_context)
             elif target == "section-security":
                 if settings_context is None:
                     settings_context = _build_dashboard_settings_context()
                 fragments[target] = render_template("account/_security_section.html", **settings_context)
+            elif target == "password-reset-panel":
+                if settings_context is None:
+                    settings_context = _build_dashboard_settings_context()
+                fragments[target] = render_template("account/_password_reset_panel.html", **settings_context)
             elif target == "section-devices":
                 if settings_context is None:
                     settings_context = _build_dashboard_settings_context()
@@ -364,14 +310,16 @@ def dashboard():
             {
                 "ok": True,
                 "fragments": fragments,
-                "subscription_sync_pending": bool(subscription_context.get("subscription_sync_pending")),
             }
         )
+    force_remote_refresh = request.args.get("sync_subscription") == "1" or not partial_targets
+    subscription_context = _build_dashboard_subscription_context(force_remote_refresh=force_remote_refresh)
+    referral_context = _build_dashboard_referrals_context()
+    settings_context = _build_dashboard_settings_context()
     return render_template(
         "dashboard.html",
-        notify_expiry=False,
-        notify_maintenance=False,
-        notify_news=False,
+        **referral_context,
+        **settings_context,
         **subscription_context,
     )
 
