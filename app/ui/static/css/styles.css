@@ -751,14 +751,28 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     right: 0;
     bottom: 0;
     z-index: 40;
+    padding: 0 .85rem calc(.9rem + env(safe-area-inset-bottom, 0px));
+    pointer-events: none;
+}
+
+.dashboard-bottom-nav__track {
+    width: min(100%, 32rem);
+    margin: 0 auto;
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: .5rem;
-    padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom, 0px));
-    border-top: 1px solid rgba(255,255,255,.08);
-    background: rgba(2,6,23,.94);
-    backdrop-filter: blur(18px);
-    box-shadow: 0 -10px 30px rgba(2,6,23,.28);
+    gap: .35rem;
+    padding: .5rem;
+    border: 1px solid rgba(148,163,184,.16);
+    border-radius: 1.7rem;
+    background:
+        linear-gradient(180deg, rgba(15,23,42,.92), rgba(2,6,23,.96)),
+        rgba(2,6,23,.96);
+    box-shadow:
+        0 14px 40px rgba(2,6,23,.42),
+        inset 0 1px 0 rgba(255,255,255,.04);
+    backdrop-filter: blur(22px) saturate(140%);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    pointer-events: auto;
 }
 
 .dashboard-bottom-nav__item {
@@ -766,36 +780,41 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: .35rem;
-    min-height: 4rem;
-    padding: .55rem .25rem;
-    border-radius: 1rem;
+    gap: .28rem;
+    min-height: 4.1rem;
+    padding: .62rem .2rem .58rem;
+    border-radius: 1.2rem;
     border: 1px solid transparent;
-    color: rgba(203,213,225,.76);
-    transition: background-color .18s ease, color .18s ease, border-color .18s ease;
+    color: rgba(148,163,184,.92);
+    transition: background-color .18s ease, color .18s ease, border-color .18s ease, transform .18s ease;
 }
 
 .dashboard-bottom-nav__item.active {
-    background: rgba(0,96,251,.16);
-    border-color: rgba(96,165,250,.2);
+    background: linear-gradient(180deg, rgba(9,31,82,.92), rgba(6,23,63,.96));
+    border-color: rgba(59,130,246,.34);
     color: #fff;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.04),
+        0 10px 22px rgba(0,96,251,.22);
 }
 
 .dashboard-bottom-nav__icon {
-    width: 1.3rem;
-    height: 1.3rem;
+    width: 1.45rem;
+    height: 1.45rem;
 }
 
 .dashboard-bottom-nav__icon svg {
     display: block;
     width: 100%;
     height: 100%;
+    stroke-width: 1.9;
 }
 
 .dashboard-bottom-nav__label {
-    font-size: .68rem;
+    font-size: .72rem;
     line-height: 1.1;
-    font-weight: 700;
+    font-weight: 600;
+    letter-spacing: -.01em;
     text-align: center;
 }
 
@@ -2363,7 +2382,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 @media (max-width: 640px) {
     .dashboard-app {
-        padding-bottom: calc(5.9rem + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(6.7rem + env(safe-area-inset-bottom, 0px));
     }
 
     .dashboard-mobile-summary {
@@ -2379,17 +2398,22 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     }
 
     .dashboard-bottom-nav {
-        gap: .35rem;
-        padding-inline: .75rem;
+        padding-inline: .7rem;
+    }
+
+    .dashboard-bottom-nav__track {
+        gap: .22rem;
+        padding: .42rem;
+        border-radius: 1.45rem;
     }
 
     .dashboard-bottom-nav__item {
-        min-height: 3.75rem;
-        border-radius: .95rem;
+        min-height: 3.95rem;
+        border-radius: 1rem;
     }
 
     .dashboard-bottom-nav__label {
-        font-size: .64rem;
+        font-size: .67rem;
     }
 
     .settings-hub {
@@ -2613,8 +2637,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 
 @media (max-width: 420px) {
+    .dashboard-bottom-nav__track {
+        gap: .12rem;
+        padding: .36rem;
+    }
+
     .dashboard-bottom-nav__label {
         font-size: .6rem;
+    }
+
+    .dashboard-bottom-nav__icon {
+        width: 1.3rem;
+        height: 1.3rem;
     }
 
     .connection-device-grid {

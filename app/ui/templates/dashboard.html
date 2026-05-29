@@ -83,55 +83,57 @@
 </div>
 
 <nav class="dashboard-bottom-nav lg:hidden" aria-label="{{ _('Разделы кабинета') }}">
-  <button type="button" class="dashboard-bottom-nav__item dashboard-nav-control active" data-target="overview" aria-label="{{ _('Обзор') }}">
-    <span class="dashboard-bottom-nav__icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 12 12 4l9 8"></path>
-        <path d="M5 10v10h14V10"></path>
-      </svg>
-    </span>
-    <span class="dashboard-bottom-nav__label">{{ _('Обзор') }}</span>
-  </button>
-  <button type="button" class="dashboard-bottom-nav__item dashboard-nav-control" data-target="subscription" aria-label="{{ _('Подписка') }}">
-    <span class="dashboard-bottom-nav__icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="6" width="18" height="12" rx="3"></rect>
-        <path d="M7 12h10"></path>
-      </svg>
-    </span>
-    <span class="dashboard-bottom-nav__label">{{ _('Подписка') }}</span>
-  </button>
-  <button type="button" class="dashboard-bottom-nav__item dashboard-nav-control" data-target="connection" aria-label="{{ _('Подключение') }}">
-    <span class="dashboard-bottom-nav__icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 18h.01"></path>
-        <path d="M8.5 14.5a5 5 0 0 1 7 0"></path>
-        <path d="M5.5 11.5a9 9 0 0 1 13 0"></path>
-        <path d="M2.5 8.5a13 13 0 0 1 19 0"></path>
-      </svg>
-    </span>
-    <span class="dashboard-bottom-nav__label">{{ _('Подключение') }}</span>
-  </button>
-  <button type="button" class="dashboard-bottom-nav__item dashboard-nav-control" data-target="referrals" aria-label="{{ _('Рефералы') }}">
-    <span class="dashboard-bottom-nav__icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-        <circle cx="9" cy="7" r="4"></circle>
-        <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-      </svg>
-    </span>
-    <span class="dashboard-bottom-nav__label">{{ _('Рефералы') }}</span>
-  </button>
-  <button type="button" class="dashboard-bottom-nav__item dashboard-nav-control" data-target="settings" aria-label="{{ _('Настройки') }}">
-    <span class="dashboard-bottom-nav__icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"></circle>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 8.92 4.6H9A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.36.15.75.23 1.14.23H21a2 2 0 0 1 0 4h-.09c-.39 0-.78.08-1.14.23Z"></path>
-      </svg>
-    </span>
-    <span class="dashboard-bottom-nav__label">{{ _('Настройки') }}</span>
-  </button>
+  <div class="dashboard-bottom-nav__track">
+    <button type="button" class="dashboard-bottom-nav__item dashboard-nav-control active" data-target="overview" aria-label="{{ _('Обзор') }}">
+      <span class="dashboard-bottom-nav__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12 12 4l9 8"></path>
+          <path d="M5 10v10h14V10"></path>
+        </svg>
+      </span>
+      <span class="dashboard-bottom-nav__label">{{ _('Обзор') }}</span>
+    </button>
+    <button type="button" class="dashboard-bottom-nav__item dashboard-nav-control" data-target="subscription" aria-label="{{ _('Подписка') }}">
+      <span class="dashboard-bottom-nav__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="6" width="18" height="12" rx="3"></rect>
+          <path d="M7 12h10"></path>
+        </svg>
+      </span>
+      <span class="dashboard-bottom-nav__label">{{ _('Подписка') }}</span>
+    </button>
+    <button type="button" class="dashboard-bottom-nav__item dashboard-nav-control" data-target="connection" aria-label="{{ _('Подключение') }}">
+      <span class="dashboard-bottom-nav__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 18h.01"></path>
+          <path d="M8.5 14.5a5 5 0 0 1 7 0"></path>
+          <path d="M5.5 11.5a9 9 0 0 1 13 0"></path>
+          <path d="M2.5 8.5a13 13 0 0 1 19 0"></path>
+        </svg>
+      </span>
+      <span class="dashboard-bottom-nav__label">{{ _('Подключение') }}</span>
+    </button>
+    <button type="button" class="dashboard-bottom-nav__item dashboard-nav-control" data-target="referrals" aria-label="{{ _('Рефералы') }}">
+      <span class="dashboard-bottom-nav__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      </span>
+      <span class="dashboard-bottom-nav__label">{{ _('Рефералы') }}</span>
+    </button>
+    <button type="button" class="dashboard-bottom-nav__item dashboard-nav-control" data-target="settings" aria-label="{{ _('Настройки') }}">
+      <span class="dashboard-bottom-nav__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 8.92 4.6H9A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.36.15.75.23 1.14.23H21a2 2 0 0 1 0 4h-.09c-.39 0-.78.08-1.14.23Z"></path>
+        </svg>
+      </span>
+      <span class="dashboard-bottom-nav__label">{{ _('Настройки') }}</span>
+    </button>
+  </div>
 </nav>
 
 <script>
