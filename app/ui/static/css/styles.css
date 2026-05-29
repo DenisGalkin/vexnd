@@ -831,6 +831,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     gap: 1rem;
 }
 
+.connection-wizard__mobile-summary,
+.connection-wizard__mobile-progress-text {
+    display: none;
+}
+
 .connection-wizard__eyebrow {
     margin: 0;
 }
@@ -2407,7 +2412,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
     .overview-panel__title {
         margin-top: .4rem;
-        font-size: clamp(1.2rem, 5.8vw, 1.5rem);
+        font-size: clamp(1.3rem, 6.1vw, 1.62rem);
         line-height: 1.16;
     }
 
@@ -2451,7 +2456,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     }
 
     .overview-panel__section-title {
-        font-size: 1.15rem;
+        font-size: 1.28rem;
         line-height: 1.22;
     }
 
@@ -2499,7 +2504,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     .referrals-hero .overview-panel__title,
     .connection-wizard__hero .overview-panel__title,
     .overview-shell > .overview-panel:first-child .overview-panel__title {
-        font-size: clamp(1.15rem, 5.4vw, 1.42rem);
+        font-size: clamp(1.24rem, 5.8vw, 1.54rem);
         line-height: 1.18;
     }
 
@@ -2517,7 +2522,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     }
 
     .connection-screen__title {
-        font-size: 1.05rem;
+        font-size: 1.16rem;
         line-height: 1.22;
     }
 
@@ -2526,7 +2531,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     .connection-subscription-card__title,
     .connection-ready-card__title,
     .connection-empty-state__title {
-        font-size: 1rem;
+        font-size: 1.08rem;
         line-height: 1.24;
     }
 
@@ -2545,7 +2550,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     }
 
     .subscription-history__title {
-        font-size: .9rem;
+        font-size: .96rem;
         line-height: 1.25;
     }
 
@@ -2728,19 +2733,120 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
         flex-direction: column;
     }
 
-    .connection-wizard__hero,
     .connection-wizard__panel {
         padding: 1.1rem;
     }
 
+    .connection-wizard__hero {
+        display: none;
+    }
+
     .connection-wizard__stepper-panel {
-        padding: 1rem;
+        position: relative;
+        overflow: hidden;
+        padding: 1.15rem;
+        gap: .85rem;
+        border-radius: 1.2rem;
+        border: 1px solid var(--dash-border);
+        background: var(--dash-surface);
+        box-shadow: none;
+    }
+
+    .connection-wizard__mobile-summary,
+    .connection-wizard__mobile-progress-text {
+        display: block;
+    }
+
+    .connection-wizard__mobile-kicker,
+    .connection-wizard__mobile-progress-text {
+        margin: 0;
+        color: rgba(203,213,225,.78);
+    }
+
+    .connection-wizard__mobile-kicker {
+        font-size: .7rem;
+        line-height: .9rem;
+        letter-spacing: 0;
+        text-transform: none;
+        font-weight: 500;
+        color: rgba(147,197,253,.95);
+    }
+
+    .connection-wizard__mobile-title {
+        margin: .4rem 0 0;
+        color: #fff;
+        font-size: clamp(1.24rem, 5.8vw, 1.54rem);
+        line-height: 1.18;
+        font-weight: 500;
+        max-width: 16rem;
+    }
+
+    .connection-wizard__stepper-panel .overview-panel__section-title {
+        display: none;
+    }
+
+    .connection-wizard__mobile-progress-text {
+        margin-top: .55rem;
+        font-size: .88rem;
+        line-height: 1.32;
+        font-weight: 500;
+        color: #fff;
+    }
+
+    .connection-wizard__stepper {
+        flex-direction: row;
+        align-items: center;
+        gap: .55rem;
+        width: fit-content;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        opacity: .96;
     }
 
     .connection-step__label {
-        white-space: normal;
-        overflow: visible;
-        text-overflow: initial;
+        display: none;
+    }
+
+    .connection-step {
+        width: auto;
+        flex: 0 0 auto;
+        gap: 0;
+    }
+
+    .connection-step__marker {
+        width: .92rem;
+        height: .92rem;
+        border: 1.5px solid rgba(148,163,184,.56);
+        background: rgba(255,255,255,.03);
+        color: transparent;
+    }
+
+    .connection-step__index,
+    .connection-step__check {
+        display: none !important;
+    }
+
+    .connection-step.is-current .connection-step__marker {
+        background: rgba(255,255,255,.92);
+        border-color: rgba(255,255,255,.92);
+        box-shadow: none;
+    }
+
+    .connection-step.is-complete .connection-step__marker {
+        background: rgba(226,232,240,.32);
+        border-color: rgba(203,213,225,.6);
+        color: transparent;
+    }
+
+    .connection-step__line {
+        display: block;
+        width: 1.4rem;
+        min-width: 1.4rem;
+        height: 2px;
+        flex: 0 0 auto;
+        background: rgba(148,163,184,.34);
     }
 
     .connection-device-grid {

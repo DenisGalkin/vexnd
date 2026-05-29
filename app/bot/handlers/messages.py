@@ -7,6 +7,7 @@ from app.bot.common import (
     get_or_create_account,
     get_or_create_state,
     h,
+    send_screen,
     send_message,
     t,
     utc_now,
@@ -168,7 +169,7 @@ def handle_message(message: dict[str, object]) -> None:
             return
 
         if text.startswith("/start"):
-            send_message(chat_id, t(state, "menu_title"), main_menu(state, user))
+            send_screen(chat_id, "menu", t(state, "menu_title"), main_menu(state, user))
             return
         if text.startswith("/admin"):
             if not is_admin:
@@ -177,7 +178,7 @@ def handle_message(message: dict[str, object]) -> None:
             send_message(chat_id, _admin_panel_text(state), admin_panel_keyboard(state))
             return
         if text.startswith("/plans"):
-            send_message(chat_id, t(state, "choose_plan"), plans_keyboard(state, user))
+            send_screen(chat_id, "payment", t(state, "choose_plan"), plans_keyboard(state, user))
             return
         if text.startswith("/help"):
             send_message(chat_id, t(state, "help_text"), help_keyboard(state))
@@ -186,7 +187,7 @@ def handle_message(message: dict[str, object]) -> None:
             has_local_data = user_has_local_subscription_data(user)
             snapshot = remnawave_subscription_snapshot(user, schedule_async_refresh=not has_local_data)
             text_out, _ = render_subscription_text(snapshot, state)
-            result = send_message(chat_id, text_out, subscription_markup(snapshot, state))
+            result = send_screen(chat_id, "subscription", text_out, subscription_markup(snapshot, state))
             if has_local_data:
                 message = (result or {}).get("result") if isinstance(result, dict) else None
                 message_id = (message or {}).get("message_id") if isinstance(message, dict) else None
@@ -194,4 +195,4 @@ def handle_message(message: dict[str, object]) -> None:
                     schedule_subscription_message_refresh(user, state, chat_id, int(message_id), text_out)
             return
 
-        send_message(chat_id, t(state, "menu_title"), main_menu(state, user))
+        send_screen(chat_id, "menu", t(state, "menu_title"), main_menu(state, user))

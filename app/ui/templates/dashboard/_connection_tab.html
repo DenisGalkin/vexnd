@@ -98,6 +98,8 @@
     'stepperApp': _('Приложение'),
     'stepperSubscription': _('Подписка'),
     'stepperDone': _('Готово'),
+    'stepWord': _('Шаг'),
+    'ofWord': _('из'),
     'detectedSuffix': _('определено автоматически'),
     'manualSelected': _('выбрано вручную'),
     'copied': _('Ссылка скопирована'),
@@ -119,7 +121,14 @@
   </section>
 
   <section class="overview-panel overview-panel--next glass-effect connection-wizard__stepper-panel">
+    <div class="connection-wizard__mobile-summary" aria-hidden="true">
+      <p class="connection-wizard__mobile-kicker">{{ _('Подключение') }}</p>
+      <h3 class="connection-wizard__mobile-title">{{ _('Настройте доступ') }}</h3>
+    </div>
     <h3 class="overview-panel__section-title">{{ _('Шаги подключения') }}</h3>
+    <p class="connection-wizard__mobile-progress-text">
+      <span data-step-counter>{{ _('Шаг') }} 1 {{ _('из') }} 4</span>
+    </p>
     <div class="connection-wizard__stepper" aria-label="{{ _('Шаги подключения') }}">
       <button type="button" class="connection-step is-current" data-stepper-item data-step="1">
         <span class="connection-step__marker"><span class="connection-step__index">1</span><span class="connection-step__check">✓</span></span>
@@ -274,6 +283,7 @@
       const subscriptionValue = wizard.querySelector('[data-subscription-value]');
       const copyButton = wizard.querySelector('[data-copy-subscription]');
       const readyHint = wizard.querySelector('[data-ready-hint]');
+      const stepCounter = wizard.querySelector('[data-step-counter]');
       const openAppUrl = config.openAppUrl || '';
       const subscriptionUrl = config.subscriptionUrl || '';
       const hasActiveSubscription = Boolean(config.hasActiveSubscription);
@@ -365,6 +375,10 @@
           item.classList.toggle('is-current', stepNumber === currentStep);
           item.classList.toggle('is-future', stepNumber > currentStep);
         });
+
+        if (stepCounter) {
+          stepCounter.textContent = (labels.stepWord || 'Шаг') + ' ' + currentStep + ' ' + (labels.ofWord || 'из') + ' 4';
+        }
 
         if (activeSubscriptionCard) {
           activeSubscriptionCard.hidden = !hasActiveSubscription;

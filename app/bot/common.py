@@ -50,6 +50,14 @@ BOT_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 SUPPORT_USERNAME = (os.environ.get("TELEGRAM_SUPPORT_USERNAME") or "vexndsupport").strip().lstrip("@")
 BOT_USERNAME = (os.environ.get("TELEGRAM_BOT_USERNAME") or "").strip().lstrip("@")
 SUBSCRIPTION_REMINDER_CHECK_INTERVAL_SECONDS = int(os.environ.get("BOT_SUBSCRIPTION_REMINDER_CHECK_INTERVAL_SECONDS", "600"))
+BOT_ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets", "screens")
+BOT_SCREEN_IMAGES = {
+    "menu": os.path.join(BOT_ASSETS_DIR, "main.png"),
+    "connect": os.path.join(BOT_ASSETS_DIR, "connection.png"),
+    "subscription": os.path.join(BOT_ASSETS_DIR, "subscription.png"),
+    "payment": os.path.join(BOT_ASSETS_DIR, "payment.png"),
+    "referrals": os.path.join(BOT_ASSETS_DIR, "referrals.png"),
+}
 
 
 def build_http_session() -> requests.Session:
@@ -268,13 +276,98 @@ def ensure_telegram_user_password(chat_id: int, user: User, state: BotUserState 
     return password
 
 
-def send_photo(chat_id: int, png_bytes: bytes, caption: str = "", reply_markup: dict[str, Any] | None = None) -> None:
+def send_photo(chat_id: int, png_bytes: bytes, caption: str = "", reply_markup: dict[str, Any] | None = None) -> dict[str, Any]:
     files = {"photo": ("subscription-qr.png", png_bytes, "image/png")}
-    data = {"chat_id": str(chat_id), "caption": caption}
+    data = {"chat_id": str(chat_id), "caption": caption, "parse_mode": "HTML"}
     if reply_markup:
         data["reply_markup"] = json.dumps(reply_markup, ensure_ascii=False)
     resp = HTTP.post(f"{BOT_API}/sendPhoto", data=data, files=files, timeout=30)
     resp.raise_for_status()
+    return resp.json()
+
+
+def read_screen_image(screen: str) -> bytes:
+    path = BOT_SCREEN_IMAGES.get(screen)
+    if not path:
+        raise KeyError(f"Unknown bot screen image: {screen}")
+    with open(path, "rb") as file_obj:
+        return file_obj.read()
+
+
+def send_screen(chat_id: int, screen: str, caption: str, reply_markup: dict[str, Any] | None = None) -> dict[str, Any]:
+    return send_photo(chat_id, read_screen_image(screen), caption, reply_markup)
+
+
+def edit_photo_caption(chat_id: int, message_id: int, caption: str, reply_markup: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    payload: dict[str, Any] = {
+        "chat_id": chat_id,
+        "message_id": message_id,
+        "caption": caption,
+        "parse_mode": "HTML",
+    }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+    try:
+        return api("editMessageCaption", payload)
+    except Exception as exc:
+        msg = str(exc).lower()
+        if "message is not modified" in msg:
+            return None
+        if "there is no caption in the message to edit" in msg or "message to edit not found" in msg or "message can't be edited" in msg:
+            send_message(chat_id, caption, reply_markup)
+            return None
+        raise
+
+
+def edit_screen_message(
+    chat_id: int,
+    message_id: int,
+    screen: str,
+    caption: str,
+    reply_markup: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    media = {
+        "type": "photo",
+        "media": "attach://screen",
+        "caption": caption,
+        "parse_mode": "HTML",
+    }
+    data = {
+        "chat_id": str(chat_id),
+        "message_id": str(message_id),
+        "media": json.dumps(media, ensure_ascii=False),
+    }
+    if reply_markup:
+        data["reply_markup"] = json.dumps(reply_markup, ensure_ascii=False)
+    files = {"screen": (f"{screen}.png", read_screen_image(screen), "image/png")}
+    resp = HTTP.post(f"{BOT_API}/editMessageMedia", data=data, files=files, timeout=30)
+    try:
+        payload = resp.json()
+    except Exception:
+        payload = None
+    if resp.status_code < 400 and isinstance(payload, dict) and payload.get("ok"):
+        return payload
+    error_text = str(payload or resp.text).lower()
+    if (
+        "message content is not modified" in error_text
+        or "message is not modified" in error_text
+        or "there is no media in the message to edit" in error_text
+        or "message can't be edited" in error_text
+        or "message to edit not found" in error_text
+        or "type of message content cannot be edited" in error_text
+    ):
+        return send_screen(chat_id, screen, caption, reply_markup)
+    raise RuntimeError(f"Telegram API error ({resp.status_code}): {payload or resp.text}")
+
+
+def replace_message_with_screen(
+    chat_id: int,
+    message_id: int,
+    screen: str,
+    caption: str,
+    reply_markup: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return edit_screen_message(chat_id, message_id, screen, caption, reply_markup)
 
 
 def edit_message(chat_id: int, message_id: int, text: str, reply_markup: dict[str, Any] | None = None) -> None:
@@ -300,10 +393,29 @@ def edit_message(chat_id: int, message_id: int, text: str, reply_markup: dict[st
 
 
 def show_loading(chat_id: int, message_id: int, state: BotUserState) -> None:
+    caption_payload = {
+        "chat_id": chat_id,
+        "message_id": message_id,
+        "caption": t(state, "loading"),
+        "parse_mode": "HTML",
+    }
     try:
-        edit_message(chat_id, message_id, t(state, "loading"))
+        api("editMessageCaption", caption_payload)
+        return
     except Exception:
-        pass
+        try:
+            api(
+                "editMessageText",
+                {
+                    "chat_id": chat_id,
+                    "message_id": message_id,
+                    "text": t(state, "loading"),
+                    "parse_mode": "HTML",
+                    "disable_web_page_preview": True,
+                },
+            )
+        except Exception:
+            pass
 
 
 def get_or_create_state(tg_user: dict[str, Any]) -> BotUserState:

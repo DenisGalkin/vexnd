@@ -8,10 +8,12 @@ from app.bot.common import (
     clear_pending_action,
     client_meta,
     db,
+    edit_photo_caption,
     device_title,
     edit_message,
     h,
     make_qr_png,
+    replace_message_with_screen,
     send_photo,
     send_message,
     show_loading,
@@ -45,6 +47,7 @@ from app.bot.subscriptions import (
     build_bot_referral_link,
     connect_intro_text,
     format_referral_text,
+    format_subscription,
     invalidate_remnawave_snapshot,
     remnawave_subscription_snapshot,
     render_subscription_text,
@@ -87,7 +90,7 @@ def handle_buy(chat_id: int, message_id: int, user, state, data: str) -> None:
         return
     from app.bot.common import bot_plan_label, bot_plan_price_usd, money_amount
 
-    edit_message(
+    edit_photo_caption(
         chat_id,
         message_id,
         (
@@ -102,23 +105,23 @@ def handle_buy(chat_id: int, message_id: int, user, state, data: str) -> None:
 
 def handle_trial_activation(chat_id: int, message_id: int, user, state) -> None:
     if not is_trial_eligible(user):
-        edit_message(chat_id, message_id, t(state, "trial_used"), main_menu(state, user))
+        replace_message_with_screen(chat_id, message_id, "menu", t(state, "trial_used"), main_menu(state, user))
         return
     try:
         activate_trial_subscription(user, source="telegram", days=1)
         invalidate_remnawave_snapshot(user.id)
     except ValueError:
         db.session.rollback()
-        edit_message(chat_id, message_id, t(state, "trial_used"), main_menu(state, user))
+        replace_message_with_screen(chat_id, message_id, "menu", t(state, "trial_used"), main_menu(state, user))
         return
     except Exception as exc:
         db.session.rollback()
         print(f"Trial activation failed: {exc}")
-        edit_message(chat_id, message_id, t(state, "invoice_error"), main_menu(state, user))
+        replace_message_with_screen(chat_id, message_id, "menu", t(state, "invoice_error"), main_menu(state, user))
         return
 
     text_out, _ = format_subscription(user, state, force_refresh=True)
-    edit_message(chat_id, message_id, f"{t(state, 'trial_started')}\n\n{text_out}", subscription_keyboard(state))
+    replace_message_with_screen(chat_id, message_id, "subscription", f"{t(state, 'trial_started')}\n\n{text_out}", subscription_keyboard(state))
 
 
 def handle_callback(callback: dict[str, object]) -> None:
@@ -137,7 +140,7 @@ def handle_callback(callback: dict[str, object]) -> None:
         if data == "menu":
             answer_callback(callback_id)
             clear_pending_action(state)
-            edit_message(chat_id, message_id, t(state, "menu_title"), main_menu(state, user))
+            replace_message_with_screen(chat_id, message_id, "menu", t(state, "menu_title"), main_menu(state, user))
             return
         if data == "admin_panel":
             answer_callback(callback_id)
@@ -160,7 +163,7 @@ def handle_callback(callback: dict[str, object]) -> None:
         if data == "plans":
             answer_callback(callback_id)
             clear_pending_action(state)
-            edit_message(chat_id, message_id, t(state, "choose_plan"), plans_keyboard(state, user))
+            replace_message_with_screen(chat_id, message_id, "payment", t(state, "choose_plan"), plans_keyboard(state, user))
             return
         if data == "trial_activate":
             answer_callback(callback_id)
@@ -176,9 +179,14 @@ def handle_callback(callback: dict[str, object]) -> None:
                 show_loading(chat_id, message_id, state)
             snapshot = remnawave_subscription_snapshot(user, force_refresh=force_refresh, schedule_async_refresh=not has_local_data)
             text_out, _ = render_subscription_text(snapshot, state)
-            edit_message(chat_id, message_id, text_out, subscription_markup(snapshot, state))
+            if force_refresh:
+                edit_photo_caption(chat_id, message_id, text_out, subscription_markup(snapshot, state))
+            else:
+                result = replace_message_with_screen(chat_id, message_id, "subscription", text_out, subscription_markup(snapshot, state))
             if not force_refresh and has_local_data:
-                schedule_subscription_message_refresh(user, state, chat_id, message_id, text_out)
+                new_message = (result or {}).get("result") if isinstance(result, dict) else None
+                new_message_id = (new_message or {}).get("message_id") if isinstance(new_message, dict) else None
+                schedule_subscription_message_refresh(user, state, chat_id, int(new_message_id or message_id), text_out)
             return
         if data in ("info", "help"):
             answer_callback(callback_id)
@@ -205,7 +213,7 @@ def handle_callback(callback: dict[str, object]) -> None:
             answer_callback(callback_id)
             clear_pending_action(state)
             link = build_bot_referral_link(user)
-            edit_message(chat_id, message_id, format_referral_text(user, state), referral_keyboard(link, state))
+            replace_message_with_screen(chat_id, message_id, "referrals", format_referral_text(user, state), referral_keyboard(link, state))
             return
         if data in ("setup", "connect"):
             answer_callback(callback_id)
@@ -214,15 +222,17 @@ def handle_callback(callback: dict[str, object]) -> None:
             if not has_local_data:
                 show_loading(chat_id, message_id, state)
             text_out, markup = connect_intro_text(user, state, schedule_async_refresh=not has_local_data)
-            edit_message(chat_id, message_id, text_out, markup)
+            result = replace_message_with_screen(chat_id, message_id, "connect", text_out, markup)
             if has_local_data:
-                schedule_connect_message_refresh(user, state, chat_id, message_id, text_out)
+                new_message = (result or {}).get("result") if isinstance(result, dict) else None
+                new_message_id = (new_message or {}).get("message_id") if isinstance(new_message, dict) else None
+                schedule_connect_message_refresh(user, state, chat_id, int(new_message_id or message_id), text_out)
             return
         if data.startswith("connect_device_"):
             answer_callback(callback_id)
             device_code = data.removeprefix("connect_device_")
             device_name = device_title(device_code, state)
-            edit_message(chat_id, message_id, f"{t(state, 'connect_title')}\n\n{t(state, 'connect_choose_client', device=device_name)}", connect_client_keyboard(device_code, state))
+            edit_photo_caption(chat_id, message_id, f"{t(state, 'connect_title')}\n\n{t(state, 'connect_choose_client', device=device_name)}", connect_client_keyboard(device_code, state))
             return
         if data.startswith("connect_client_"):
             answer_callback(callback_id)
@@ -231,7 +241,7 @@ def handle_callback(callback: dict[str, object]) -> None:
             if not client:
                 edit_message(chat_id, message_id, t(state, "invoice_missing"), main_menu(state, user))
                 return
-            edit_message(chat_id, message_id, f"{t(state, 'connect_title')}\n\n{t(state, 'connect_install_step', client=client['name'], device=device_title(device_code, state))}", connect_install_keyboard(device_code, client_code, state))
+            edit_photo_caption(chat_id, message_id, f"{t(state, 'connect_title')}\n\n{t(state, 'connect_install_step', client=client['name'], device=device_title(device_code, state))}", connect_install_keyboard(device_code, client_code, state))
             return
         if data.startswith("connect_ready_"):
             answer_callback(callback_id)
@@ -241,7 +251,7 @@ def handle_callback(callback: dict[str, object]) -> None:
             sub_url = str(snapshot.get("subscription_url") or "").strip()
             if not client or not sub_url:
                 text_key = "subscription_missing" if snapshot_has_missing_remote_subscription(snapshot) else "connect_link_missing"
-                edit_message(chat_id, message_id, t(state, text_key), subscription_markup(snapshot, state))
+                edit_photo_caption(chat_id, message_id, t(state, text_key), subscription_markup(snapshot, state))
                 return
             add_url = browser_import_url(user, client, state, sub_url)
             markup = {
@@ -251,7 +261,7 @@ def handle_callback(callback: dict[str, object]) -> None:
                     [{"text": t(state, "back"), "callback_data": f"connect_client_{device_code}_{client_code}"}],
                 ]
             }
-            edit_message(chat_id, message_id, f"{t(state, 'connect_title')}\n\n{t(state, 'connect_add_step', client=client['name'])}\n\n🔗 <b>{t(state, 'sub_link')}</b>\n<code>{h(sub_url)}</code>\n\n{t(state, 'connect_done')}", markup)
+            edit_photo_caption(chat_id, message_id, f"{t(state, 'connect_title')}\n\n{t(state, 'connect_add_step', client=client['name'])}\n\n🔗 <b>{t(state, 'sub_link')}</b>\n<code>{h(sub_url)}</code>\n\n{t(state, 'connect_done')}", markup)
             return
         if data == "language":
             answer_callback(callback_id)
@@ -267,7 +277,7 @@ def handle_callback(callback: dict[str, object]) -> None:
             if previous_action == "help":
                 edit_message(chat_id, message_id, f"{t(state, 'help_title')}\n\n{t(state, 'help_text')}", help_keyboard(state))
                 return
-            edit_message(chat_id, message_id, t(state, "menu_title"), main_menu(state, user))
+            replace_message_with_screen(chat_id, message_id, "menu", t(state, "menu_title"), main_menu(state, user))
             return
         if data == "subscription_qr":
             answer_callback(callback_id)

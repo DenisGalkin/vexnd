@@ -13,10 +13,12 @@ from app.bot.common import (
     bot_webhook_url,
     create_bot_intent_pricing,
     db,
+    edit_photo_caption,
     edit_message,
     ensure_bot_intent_pricing,
     h,
     money_amount,
+    replace_message_with_screen,
     t,
 )
 from app.bot.keyboards import (
@@ -166,24 +168,24 @@ def handle_payment_method(chat_id: int, message_id: int, user: User, state: BotU
         _prefix, method, months_raw = data.split("_", 2)
         plan_months = int(months_raw)
     except (ValueError, TypeError):
-        edit_message(chat_id, message_id, t(state, "invoice_missing"), plans_keyboard(state, user))
+        edit_photo_caption(chat_id, message_id, t(state, "invoice_missing"), plans_keyboard(state, user))
         return
     from app.bot.keyboards import is_payment_method_enabled
 
     if method not in PAYMENT_METHODS or plan_months not in BOT_PLAN_CATALOG:
-        edit_message(chat_id, message_id, "⚠️ Payment method unavailable. Choose another option:" if state.lang == "en" else "⚠️ Способ оплаты недоступен. Выберите другой вариант:", plans_keyboard(state, user))
+        edit_photo_caption(chat_id, message_id, "⚠️ Payment method unavailable. Choose another option:" if state.lang == "en" else "⚠️ Способ оплаты недоступен. Выберите другой вариант:", plans_keyboard(state, user))
         return
     if not is_payment_method_enabled(method):
-        edit_message(chat_id, message_id, "🛠 This payment method is not configured yet. Choose another one:" if state.lang == "en" else "🛠 Этот способ оплаты пока не настроен. Выберите другой:", payment_methods_keyboard(plan_months, state))
+        edit_photo_caption(chat_id, message_id, "🛠 This payment method is not configured yet. Choose another one:" if state.lang == "en" else "🛠 Этот способ оплаты пока не настроен. Выберите другой:", payment_methods_keyboard(plan_months, state))
         return
     try:
         pay_url, label, intent_id = create_bot_payment(user, method, plan_months)
     except Exception as exc:
         db.session.rollback()
         print(f"Bot payment creation failed: {exc}")
-        edit_message(chat_id, message_id, t(state, "invoice_error"), payment_methods_keyboard(plan_months, state))
+        edit_photo_caption(chat_id, message_id, t(state, "invoice_error"), payment_methods_keyboard(plan_months, state))
         return
-    edit_message(chat_id, message_id, f"{t(state, 'invoice_created')}\n\n{t(state, 'method')}: <b>{h(label)}</b>\n📦 {t(state, 'plan')}: <b>{h(bot_plan_label(plan_months, state))}</b>\n💰 {t(state, 'amount')}: <b>{money_amount(bot_plan_price_usd(plan_months))}</b>\n\n{t(state, 'after_pay')}", payment_link_keyboard(pay_url, intent_id, plan_months, state))
+    edit_photo_caption(chat_id, message_id, f"{t(state, 'invoice_created')}\n\n{t(state, 'method')}: <b>{h(label)}</b>\n📦 {t(state, 'plan')}: <b>{h(bot_plan_label(plan_months, state))}</b>\n💰 {t(state, 'amount')}: <b>{money_amount(bot_plan_price_usd(plan_months))}</b>\n\n{t(state, 'after_pay')}", payment_link_keyboard(pay_url, intent_id, plan_months, state))
 
 def ensure_bot_schema() -> None:
     db.create_all()
@@ -223,11 +225,11 @@ def handle_payment_check(chat_id: int, message_id: int, user: User, state: BotUs
     try:
         intent_id = int(data.removeprefix("checkpay_"))
     except ValueError:
-        edit_message(chat_id, message_id, t(state, "invoice_missing"), main_menu(state, user))
+        edit_photo_caption(chat_id, message_id, t(state, "invoice_missing"), main_menu(state, user))
         return
     intent = db.session.get(PaymentIntent, intent_id)
     if not intent or intent.user_id != user.id:
-        edit_message(chat_id, message_id, t(state, "invoice_missing"), main_menu(state, user))
+        edit_photo_caption(chat_id, message_id, t(state, "invoice_missing"), main_menu(state, user))
         return
     try:
         processed, msg = process_payment_intent(intent)
@@ -236,9 +238,9 @@ def handle_payment_check(chat_id: int, message_id: int, user: User, state: BotUs
         print(f"Bot payment check failed: {exc}")
         processed, msg = False, "temporary error"
     if not processed:
-        edit_message(chat_id, message_id, t(state, "payment_pending"), keyboard([[(t(state, "check_payment"), f"checkpay_{intent.id}")], [(t(state, "back_menu"), "menu")]]))
+        edit_photo_caption(chat_id, message_id, t(state, "payment_pending"), keyboard([[(t(state, "check_payment"), f"checkpay_{intent.id}")], [(t(state, "back_menu"), "menu")]]))
         return
     invalidate_remnawave_snapshot(user.id)
     snapshot = remnawave_subscription_snapshot(user, force_refresh=True)
     text_out, _ = render_subscription_text(snapshot, state)
-    edit_message(chat_id, message_id, f"{t(state, 'payment_ok')}\n\n{t(state, 'sub_activated')}\n\n" + text_out, subscription_markup(snapshot, state))
+    replace_message_with_screen(chat_id, message_id, "subscription", f"{t(state, 'payment_ok')}\n\n{t(state, 'sub_activated')}\n\n" + text_out, subscription_markup(snapshot, state))

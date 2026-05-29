@@ -13,6 +13,7 @@ from app.bot.common import (
     app,
     browser_import_url,
     coerce_int,
+    edit_photo_caption,
     edit_message,
     find_remote_value,
     format_bytes,
@@ -220,7 +221,7 @@ def refresh_remnawave_snapshot_async(
                                 refreshed_text, _sub_url = render_subscription_text(local_snapshot, state)
                                 refreshed_markup = subscription_markup(local_snapshot, state)
                             if refreshed_text != (previous_text or ""):
-                                edit_message(chat_id, message_id, refreshed_text, refreshed_markup)
+                                edit_photo_caption(chat_id, message_id, refreshed_text, refreshed_markup)
                     return
                 restore_local_subscription_state(user, remote_user)
                 refreshed_snapshot = snapshot_from_remote_user(local_snapshot, remote_user)
@@ -238,7 +239,7 @@ def refresh_remnawave_snapshot_async(
                             refreshed_text, _sub_url = render_subscription_text(refreshed_snapshot, state)
                             refreshed_markup = subscription_markup(refreshed_snapshot, state)
                         if refreshed_text != (previous_text or ""):
-                            edit_message(chat_id, message_id, refreshed_text, refreshed_markup)
+                            edit_photo_caption(chat_id, message_id, refreshed_text, refreshed_markup)
         except Exception as exc:
             print(f"Remnawave async snapshot refresh failed: {exc}")
         finally:
