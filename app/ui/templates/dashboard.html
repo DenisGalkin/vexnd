@@ -44,25 +44,6 @@
   </aside>
   <!-- Main content area; each section shown based on sidebar selection -->
   <main class="dashboard-main flex-1 flex flex-col gap-6">
-    <section class="dashboard-mobile-summary glass-effect rounded-2xl p-4 lg:hidden">
-      <div class="dashboard-mobile-summary__head">
-        <div>
-          <div class="dashboard-mobile-summary__title">{{ _('Личный кабинет') }}</div>
-          <div class="dashboard-mobile-summary__email break-anywhere">{{ current_user.email }}</div>
-        </div>
-        <form method="POST" action="{{ url_for('logout') }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="dashboard-mobile-summary__logout">{{ _('Выйти') }}</button>
-        </form>
-      </div>
-      <div class="dashboard-mobile-summary__status">
-        <span class="inline-block w-2 h-2 rounded-full {% if is_active %}bg-emerald-400{% elif has_subscription_record %}bg-amber-400{% else %}bg-gray-500{% endif %}"></span>
-        <span class="{% if is_active %}text-emerald-200{% elif has_subscription_record %}text-amber-200{% else %}text-gray-400{% endif %}">
-          {% if is_active %}{{ _('Активна') }}{% elif has_subscription_record %}{{ _('Ожидает оплаты') }}{% else %}{{ _('Нет подписки') }}{% endif %}
-        </span>
-      </div>
-    </section>
-
     <!-- Overview panel: welcome, metrics and actions -->
     <section id="panel-overview" class="dashboard-section active">
       {% include "dashboard/_overview_tab.html" %}

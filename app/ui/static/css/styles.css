@@ -2390,6 +2390,42 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
         padding-bottom: calc(5.8rem + env(safe-area-inset-bottom, 0px));
     }
 
+    .overview-metrics {
+        gap: .7rem;
+    }
+
+    .overview-metric {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "label value"
+            "hint value";
+        align-items: start;
+        min-height: 0;
+        padding: .85rem;
+        gap: .15rem .9rem;
+    }
+
+    .overview-metric__label {
+        grid-area: label;
+        font-size: .76rem;
+        line-height: 1rem;
+    }
+
+    .overview-metric__value {
+        grid-area: value;
+        align-self: center;
+        text-align: right;
+        font-size: clamp(1.35rem, 6vw, 1.8rem);
+    }
+
+    .overview-metric__hint {
+        grid-area: hint;
+        margin-top: 0;
+        font-size: .9rem;
+        line-height: 1.35;
+    }
+
     .dashboard-mobile-summary {
         padding: 1rem;
     }

@@ -1,4 +1,4 @@
-{%- set plan_name = subscription_plan_name if subscription_plan_name else ('VEXND VPN' if is_active else '—') -%}
+{%- set plan_name = subscription_plan_name if subscription_plan_name else ('VEXND VPN' if is_active else _('Нет')) -%}
 {%- set days_left = remaining_days if remaining_days is not none and remaining_days > 0 else (((subscription.expiry_date - now).total_seconds() / 86400)|round(0, 'ceil')|int if subscription and subscription.expiry_date and subscription.expiry_date > now else 0) -%}
 {%- set expiry_date = subscription.expiry_date.strftime('%d.%m.%Y') if subscription and subscription.expiry_date else '—' -%}
 {%- set status_label = (_('Активна') if is_active else (_('Истекла') if has_subscription_record else _('Нет подписки'))) -%}
