@@ -5,15 +5,12 @@
 {% block content %}
 <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
   <a href="{{ url_lang('dashboard') }}#overview" class="balance-topup__back-link">
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path d="M11.75 4.25 6 10l5.75 5.75" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-    </svg>
+    <span class="balance-topup__back-arrow" aria-hidden="true">&larr;</span>
     <span>{{ _('Назад') }}</span>
   </a>
 
   <div class="overview-shell balance-topup">
     <section class="overview-panel glass-effect balance-topup__hero">
-      <div class="overview-panel__eyebrow">{{ _('Пополнение баланса') }}</div>
       <h1 class="overview-panel__title">{{ _('Пополнение баланса') }}</h1>
       <div class="balance-topup__balance-row">
         <span class="balance-topup__balance-label">{{ _('Баланс') }}</span>
@@ -117,7 +114,9 @@
         </div>
 
         <button type="submit" class="overview-chip overview-chip--primary balance-topup__submit balance-topup__submit--inline" {% if not payment_methods %}disabled aria-disabled="true"{% endif %}>
-          {{ _('Пополнить баланс') }}
+          <span>{{ _('Пополнить баланс') }}</span>
+          <span class="balance-topup__submit-separator">&middot;</span>
+          <span data-submit-amount>$1.00</span>
         </button>
       </section>
 

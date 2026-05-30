@@ -2078,9 +2078,12 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     align-items: center;
     gap: .55rem;
     margin-bottom: 1rem;
+    width: fit-content;
     color: rgba(226, 232, 240, 0.82);
     font-size: 1rem;
     font-weight: 500;
+    line-height: 1.2;
+    text-decoration: none;
     transition: color .18s ease;
 }
 
@@ -2088,16 +2091,17 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     color: #fff;
 }
 
-.balance-topup__back-link svg {
-    width: 1rem;
-    height: 1rem;
+.balance-topup__back-arrow {
+    display: inline-block;
+    font-size: 1rem;
+    line-height: 1;
     flex: none;
 }
 
 .balance-topup__presets,
 .balance-topup__payments {
     display: grid;
-    gap: .75rem;
+    gap: .6rem;
 }
 
 .balance-topup__presets {
@@ -2114,13 +2118,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     align-items: center;
     justify-content: center;
     min-height: 3rem;
-    padding: .85rem .95rem;
+    padding: .78rem .9rem;
     border-radius: .95rem;
     border: 1px solid rgba(96, 165, 250, .16);
-    background: rgba(255, 255, 255, .02);
+    background: rgba(255, 255, 255, .03);
     color: rgba(248, 250, 252, .94);
-    font-size: 1rem;
-    line-height: 1.35;
+    font-size: .95rem;
+    line-height: 1.2;
     font-weight: 500;
     text-align: center;
     transition: background-color .18s ease, border-color .18s ease, color .18s ease;
@@ -2142,8 +2146,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .balance-topup__field-wrap {
     display: flex;
     flex-direction: column;
-    gap: .6rem;
-    max-width: 28rem;
+    gap: .75rem;
+    max-width: 32rem;
+    margin-top: .35rem;
 }
 
 .balance-topup__balance-row {
@@ -2189,6 +2194,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 .balance-topup__input {
     height: 3rem;
+    padding-left: 1rem;
     padding-right: 4.5rem;
     font-size: 1rem;
 }
@@ -2209,31 +2215,40 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 
 .balance-topup__payment {
-    justify-content: flex-start;
-    gap: .7rem;
+    justify-content: center;
+    gap: .5rem;
+    min-height: 3.15rem;
 }
 
 .balance-topup__payment-icon {
-    font-size: 1.1rem;
+    font-size: 1rem;
     line-height: 1;
 }
 
 .balance-topup__payment-name {
     min-width: 0;
-    text-align: left;
+    text-align: center;
 }
 
 .balance-topup__summary {
     display: flex;
     flex-direction: column;
-    gap: .8rem;
+    gap: .7rem;
+    padding: .2rem 0;
 }
 
 .balance-topup__summary-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
+    gap: .75rem 1rem;
+    padding-bottom: .7rem;
+    border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+
+.balance-topup__summary-row:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
 }
 
 .balance-topup__summary-value {
@@ -2246,11 +2261,17 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 .balance-topup__submit {
     width: 100%;
-    max-width: 18rem;
+    max-width: none;
+    min-height: 3.15rem;
+    gap: .5rem;
 }
 
 .balance-topup__sticky-cta {
     display: none;
+}
+
+.balance-topup__submit--inline {
+    margin-top: .45rem;
 }
 
 .balance-topup__submit--sticky {
@@ -2974,7 +2995,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
     .balance-topup__presets,
     .balance-topup__payments {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: .65rem;
     }
 
@@ -3008,6 +3029,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
         padding: .78rem .82rem;
         border-radius: .82rem;
         font-size: .88rem;
+    }
+
+    .balance-topup__payment {
+        justify-content: center;
     }
 
     .balance-topup__input {
