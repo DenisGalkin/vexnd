@@ -4,72 +4,214 @@
 
 {% block content %}
 <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-  <section class="glass-effect rounded-3xl p-6 sm:p-8">
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_auto] xl:items-end mb-8">
-      <div>
-        <div class="text-sm uppercase tracking-[0.22em] text-blue-300">{{ _('Внутренний баланс') }}</div>
-        <h1 class="text-4xl sm:text-6xl font-bold mt-3 leading-none">{{ balance_amount_text }}</h1>
-        <p class="text-gray-400 mt-4 max-w-2xl text-lg leading-8">{{ _('Пополните внутренний баланс один раз и оплачивайте подписку в checkout без перехода в платёжный шлюз каждый раз.') }}</p>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 xl:min-w-[460px]">
-        <a href="{{ url_lang('dashboard') }}#subscription" class="inline-flex items-center justify-center min-h-[68px] rounded-3xl border border-blue-500/20 bg-white/[0.03] px-6 text-lg font-semibold text-white transition-all hover:bg-white/[0.06] hover:border-blue-400/40 text-center">
-          {{ _('Назад в подписку') }}
-        </a>
-        <a href="{{ url_lang('pricing') }}" class="inline-flex items-center justify-center min-h-[68px] rounded-3xl bg-gradient-to-r from-blue-600 to-blue-500 px-6 text-lg font-semibold text-white shadow-[0_18px_40px_rgba(37,99,235,0.28)] transition-all hover:scale-[1.01] hover:brightness-105 text-center">
-          {{ _('Выбрать тариф') }}
-        </a>
-      </div>
-    </div>
+  <a href="{{ url_lang('dashboard') }}#overview" class="balance-topup__back-link">
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M11.75 4.25 6 10l5.75 5.75" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+    </svg>
+    <span>{{ _('Назад') }}</span>
+  </a>
 
-    <div class="grid gap-4 sm:grid-cols-3 mb-8">
-      <div class="rounded-3xl border border-white/10 bg-white/[0.035] px-5 py-4">
-        <div class="text-xs uppercase tracking-[0.22em] text-gray-500">{{ _('Минимум') }}</div>
-        <div class="mt-2 text-2xl font-semibold text-white">$1.00</div>
+  <div class="overview-shell balance-topup">
+    <section class="overview-panel glass-effect balance-topup__hero">
+      <div class="overview-panel__eyebrow">{{ _('Пополнение баланса') }}</div>
+      <h1 class="overview-panel__title">{{ _('Пополнение баланса') }}</h1>
+      <div class="balance-topup__balance-row">
+        <span class="balance-topup__balance-label">{{ _('Баланс') }}</span>
+        <span class="balance-topup__balance-value">{{ balance_amount_text }}</span>
       </div>
-      <div class="rounded-3xl border border-white/10 bg-white/[0.035] px-5 py-4">
-        <div class="text-xs uppercase tracking-[0.22em] text-gray-500">{{ _('Максимум') }}</div>
-        <div class="mt-2 text-2xl font-semibold text-white">$500.00</div>
-      </div>
-      <div class="rounded-3xl border border-white/10 bg-white/[0.035] px-5 py-4">
-        <div class="text-xs uppercase tracking-[0.22em] text-gray-500">{{ _('Оплата') }}</div>
-        <div class="mt-2 text-2xl font-semibold text-white">{{ _('Через 4 провайдера') }}</div>
-      </div>
-    </div>
+      <p class="overview-panel__meta balance-topup__hero-meta">{{ _('Пополните баланс и оплачивайте подписку быстрее без повторного ввода платёжных данных.') }}</p>
+    </section>
 
-    <form method="POST" action="{{ url_for('start_balance_payment', method='cryptobot') }}" class="space-y-8">
+    <section class="overview-metrics balance-topup__limits" aria-label="{{ _('Параметры пополнения') }}">
+      <article class="overview-metric glass-effect">
+        <div class="overview-metric__label">{{ _('Минимум') }}</div>
+        <div class="overview-metric__value">$1.00</div>
+        <p class="overview-metric__hint">{{ _('За одно пополнение') }}</p>
+      </article>
+      <article class="overview-metric glass-effect">
+        <div class="overview-metric__label">{{ _('Максимум') }}</div>
+        <div class="overview-metric__value">$500.00</div>
+        <p class="overview-metric__hint">{{ _('Лимит одной операции') }}</p>
+      </article>
+      <article class="overview-metric glass-effect">
+        <div class="overview-metric__label">{{ _('Способы оплаты') }}</div>
+        <div class="overview-metric__value">{{ payment_methods|length }}</div>
+        <p class="overview-metric__hint">{{ _('Доступно на выбор') }}</p>
+      </article>
+    </section>
+
+    <form method="POST" action="{{ url_for('start_balance_payment', method=(payment_methods[0].slug if payment_methods else 'cryptobot')) }}" class="overview-shell" id="balance-topup-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-      <div>
-        <div class="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-3">{{ _('Быстрые суммы') }}</div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <section class="overview-panel overview-panel--next glass-effect">
+        <h2 class="overview-panel__section-title">{{ _('Сумма пополнения') }}</h2>
+        <div class="balance-topup__presets" role="group" aria-label="{{ _('Быстрые суммы') }}">
           {% for preset in topup_presets %}
-            <button type="button" class="glass-effect rounded-3xl px-5 py-5 text-left hover:bg-white/10 hover:-translate-y-0.5 transition-all border border-white/10" onclick="document.getElementById('balance-amount-input').value='{{ '%.2f'|format(preset / 100) }}'">
-              <div class="text-3xl font-semibold text-white">{{ '$%.2f'|format(preset / 100) }}</div>
-              <div class="text-sm text-gray-400 mt-2">{{ _('Пополнить') }}</div>
+            {% set preset_value = '%.2f'|format(preset / 100) %}
+            <button
+              type="button"
+              class="balance-topup__option{% if loop.first %} is-active{% endif %}"
+              data-balance-preset
+              data-amount="{{ preset_value }}"
+            >
+              {{ '$%.2f'|format(preset / 100) }}
             </button>
           {% endfor %}
         </div>
-      </div>
 
-      <div class="max-w-md">
-        <label class="block text-sm text-gray-300 mb-2" for="balance-amount-input">{{ _('Сумма пополнения') }}</label>
-        <input id="balance-amount-input" name="amount" type="number" min="1" max="500" step="0.01" value="5.00" required class="form-input text-lg h-16 rounded-3xl px-5">
-        <p class="text-xs text-gray-500 mt-2">{{ _('Минимум $1, максимум $500 за одно пополнение.') }}</p>
-      </div>
-
-      <div>
-        <div class="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-3">{{ _('Способ пополнения') }}</div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-          {% for method in payment_methods %}
-            <button type="submit" formaction="{{ url_for('start_balance_payment', method=method.slug) }}" class="glass-effect rounded-3xl p-6 text-left hover:bg-white/10 hover:-translate-y-0.5 transition-all border border-white/10 min-h-[220px] flex flex-col">
-              <div class="text-4xl">{{ method.icon }}</div>
-              <div class="mt-8 text-[2rem] font-semibold leading-tight text-white">{{ method.name }}</div>
-              <div class="mt-auto pt-6 text-sm leading-6 text-gray-400">{{ _('Открыть платёжную страницу') }}</div>
-            </button>
-          {% endfor %}
+        <div class="balance-topup__field-wrap">
+          <label class="balance-topup__field-label" for="balance-amount-input">{{ _('Другая сумма') }}</label>
+          <div class="balance-topup__field">
+            <input
+              id="balance-amount-input"
+              name="amount"
+              type="number"
+              min="1"
+              max="500"
+              step="0.01"
+              value="1.00"
+              required
+              class="form-input balance-topup__input"
+            >
+            <span class="balance-topup__currency">USD</span>
+          </div>
+          <p class="balance-topup__hint">{{ _('Минимум $1, максимум $500.') }}</p>
         </div>
+      </section>
+
+      <section class="overview-panel overview-panel--next glass-effect">
+        <h2 class="overview-panel__section-title">{{ _('Способ оплаты') }}</h2>
+        {% if payment_methods %}
+          <div class="balance-topup__payments" role="radiogroup" aria-label="{{ _('Способ оплаты') }}">
+            {% for method in payment_methods %}
+              <button
+                type="button"
+                class="balance-topup__payment{% if loop.first %} is-active{% endif %}"
+                data-payment-method
+                data-method-slug="{{ method.slug }}"
+                data-method-name="{{ method.name }}"
+                role="radio"
+                aria-checked="{{ 'true' if loop.first else 'false' }}"
+              >
+                <span class="balance-topup__payment-icon" aria-hidden="true">{{ method.icon }}</span>
+                <span class="balance-topup__payment-name">{{ method.name }}</span>
+              </button>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="balance-topup__hint">{{ _('Способы оплаты временно недоступны. Попробуйте позже.') }}</p>
+        {% endif %}
+      </section>
+
+      <section class="overview-panel overview-panel--next glass-effect">
+        <h2 class="overview-panel__section-title">{{ _('Итого') }}</h2>
+        <div class="balance-topup__summary">
+          <div class="balance-topup__summary-row">
+            <span class="balance-topup__summary-label">{{ _('Сумма') }}</span>
+            <span class="balance-topup__summary-value" data-summary-amount>$1.00</span>
+          </div>
+          <div class="balance-topup__summary-row">
+            <span class="balance-topup__summary-label">{{ _('Способ') }}</span>
+            <span class="balance-topup__summary-value" data-summary-method>{{ payment_methods[0].name if payment_methods else '—' }}</span>
+          </div>
+        </div>
+
+        <button type="submit" class="overview-chip overview-chip--primary balance-topup__submit balance-topup__submit--inline" {% if not payment_methods %}disabled aria-disabled="true"{% endif %}>
+          {{ _('Пополнить баланс') }}
+        </button>
+      </section>
+
+      <div class="balance-topup__sticky-cta">
+        <button type="submit" class="overview-chip overview-chip--primary balance-topup__submit balance-topup__submit--sticky" {% if not payment_methods %}disabled aria-disabled="true"{% endif %}>
+          <span>{{ _('Пополнить баланс') }}</span>
+          <span class="balance-topup__submit-separator">&middot;</span>
+          <span data-submit-amount>$1.00</span>
+        </button>
       </div>
     </form>
-  </section>
+  </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('balance-topup-form');
+    if (!form) return;
+
+    const amountInput = document.getElementById('balance-amount-input');
+    const presetButtons = Array.from(form.querySelectorAll('[data-balance-preset]'));
+    const methodButtons = Array.from(form.querySelectorAll('[data-payment-method]'));
+    const summaryAmount = form.querySelector('[data-summary-amount]');
+    const summaryMethod = form.querySelector('[data-summary-method]');
+    const submitAmounts = Array.from(form.querySelectorAll('[data-submit-amount]'));
+
+    function normalizeAmount(value) {
+      const parsed = Number.parseFloat(String(value).replace(',', '.'));
+      if (!Number.isFinite(parsed)) return 1;
+      return Math.min(500, Math.max(1, parsed));
+    }
+
+    function formatAmount(value) {
+      return '$' + normalizeAmount(value).toFixed(2);
+    }
+
+    function syncPresetState() {
+      const currentValue = normalizeAmount(amountInput.value).toFixed(2);
+      let hasActivePreset = false;
+      presetButtons.forEach(button => {
+        const matches = button.dataset.amount === currentValue;
+        button.classList.toggle('is-active', matches);
+        if (matches) hasActivePreset = true;
+      });
+      if (!hasActivePreset) {
+        presetButtons.forEach(button => button.classList.remove('is-active'));
+      }
+    }
+
+    function syncSummary() {
+      const formattedAmount = formatAmount(amountInput.value);
+      if (summaryAmount) summaryAmount.textContent = formattedAmount;
+      submitAmounts.forEach(node => {
+        node.textContent = formattedAmount;
+      });
+      const activeMethod = form.querySelector('[data-payment-method].is-active');
+      if (summaryMethod) summaryMethod.textContent = activeMethod ? activeMethod.dataset.methodName : '—';
+      if (activeMethod) {
+        form.action = "{{ url_for('start_balance_payment', method='__METHOD__') }}".replace('__METHOD__', activeMethod.dataset.methodSlug);
+      }
+    }
+
+    presetButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        amountInput.value = button.dataset.amount || '1.00';
+        syncPresetState();
+        syncSummary();
+      });
+    });
+
+    amountInput.addEventListener('input', () => {
+      syncPresetState();
+      syncSummary();
+    });
+
+    amountInput.addEventListener('blur', () => {
+      amountInput.value = normalizeAmount(amountInput.value).toFixed(2);
+      syncPresetState();
+      syncSummary();
+    });
+
+    methodButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        methodButtons.forEach(item => {
+          const isActive = item === button;
+          item.classList.toggle('is-active', isActive);
+          item.setAttribute('aria-checked', isActive ? 'true' : 'false');
+        });
+        syncSummary();
+      });
+    });
+
+    syncPresetState();
+    syncSummary();
+  });
+</script>
 {% endblock %}

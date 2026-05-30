@@ -2065,6 +2065,207 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     margin-top: -.35rem;
 }
 
+.balance-topup {
+    gap: 1rem;
+}
+
+.balance-topup__hero {
+    gap: .5rem;
+}
+
+.balance-topup__back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    margin-bottom: 1rem;
+    color: rgba(226, 232, 240, 0.82);
+    font-size: 1rem;
+    font-weight: 500;
+    transition: color .18s ease;
+}
+
+.balance-topup__back-link:hover {
+    color: #fff;
+}
+
+.balance-topup__back-link svg {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+}
+
+.balance-topup__presets,
+.balance-topup__payments {
+    display: grid;
+    gap: .75rem;
+}
+
+.balance-topup__presets {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.balance-topup__payments {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.balance-topup__option,
+.balance-topup__payment {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3rem;
+    padding: .85rem .95rem;
+    border-radius: .95rem;
+    border: 1px solid rgba(96, 165, 250, .16);
+    background: rgba(255, 255, 255, .02);
+    color: rgba(248, 250, 252, .94);
+    font-size: 1rem;
+    line-height: 1.35;
+    font-weight: 500;
+    text-align: center;
+    transition: background-color .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.balance-topup__option:hover,
+.balance-topup__payment:hover {
+    background: rgba(255, 255, 255, .04);
+    border-color: rgba(96, 165, 250, .26);
+}
+
+.balance-topup__option.is-active,
+.balance-topup__payment.is-active {
+    background: rgba(37, 99, 235, .18);
+    border-color: rgba(96, 165, 250, .42);
+    color: #fff;
+}
+
+.balance-topup__field-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    max-width: 28rem;
+}
+
+.balance-topup__balance-row {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-top: .35rem;
+    flex-wrap: wrap;
+}
+
+.balance-topup__balance-label {
+    color: rgba(226, 232, 240, .82);
+    font-size: 1rem;
+    line-height: 1.45;
+}
+
+.balance-topup__balance-value {
+    color: #fff;
+    font-size: 1.25rem;
+    line-height: 1.25;
+    font-weight: 500;
+}
+
+.balance-topup__hero-meta {
+    max-width: 38rem;
+}
+
+.balance-topup__field-label,
+.balance-topup__hint,
+.balance-topup__summary-label {
+    font-size: 1rem;
+    line-height: 1.45;
+}
+
+.balance-topup__field-label,
+.balance-topup__summary-label {
+    color: rgba(226, 232, 240, .82);
+}
+
+.balance-topup__field {
+    position: relative;
+}
+
+.balance-topup__input {
+    height: 3rem;
+    padding-right: 4.5rem;
+    font-size: 1rem;
+}
+
+.balance-topup__currency {
+    position: absolute;
+    top: 50%;
+    right: 1rem;
+    transform: translateY(-50%);
+    color: rgba(148, 163, 184, .9);
+    font-size: .95rem;
+    font-weight: 500;
+    pointer-events: none;
+}
+
+.balance-topup__hint {
+    color: rgba(148, 163, 184, .9);
+}
+
+.balance-topup__payment {
+    justify-content: flex-start;
+    gap: .7rem;
+}
+
+.balance-topup__payment-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.balance-topup__payment-name {
+    min-width: 0;
+    text-align: left;
+}
+
+.balance-topup__summary {
+    display: flex;
+    flex-direction: column;
+    gap: .8rem;
+}
+
+.balance-topup__summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.balance-topup__summary-value {
+    font-size: 1rem;
+    line-height: 1.45;
+    font-weight: 500;
+    color: #fff;
+    text-align: right;
+}
+
+.balance-topup__submit {
+    width: 100%;
+    max-width: 18rem;
+}
+
+.balance-topup__sticky-cta {
+    display: none;
+}
+
+.balance-topup__submit--sticky {
+    max-width: none;
+}
+
+.balance-topup__submit-separator {
+    opacity: .62;
+}
+
+.balance-topup__submit[disabled] {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
 .subscription-access__layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -2759,6 +2960,90 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
     .overview-shortcuts {
         flex-direction: column;
+    }
+
+    .balance-topup__back-link,
+    .balance-topup__balance-label,
+    .balance-topup__field-label,
+    .balance-topup__hint,
+    .balance-topup__summary-label,
+    .balance-topup__summary-value {
+        font-size: .88rem;
+        line-height: 1.35;
+    }
+
+    .balance-topup__presets,
+    .balance-topup__payments {
+        grid-template-columns: 1fr;
+        gap: .65rem;
+    }
+
+    .balance-topup__hero {
+        padding: 0;
+        background: transparent;
+        border: 0;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    .balance-topup__hero-meta,
+    .balance-topup__limits {
+        display: none;
+    }
+
+    .balance-topup__balance-row {
+        margin-top: .1rem;
+        gap: .5rem;
+    }
+
+    .balance-topup__balance-value {
+        font-size: 1.05rem;
+        line-height: 1.3;
+    }
+
+    .balance-topup__option,
+    .balance-topup__payment {
+        width: 100%;
+        min-height: 2.55rem;
+        padding: .78rem .82rem;
+        border-radius: .82rem;
+        font-size: .88rem;
+    }
+
+    .balance-topup__input {
+        height: 2.55rem;
+        font-size: .88rem;
+    }
+
+    .balance-topup__currency {
+        right: .9rem;
+        font-size: .82rem;
+    }
+
+    .balance-topup__submit {
+        max-width: none;
+    }
+
+    .balance-topup__submit--inline {
+        display: none;
+    }
+
+    .balance-topup__sticky-cta {
+        position: sticky;
+        bottom: 0;
+        display: block;
+        padding-top: .35rem;
+        padding-bottom: calc(.35rem + env(safe-area-inset-bottom, 0px));
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, .92) 34%);
+        z-index: 15;
+    }
+
+    .balance-topup__submit--sticky {
+        min-height: 2.8rem;
+        justify-content: center;
+        gap: .45rem;
+        border-radius: .9rem;
+        font-size: .88rem;
     }
 
     .connection-wizard__panel {
