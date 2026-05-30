@@ -33,7 +33,7 @@ from app.services.balance import format_balance_cents, purchase_subscription_wit
 from app.services.payments.crystalpay import crystal_credentials, crystal_invoice_info, crystalpay_process_paid_invoice
 from app.services.payments.cryptobot import cryptobot_api_base, cryptobot_get_invoice_by_id, cryptobot_process_paid_invoice
 from app.services.payments.heleket import heleket_credentials, heleket_json_dumps, heleket_payment_info, heleket_process_paid, heleket_sign_payload
-from app.services.payments.platega import platega_api_base, platega_credentials, platega_get_transaction, platega_process_paid_transaction, platega_quote_amount
+from app.services.payments.platega import platega_api_base, platega_credentials, platega_get_transaction, platega_process_paid_transaction, platega_quote_amount, platega_raise_for_status
 from app.services.security import get_webhook_secret
 
 
@@ -101,8 +101,8 @@ def create_bot_platega_transaction(plan_months: int = 0, amount_cents: int | Non
     if tg_return:
         body["return"] = tg_return
         body["failedUrl"] = tg_return
-    resp = HTTP.post(f"{platega_api_base()}/v2/transaction/process", json=body, headers=headers, timeout=30)
-    resp.raise_for_status()
+    resp = HTTP.post(f"{platega_api_base()}/transaction/process", json=body, headers=headers, timeout=30)
+    platega_raise_for_status(resp)
     data = resp.json() or {}
     if not isinstance(data, dict) or not (data.get("url") or data.get("redirect") or data.get("payformSuccessUrl")):
         raise RuntimeError("Platega create transaction response missing redirect URL")

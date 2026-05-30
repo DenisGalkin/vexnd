@@ -53,7 +53,7 @@
     <h3 class="overview-panel__section-title">{{ _('Что дальше?') }}</h3>
     <div class="overview-shortcuts">
       <button type="button" class="overview-chip" data-dashboard-target="connection">{{ _('Подключение') }}</button>
-      <button type="button" class="overview-chip" data-dashboard-target="subscription">{{ _('Пополнить баланс') }}</button>
+      <a href="{{ url_lang('balance_page') }}" class="overview-chip">{{ _('Пополнить баланс') }}</a>
       <button type="button" class="overview-chip" data-dashboard-target="referrals">{{ _('Рефералы') }}</button>
       <button type="button" class="overview-chip" data-dashboard-target="settings">{{ _('Настройки') }}</button>
     </div>

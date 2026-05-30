@@ -11,6 +11,7 @@
                 <h1 class="text-3xl font-bold">{{ _('Оплата') }}</h1>
                 <p class="text-gray-400 mt-1">{{ _('Выберите способ оплаты') }}</p>
                 <p class="text-gray-500 mt-2 text-sm">{{ _('Внутренний баланс:') }} <span class="text-white font-semibold">{{ balance_amount_text }}</span></p>
+                <p class="mt-2"><a href="{{ url_lang('balance_page') }}" class="text-sm text-blue-300 hover:text-blue-200 underline underline-offset-4">{{ _('Пополнить баланс') }}</a></p>
             </div>
             <div class="hidden sm:block text-right">
                 <p class="text-gray-400 text-sm">{{ _('Тариф:') }} <span class="text-white font-semibold">{{ plan_duration_label(plan) }}</span></p>
@@ -47,6 +48,9 @@
                 <span class="sm:hidden">{{ _('Global') }}</span>
                 <span class="hidden sm:inline">{{ _('Global Cards') }}</span>
             </button>
+            <button onclick="filterPayments('balance', event)" class="filter-btn px-3 sm:px-4 py-2 rounded-lg glass-effect hover:bg-white/10 font-medium transition-all whitespace-nowrap shrink-0">
+                {{ _('Баланс') }}
+            </button>
         </div>
         
         <!-- Payment Grid -->
@@ -73,6 +77,7 @@
                         data-target="{{ target }}"
                         data-name="{{ method.name }}"
                         data-icon="{{ method.icon }}"
+                        data-balance-available="{{ '1' if method.is_available is not defined or method.is_available else '0' }}"
                         onclick="selectPayment(this)">
                     <div class="pm-row flex items-center gap-4">
                         <div class="text-3xl sm:text-4xl leading-none">{{ method.icon }}</div>
@@ -83,7 +88,7 @@
                             {% if m in ['cryptobot', 'heleket'] %}
                                 {% set subtitle = _('Криптовалюты') %}
                             {% elif m == 'balance' %}
-                                {% set subtitle = _('Моментальное списание с внутреннего баланса') %}
+                                {% set subtitle = _('Моментальное списание с внутреннего баланса') if method.is_available else _('Недостаточно средств, сначала пополните баланс') %}
                             {% elif m == 'platega' %}
                                 {% set subtitle = _('СБП (QR)') %}
                             {% elif m == 'crystalpay' %}
@@ -282,12 +287,19 @@ function selectPayment(el) {
     const name = el.dataset.name || '';
     const icon = el.dataset.icon || '💳';
     const target = el.dataset.target || '#';
+    const balanceAvailable = (el.dataset.balanceAvailable || '1') === '1';
 
     document.getElementById('summary-method').textContent = name;
     document.getElementById('summary-icon').textContent = icon;
 
     const payForm = document.getElementById('pay-form');
     payForm.action = target;
+    const payBtn = document.getElementById('pay-btn');
+    const isBalanceMethod = (name || '').toLowerCase().includes('баланс') || (name || '').toLowerCase().includes('balance');
+    payBtn.disabled = isBalanceMethod && !balanceAvailable;
+    payBtn.textContent = (isBalanceMethod && !balanceAvailable)
+        ? "{{ _('Сначала пополните баланс') }}"
+        : "{{ _('Перейти к оплате') }}";
 
     // Show summary
     const summary = document.getElementById('order-summary');
@@ -374,6 +386,9 @@ function resetSelection() {
     });
     const summary = document.getElementById('order-summary');
     summary.classList.add('hidden');
+    const payBtn = document.getElementById('pay-btn');
+    payBtn.disabled = false;
+    payBtn.textContent = "{{ _('Перейти к оплате') }}";
     // scroll back to methods
     const grid = document.getElementById('payment-grid');
     if (grid) {

@@ -5,6 +5,7 @@ import os
 import secrets
 from datetime import datetime
 from decimal import Decimal
+from requests import HTTPError
 
 from flask import jsonify, request
 
@@ -35,6 +36,21 @@ def platega_credentials() -> tuple[str, str]:
 
 def platega_api_base() -> str:
     return (os.environ.get("PLATEGA_API_BASE") or "https://gate.platega.io/api/v2").strip().rstrip("/")
+
+
+def platega_raise_for_status(resp) -> None:
+    try:
+        resp.raise_for_status()
+    except HTTPError as exc:
+        details = ""
+        try:
+            payload = resp.json()
+            details = str(payload)
+        except Exception:
+            details = (resp.text or "").strip()
+        if details:
+            raise RuntimeError(f"Platega API error {resp.status_code}: {details}") from exc
+        raise
 
 
 def platega_get_rate(payment_method: int, currency_from: str, currency_to: str) -> float:
@@ -87,20 +103,25 @@ def create_platega_transaction(
     merchant_id, secret = platega_credentials()
     intent_token = secrets.token_urlsafe(24)
     quoted_amount, currency, payment_method = platega_quote_amount(amount_usd)
+    webhook_secret = get_webhook_secret("PLATEGA_WEBHOOK_PATH_SECRET")
     payload = {
         "paymentMethod": payment_method,
-        "amount": quoted_amount,
-        "currency": currency,
-        "merchantSiteLink": public_url("platega_return", token=intent_token),
-        "callbackUrl": public_url("platega_webhook_secret", secret=get_webhook_secret("PLATEGA_WEBHOOK_PATH_SECRET")) if get_webhook_secret("PLATEGA_WEBHOOK_PATH_SECRET") else public_url("platega_webhook"),
+        "paymentDetails": {
+            "amount": quoted_amount,
+            "currency": currency,
+        },
+        "return": public_url("platega_return", token=intent_token),
+        "failedUrl": public_url("platega_fail", plan=plan_months),
         "payload": intent_token,
-        "failLink": public_url("platega_fail", plan=plan_months),
     }
+    callback_url = public_url("platega_webhook_secret", secret=webhook_secret) if webhook_secret else public_url("platega_webhook")
+    if callback_url:
+        payload["callbackUrl"] = callback_url
     if description:
         payload["description"] = description
     headers = {"X-MerchantId": merchant_id, "X-Secret": secret, "Content-Type": "application/json", "Accept": "application/json"}
     resp = HTTP.post(f"{platega_api_base()}/transaction/process", headers=headers, json=payload, timeout=30)
-    resp.raise_for_status()
+    platega_raise_for_status(resp)
     data = resp.json() or {}
     if not isinstance(data, dict):
         raise RuntimeError("Unexpected Platega response")

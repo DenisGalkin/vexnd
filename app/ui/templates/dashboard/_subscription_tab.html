@@ -23,10 +23,11 @@
     <div class="overview-panel__actions subscription-hero__actions">
       {% if is_active %}
         <a href="{{ url_lang('pricing') }}" class="overview-chip overview-chip--primary">{{ _('Продлить') }}</a>
-        <button type="button" class="overview-chip" data-dashboard-target="connection">{{ _('Подключение') }}</button>
       {% else %}
         <a href="{{ url_lang('pricing') }}" class="overview-chip overview-chip--primary">{{ _('Выбрать тариф') }}</a>
       {% endif %}
+      <a href="{{ url_lang('balance_page') }}" class="overview-chip">{{ _('Пополнить баланс') }}</a>
+      <button type="button" class="overview-chip" data-dashboard-target="connection">{{ _('Подключение') }}</button>
     </div>
   </section>
 
@@ -34,13 +35,7 @@
     <article class="overview-metric glass-effect">
       <div class="overview-metric__label">{{ _('Баланс') }}</div>
       <div class="overview-metric__value">{{ balance_amount_text }}</div>
-      <p class="overview-metric__hint">{{ _('Доступно для внутренних покупок') }}</p>
-    </article>
-
-    <article class="overview-metric glass-effect">
-      <div class="overview-metric__label">{{ _('Тариф') }}</div>
-      <div class="overview-metric__value">{{ plan_name }}</div>
-      <p class="overview-metric__hint">{{ status_label }}</p>
+      <p class="overview-metric__hint">{{ _('Доступно для оплаты в checkout') }}</p>
     </article>
 
     <article class="overview-metric glass-effect">
@@ -59,73 +54,6 @@
       </div>
       <p class="overview-metric__hint">{{ traffic_hint }}</p>
     </article>
-  </section>
-
-  <section class="overview-panel glass-effect subscription-access">
-    <h3 class="overview-panel__section-title">{{ _('Внутренний баланс') }}</h3>
-    <p class="overview-status__text subscription-access__intro">{{ _('Пополняйте баланс через платёжные системы, а затем оплачивайте подписку без повторного ввода реквизитов.') }}</p>
-
-    <form method="POST" action="{{ url_for('start_balance_payment', method='cryptobot') }}" class="settings-form space-y-4">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="grid gap-3 sm:grid-cols-4">
-        {% for preset in topup_presets %}
-          <label class="settings-field">
-            <span>{{ _('Сумма') }}</span>
-            <input type="radio" name="amount_preset" value="{{ preset / 100 }}" {% if loop.first %}checked{% endif %} onclick="document.getElementById('balance-topup-amount').value='{{ '%.2f'|format(preset / 100) }}'">
-            <span>{{ '$%.2f'|format(preset / 100) }}</span>
-          </label>
-        {% endfor %}
-      </div>
-      <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_repeat(4,auto)]">
-        <label class="settings-field">
-          <span>{{ _('Пополнить на сумму') }}</span>
-          <input id="balance-topup-amount" type="number" step="0.01" min="3" max="500" name="amount" value="5.00" required>
-        </label>
-        <button type="submit" formaction="{{ url_for('start_balance_payment', method='cryptobot') }}" class="overview-chip overview-chip--primary">{{ _('Crypto Bot') }}</button>
-        <button type="submit" formaction="{{ url_for('start_balance_payment', method='heleket') }}" class="overview-chip">{{ _('Heleket') }}</button>
-        <button type="submit" formaction="{{ url_for('start_balance_payment', method='platega') }}" class="overview-chip">{{ _('Platega') }}</button>
-        <button type="submit" formaction="{{ url_for('start_balance_payment', method='crystalpay') }}" class="overview-chip">{{ _('Crystal Pay') }}</button>
-      </div>
-    </form>
-
-    <div class="subscription-history mt-6">
-      <div class="subscription-history__item">
-        <div>
-          <div class="subscription-history__title">{{ _('1 месяц') }}</div>
-          <p class="subscription-history__meta">{{ _('Мгновенная активация с баланса') }}</p>
-        </div>
-        <div class="subscription-history__side">
-          <form method="POST" action="{{ url_for('start_payment', method='balance', plan=1) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="overview-chip {% if balance_can_pay_1m %}overview-chip--primary{% endif %}" {% if not balance_can_pay_1m %}disabled{% endif %}>{{ _('Оплатить с баланса') }}</button>
-          </form>
-        </div>
-      </div>
-      <div class="subscription-history__item">
-        <div>
-          <div class="subscription-history__title">{{ _('3 месяца') }}</div>
-          <p class="subscription-history__meta">{{ _('Продление без внешнего платёжного окна') }}</p>
-        </div>
-        <div class="subscription-history__side">
-          <form method="POST" action="{{ url_for('start_payment', method='balance', plan=3) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="overview-chip {% if balance_can_pay_3m %}overview-chip--primary{% endif %}" {% if not balance_can_pay_3m %}disabled{% endif %}>{{ _('Оплатить с баланса') }}</button>
-          </form>
-        </div>
-      </div>
-      <div class="subscription-history__item">
-        <div>
-          <div class="subscription-history__title">{{ _('12 месяцев') }}</div>
-          <p class="subscription-history__meta">{{ _('Максимально выгодное продление') }}</p>
-        </div>
-        <div class="subscription-history__side">
-          <form method="POST" action="{{ url_for('start_payment', method='balance', plan=12) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="overview-chip {% if balance_can_pay_12m %}overview-chip--primary{% endif %}" {% if not balance_can_pay_12m %}disabled{% endif %}>{{ _('Оплатить с баланса') }}</button>
-          </form>
-        </div>
-      </div>
-    </div>
   </section>
 
   <section class="overview-panel glass-effect subscription-access">
@@ -170,22 +98,22 @@
   </section>
 
   <section class="overview-panel overview-panel--next glass-effect">
-    <h3 class="overview-panel__section-title">{{ _('История оплаты') }}</h3>
+    <h3 class="overview-panel__section-title">{{ _('История операций') }}</h3>
 
-    {% if transactions %}
+    {% if operations %}
       <div class="subscription-history">
-        {% for t in transactions[:5] %}
+        {% for item in operations[:10] %}
           <div class="subscription-history__item">
             <div>
-              <div class="subscription-history__title">{{ t.plan_name }}</div>
-              <p class="subscription-history__meta">{{ t.date.strftime('%d.%m.%Y %H:%M') if t.date else '—' }} · {{ t.provider }}</p>
+              <div class="subscription-history__title">{{ item.title }}</div>
+              <p class="subscription-history__meta">{{ item.date.strftime('%d.%m.%Y %H:%M') if item.date else '—' }} · {{ item.subtitle }}</p>
             </div>
             <div class="subscription-history__side">
-              <div class="subscription-history__amount">{{ t.amount }}</div>
-              <div class="subscription-history__state {% if t.status == 'success' %}is-success{% elif t.status == 'pending' %}is-pending{% else %}is-failed{% endif %}">
-                {% if t.status == 'success' %}
-                  {{ _('Оплачено') }}
-                {% elif t.status == 'pending' %}
+              <div class="subscription-history__amount">{{ item.amount }}</div>
+              <div class="subscription-history__state {% if item.status == 'success' %}is-success{% elif item.status == 'pending' %}is-pending{% else %}is-failed{% endif %}">
+                {% if item.status == 'success' %}
+                  {{ _('Успешно') }}
+                {% elif item.status == 'pending' %}
                   {{ _('Ожидает оплаты') }}
                 {% else %}
                   {{ _('Ошибка') }}
@@ -196,30 +124,7 @@
         {% endfor %}
       </div>
     {% else %}
-      <p class="overview-status__text">{{ _('Платежей пока нет.') }}</p>
-    {% endif %}
-  </section>
-
-  <section class="overview-panel overview-panel--next glass-effect">
-    <h3 class="overview-panel__section-title">{{ _('История баланса') }}</h3>
-
-    {% if balance_entries %}
-      <div class="subscription-history">
-        {% for entry in balance_entries[:5] %}
-          <div class="subscription-history__item">
-            <div>
-              <div class="subscription-history__title">{{ entry.description or entry.kind }}</div>
-              <p class="subscription-history__meta">{{ entry.created_at.strftime('%d.%m.%Y %H:%M') if entry.created_at else '—' }}</p>
-            </div>
-            <div class="subscription-history__side">
-              <div class="subscription-history__amount">{{ '+' if entry.direction == 'credit' else '-' }}{{ '$%.2f'|format(entry.amount_cents / 100) }}</div>
-              <div class="subscription-history__meta">{{ _('Баланс после операции:') }} {{ '$%.2f'|format(entry.balance_after_cents / 100) }}</div>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="overview-status__text">{{ _('Операций по балансу пока нет.') }}</p>
+      <p class="overview-status__text">{{ _('Операций пока нет.') }}</p>
     {% endif %}
   </section>
 </div>

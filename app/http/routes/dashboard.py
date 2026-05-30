@@ -104,6 +104,7 @@ def _build_dashboard_referrals_context() -> dict[str, object]:
 
 def _build_dashboard_settings_context() -> dict[str, object]:
     transactions = []
+    operations = []
     subscription_plan_name = None
     balance_amount_cents = user_balance_cents(current_user.id)
     try:
@@ -115,24 +116,26 @@ def _build_dashboard_settings_context() -> dict[str, object]:
             .all()
         )
         for intent in intents:
+            if getattr(intent, "purpose", "subscription") == "balance_topup":
+                continue
             pricing = intent_pricing(intent)
             if subscription_plan_name is None and intent.processed_at:
                 subscription_plan_name = plan_duration_label(intent.plan_months)
-            transactions.append(
-                {
-                    "id": intent.id,
-                    "date": intent.processed_at or intent.created_at,
-                    "amount": f"{format_usd_amount(pricing['final_price'])} USD",
-                    "original_amount": format_usd_amount(pricing["original_price"]),
-                    "plan_name": plan_duration_label(intent.plan_months) if int(intent.plan_months or 0) > 0 else translate("Пополнение баланса"),
-                    "provider": (intent.provider or "").strip() or "—",
-                    "coupon_code": pricing.get("coupon_code") or None,
-                    "status": "success" if intent.processed_at else "pending",
-                    "kind": getattr(intent, "purpose", "subscription"),
-                }
-            )
+            item = {
+                "id": f"payment-{intent.id}",
+                "date": intent.processed_at or intent.created_at,
+                "amount": f"{format_usd_amount(pricing['final_price'])} USD",
+                "title": plan_duration_label(intent.plan_months),
+                "subtitle": f"{(intent.provider or '').strip() or '—'}",
+                "status": "success" if intent.processed_at else "pending",
+                "kind": "subscription_purchase",
+                "direction": "debit",
+            }
+            transactions.append(item)
+            operations.append(item)
     except Exception:
         transactions = []
+        operations = []
         subscription_plan_name = None
     try:
         balance_entries = (
@@ -144,6 +147,20 @@ def _build_dashboard_settings_context() -> dict[str, object]:
         )
     except Exception:
         balance_entries = []
+    for entry in balance_entries:
+        operations.append(
+            {
+                "id": f"balance-{entry.id}",
+                "date": entry.created_at,
+                "amount": f"{'+' if entry.direction == 'credit' else '-'}{format_usd_amount(entry.amount_cents / 100)} USD",
+                "title": entry.description or entry.kind,
+                "subtitle": translate("Баланс после операции: ") + format_balance_cents(entry.balance_after_cents),
+                "status": "success",
+                "kind": entry.kind,
+                "direction": entry.direction,
+            }
+        )
+    operations.sort(key=lambda item: item["date"] or datetime.min, reverse=True)
 
     sessions = []
     try:
@@ -182,6 +199,7 @@ def _build_dashboard_settings_context() -> dict[str, object]:
 
     return {
         "transactions": transactions,
+        "operations": operations[:20],
         "sessions": sessions,
         "subscription_plan_name": subscription_plan_name,
         "balance_amount_cents": balance_amount_cents,
@@ -372,8 +390,7 @@ def checkout():
     if (os.environ.get("CRYSTALPAY_AUTH_LOGIN") or "").strip() and (os.environ.get("CRYSTALPAY_AUTH_SECRET") or "").strip():
         payment_methods.append({"slug": "crystalpay", "name": "Crystal Pay", "icon": "💎", "class": "crypto", "preferred": False})
     balance_ready, _balance_pricing = can_pay_for_plan_with_balance(current_user.id, plan_months, coupon_code)
-    if balance_ready:
-        payment_methods.insert(0, {"slug": "balance", "name": translate("Внутренний баланс"), "icon": "💰", "class": "preferred", "preferred": True})
+    payment_methods.insert(0, {"slug": "balance", "name": translate("Внутренний баланс"), "icon": "💰", "class": "balance preferred", "preferred": balance_ready, "is_available": balance_ready})
     return render_template(
         "checkout.html",
         plan=plan_months,
@@ -388,6 +405,26 @@ def checkout():
         end_dt=end_dt,
         user_email=(current_user.email if current_user.is_authenticated else ""),
         balance_amount_text=format_balance_cents(user_balance_cents(current_user.id)),
+        balance_ready=balance_ready,
+    )
+
+
+@login_required
+def balance_page():
+    payment_methods = []
+    if (os.environ.get("CRYPTO_PAY_API_TOKEN") or "").strip():
+        payment_methods.append({"slug": "cryptobot", "name": "Crypto Bot", "icon": "🤖", "preferred": True})
+    if (os.environ.get("HELEKET_MERCHANT_ID") or "").strip() and (os.environ.get("HELEKET_API_KEY") or "").strip():
+        payment_methods.append({"slug": "heleket", "name": "Heleket", "icon": "🪙", "preferred": True})
+    if (os.environ.get("PLATEGA_MERCHANT_ID") or "").strip() and (os.environ.get("PLATEGA_SECRET") or "").strip():
+        payment_methods.append({"slug": "platega", "name": "Platega", "icon": "🌍", "preferred": False})
+    if (os.environ.get("CRYSTALPAY_AUTH_LOGIN") or "").strip() and (os.environ.get("CRYSTALPAY_AUTH_SECRET") or "").strip():
+        payment_methods.append({"slug": "crystalpay", "name": "Crystal Pay", "icon": "💎", "preferred": False})
+    return render_template(
+        "balance.html",
+        balance_amount_text=format_balance_cents(user_balance_cents(current_user.id)),
+        topup_presets=list(TOPUP_PRESET_CENTS),
+        payment_methods=payment_methods,
     )
 
 
@@ -397,3 +434,5 @@ def register(app) -> None:
     app.add_url_rule("/account/trial", endpoint="activate_trial", view_func=activate_trial, methods=["POST"])
     app.add_url_rule("/checkout", endpoint="checkout", view_func=checkout, methods=["GET"])
     app.add_url_rule("/en/checkout", endpoint="checkout_en", view_func=checkout, methods=["GET"])
+    app.add_url_rule("/balance", endpoint="balance_page", view_func=balance_page, methods=["GET"])
+    app.add_url_rule("/en/balance", endpoint="balance_page_en", view_func=balance_page, methods=["GET"])
