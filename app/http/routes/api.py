@@ -4,6 +4,7 @@ from flask import jsonify, request
 from flask_login import current_user, login_required
 
 from app.domain.plans import format_usd_amount, plan_duration_label
+from app.services.balance import amount_to_cents, format_balance_cents, user_balance_cents
 from app.services.coupons import coupon_pricing
 from app.services.security import require_csrf
 from app.http.helpers import translate
@@ -26,6 +27,10 @@ def coupon_preview():
     pricing = coupon_pricing(plan_months, coupon_code, current_user.id if current_user.is_authenticated else None)
     if pricing.get("error"):
         return jsonify({"ok": False, "error": pricing["error"]}), 400
+    balance_amount_cents = user_balance_cents(current_user.id)
+    total_due_cents = amount_to_cents(pricing["final_price"])
+    balance_shortfall_cents = max(0, total_due_cents - balance_amount_cents)
+    balance_ready = balance_amount_cents >= total_due_cents
     return jsonify(
         {
             "ok": True,
@@ -35,6 +40,14 @@ def coupon_preview():
             "final_price": format_usd_amount(pricing["final_price"]),
             "discount_amount": format_usd_amount(pricing["discount_amount"]),
             "plan_label": plan_duration_label(pricing["plan_months"]),
+            "balance_ready": balance_ready,
+            "balance_amount_text": format_balance_cents(balance_amount_cents),
+            "balance_shortfall_text": format_balance_cents(balance_shortfall_cents),
+            "balance_status_text": (
+                translate("Хватает для оплаты с баланса.")
+                if balance_ready
+                else translate("Не хватает %(amount)s для оплаты с баланса.") % {"amount": format_balance_cents(balance_shortfall_cents)}
+            ),
             "message": translate("Промокод применён."),
         }
     )

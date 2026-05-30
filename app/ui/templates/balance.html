@@ -12,29 +12,13 @@
   <div class="overview-shell balance-topup">
     <section class="overview-panel glass-effect balance-topup__hero">
       <h1 class="overview-panel__title">{{ _('Пополнение баланса') }}</h1>
-      <div class="balance-topup__balance-row">
+      <div class="balance-topup__balance-card">
         <span class="balance-topup__balance-label">{{ _('Баланс') }}</span>
-        <span class="balance-topup__balance-value">{{ balance_amount_text }}</span>
+        <div class="balance-topup__balance-row">
+          <span class="balance-topup__balance-value">{{ balance_amount_text }}</span>
+        </div>
       </div>
       <p class="overview-panel__meta balance-topup__hero-meta">{{ _('Пополните баланс и оплачивайте подписку быстрее без повторного ввода платёжных данных.') }}</p>
-    </section>
-
-    <section class="overview-metrics balance-topup__limits" aria-label="{{ _('Параметры пополнения') }}">
-      <article class="overview-metric glass-effect">
-        <div class="overview-metric__label">{{ _('Минимум') }}</div>
-        <div class="overview-metric__value">$1.00</div>
-        <p class="overview-metric__hint">{{ _('За одно пополнение') }}</p>
-      </article>
-      <article class="overview-metric glass-effect">
-        <div class="overview-metric__label">{{ _('Максимум') }}</div>
-        <div class="overview-metric__value">$500.00</div>
-        <p class="overview-metric__hint">{{ _('Лимит одной операции') }}</p>
-      </article>
-      <article class="overview-metric glass-effect">
-        <div class="overview-metric__label">{{ _('Способы оплаты') }}</div>
-        <div class="overview-metric__value">{{ payment_methods|length }}</div>
-        <p class="overview-metric__hint">{{ _('Доступно на выбор') }}</p>
-      </article>
     </section>
 
     <form method="POST" action="{{ url_for('start_balance_payment', method=(payment_methods[0].slug if payment_methods else 'cryptobot')) }}" class="overview-shell" id="balance-topup-form">
