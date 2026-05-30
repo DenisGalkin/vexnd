@@ -698,7 +698,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 
 .dashboard-nav .sidebar-item {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
     width: 100%;
     text-align: left;
     padding: 0.6rem 0.8rem;
@@ -707,6 +709,24 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     font-weight: 600;
     color: rgba(229,231,235,.86);
     transition: background-color .18s ease, color .18s ease;
+}
+
+.dashboard-sidebar-nav__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.15rem;
+    height: 1.15rem;
+    flex-shrink: 0;
+}
+
+.dashboard-sidebar-nav__icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.dashboard-sidebar-nav__label {
+    min-width: 0;
 }
 
 .dashboard-nav .sidebar-item:hover {

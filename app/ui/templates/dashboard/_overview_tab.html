@@ -26,6 +26,7 @@
       {% else %}
         <a href="{{ url_lang('pricing') }}" class="overview-chip overview-chip--primary">{{ primary_cta }}</a>
       {% endif %}
+      <a href="{{ url_lang('balance_page') }}" class="overview-chip">{{ _('Пополнить баланс') }}</a>
     </div>
   </section>
 
@@ -53,7 +54,6 @@
     <h3 class="overview-panel__section-title">{{ _('Что дальше?') }}</h3>
     <div class="overview-shortcuts">
       <button type="button" class="overview-chip" data-dashboard-target="connection">{{ _('Подключение') }}</button>
-      <a href="{{ url_lang('balance_page') }}" class="overview-chip">{{ _('Пополнить баланс') }}</a>
       <button type="button" class="overview-chip" data-dashboard-target="referrals">{{ _('Рефералы') }}</button>
       <button type="button" class="overview-chip" data-dashboard-target="settings">{{ _('Настройки') }}</button>
     </div>

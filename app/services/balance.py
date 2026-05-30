@@ -11,9 +11,9 @@ from app.services.referrals import apply_referral_bonus_if_eligible
 from app.services.subscriptions import create_remnawave_subscription
 
 
-MIN_TOPUP_CENTS = 300
+MIN_TOPUP_CENTS = 100
 MAX_TOPUP_CENTS = 50000
-TOPUP_PRESET_CENTS = (500, 1000, 2500, 5000)
+TOPUP_PRESET_CENTS = (100, 500, 1000, 2500)
 
 
 def amount_to_cents(amount: Decimal | float | int | str) -> int:
