@@ -20,19 +20,20 @@ from app.domain.models import User
 from app.services.subscriptions import is_trial_eligible
 from app.services.bot_admin_links import is_bot_admin
 from app.bot.models import BotUserState, TelegramAccount
+from app.services.balance import TOPUP_PRESET_CENTS, can_pay_for_plan_with_balance
 
 
 def keyboard(rows: list[list[tuple[str, str]]]) -> dict[str, object]:
     return {"inline_keyboard": [[{"text": text, "callback_data": data} for text, data in row] for row in rows]}
 
 
-def payment_link_keyboard(pay_url: str, intent_id: int, plan_months: int, state: BotUserState) -> dict[str, object]:
+def payment_link_keyboard(pay_url: str, intent_id: int, plan_months: int, state: BotUserState, *, return_callback: str | None = None) -> dict[str, object]:
     return {
         "inline_keyboard": [
             [{"text": t(state, "pay"), "url": pay_url}],
             [
                 {"text": t(state, "check_payment"), "callback_data": f"checkpay_{intent_id}"},
-                {"text": t(state, "other_method"), "callback_data": f"buy_{plan_months}"},
+                {"text": t(state, "other_method"), "callback_data": return_callback or f"buy_{plan_months}"},
             ],
             [{"text": t(state, "back_menu"), "callback_data": "menu"}],
         ]
@@ -43,7 +44,8 @@ def main_menu(state: BotUserState, user: User | None = None) -> dict[str, object
     rows = [[{"text": t(state, "setup"), "callback_data": "connect"}, {"text": t(state, "profile"), "callback_data": "subscription"}]]
     if user is not None and is_trial_eligible(user):
         rows.append([{"text": t(state, "trial_offer"), "callback_data": "trial_activate"}])
-    rows.append([{"text": t(state, "buy"), "callback_data": "plans"}, {"text": t(state, "referrals"), "callback_data": "referrals"}])
+    rows.append([{"text": t(state, "buy"), "callback_data": "plans"}, {"text": t(state, "balance"), "callback_data": "balance"}])
+    rows.append([{"text": t(state, "referrals"), "callback_data": "referrals"}])
     account = TelegramAccount.query.filter_by(user_id=user.id).first() if user is not None else None
     if is_bot_admin(getattr(account, "telegram_id", None), getattr(account, "username", None)):
         rows.append([{"text": t(state, "admin_panel"), "callback_data": "admin_panel"}])
@@ -57,11 +59,33 @@ def is_payment_method_enabled(method: str) -> bool:
 
 
 def payment_methods_keyboard(plan_months: int, state: BotUserState) -> dict[str, object]:
+    return payment_methods_keyboard_for_user(plan_months, state, None)
+
+
+def payment_methods_keyboard_for_user(plan_months: int, state: BotUserState, user: User | None) -> dict[str, object]:
     rows: list[list[tuple[str, str]]] = []
-    enabled_methods = [(PAYMENT_METHODS[code]["label"], f"pm_{code}_{plan_months}") for code in ("platega", "cryptobot", "heleket", "crystal") if is_payment_method_enabled(code)]
-    for item in enabled_methods:
-        rows.append([item])
+    if user is not None and can_pay_for_plan_with_balance(user.id, plan_months)[0]:
+        rows.append([(t(state, "balance_buy"), f"pm_balance_{plan_months}")])
+    rows.extend([[(PAYMENT_METHODS[code]["label"], f"pm_{code}_{plan_months}")] for code in ("platega", "cryptobot", "heleket", "crystal") if is_payment_method_enabled(code)])
     rows.append([(t(state, "back_plans"), "plans")])
+    return keyboard(rows)
+
+
+def balance_keyboard(state: BotUserState) -> dict[str, object]:
+    rows = [[(t(state, "balance_topup"), "balance_topup"), (t(state, "buy"), "plans")]]
+    rows.append([(t(state, "back_menu"), "menu")])
+    return keyboard(rows)
+
+
+def balance_topup_amounts_keyboard(state: BotUserState) -> dict[str, object]:
+    rows = [[(money_amount(preset / 100), f"balance_amount_{preset}") for preset in TOPUP_PRESET_CENTS[:2]], [(money_amount(preset / 100), f"balance_amount_{preset}") for preset in TOPUP_PRESET_CENTS[2:]]]
+    rows.append([(t(state, "back"), "balance")])
+    return keyboard(rows)
+
+
+def balance_topup_methods_keyboard(amount_cents: int, state: BotUserState) -> dict[str, object]:
+    rows = [[(PAYMENT_METHODS[code]["label"], f"balance_pm_{code}_{amount_cents}")] for code in ("platega", "cryptobot", "heleket", "crystal") if is_payment_method_enabled(code)]
+    rows.append([(t(state, "back"), "balance_topup")])
     return keyboard(rows)
 
 

@@ -14,6 +14,8 @@ def create_intent_with_pricing(
     token: str,
     user_id: int,
     plan_months: int,
+    purpose: str = "subscription",
+    balance_amount_cents: int | None = None,
     external_id: str | None,
     pricing: dict,
 ) -> Any:
@@ -23,6 +25,8 @@ def create_intent_with_pricing(
         token=token,
         user_id=user_id,
         plan_months=plan_months,
+        purpose=purpose,
+        balance_amount_cents=balance_amount_cents,
         external_id=external_id or None,
     )
     db_session.add(intent)

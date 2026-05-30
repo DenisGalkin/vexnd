@@ -16,8 +16,9 @@ from app.bot.common import format_bytes
 from app.bot.models import TelegramAccount
 from app.bot.subscriptions import local_subscription_snapshot, remnawave_subscription_snapshot, snapshot_has_missing_remote_subscription
 from app.core.extensions import db
-from app.domain.models import PaymentIntent, ReferralSignup, Subscription, User, UserNotificationPreference
+from app.domain.models import BalanceTransaction, PaymentIntent, ReferralSignup, Subscription, User, UserNotificationPreference
 from app.domain.plans import format_usd_amount, plan_details, plan_duration_label
+from app.services.balance import TOPUP_PRESET_CENTS, can_pay_for_plan_with_balance, format_balance_cents, user_balance_cents
 from app.services.coupons import coupon_pricing, intent_pricing, normalize_coupon_code
 from app.services.email_change_otp import get_pending_email_change
 from app.services.email_otp import OTP_TTL_MINUTES
@@ -104,6 +105,7 @@ def _build_dashboard_referrals_context() -> dict[str, object]:
 def _build_dashboard_settings_context() -> dict[str, object]:
     transactions = []
     subscription_plan_name = None
+    balance_amount_cents = user_balance_cents(current_user.id)
     try:
         intents = (
             db.session.query(PaymentIntent)
@@ -122,15 +124,26 @@ def _build_dashboard_settings_context() -> dict[str, object]:
                     "date": intent.processed_at or intent.created_at,
                     "amount": f"{format_usd_amount(pricing['final_price'])} USD",
                     "original_amount": format_usd_amount(pricing["original_price"]),
-                    "plan_name": plan_duration_label(intent.plan_months),
+                    "plan_name": plan_duration_label(intent.plan_months) if int(intent.plan_months or 0) > 0 else translate("Пополнение баланса"),
                     "provider": (intent.provider or "").strip() or "—",
                     "coupon_code": pricing.get("coupon_code") or None,
                     "status": "success" if intent.processed_at else "pending",
+                    "kind": getattr(intent, "purpose", "subscription"),
                 }
             )
     except Exception:
         transactions = []
         subscription_plan_name = None
+    try:
+        balance_entries = (
+            db.session.query(BalanceTransaction)
+            .filter(BalanceTransaction.user_id == current_user.id)
+            .order_by(BalanceTransaction.created_at.desc())
+            .limit(20)
+            .all()
+        )
+    except Exception:
+        balance_entries = []
 
     sessions = []
     try:
@@ -171,6 +184,10 @@ def _build_dashboard_settings_context() -> dict[str, object]:
         "transactions": transactions,
         "sessions": sessions,
         "subscription_plan_name": subscription_plan_name,
+        "balance_amount_cents": balance_amount_cents,
+        "balance_amount_text": format_balance_cents(balance_amount_cents),
+        "balance_entries": balance_entries,
+        "topup_presets": list(TOPUP_PRESET_CENTS),
         "telegram_auth": telegram_auth,
         "pending_email_change": pending_email_change,
         "pending_email_change_masked": mask_email(pending_email_change.new_email) if pending_email_change else None,
@@ -255,6 +272,11 @@ def _build_dashboard_subscription_context(*, force_remote_refresh: bool = False)
         "qr_code": _subscription_qr_code(subscription_url),
         "has_subscription_record": has_subscription_record,
         "is_active": is_active,
+        "balance_amount_cents": user_balance_cents(current_user.id),
+        "balance_amount_text": format_balance_cents(user_balance_cents(current_user.id)),
+        "balance_can_pay_1m": can_pay_for_plan_with_balance(current_user.id, 1)[0],
+        "balance_can_pay_3m": can_pay_for_plan_with_balance(current_user.id, 3)[0],
+        "balance_can_pay_12m": can_pay_for_plan_with_balance(current_user.id, 12)[0],
     }
 @login_required
 def dashboard():
@@ -321,6 +343,7 @@ def dashboard():
         **referral_context,
         **settings_context,
         **subscription_context,
+        topup_presets=list(TOPUP_PRESET_CENTS),
     )
 
 
@@ -351,6 +374,9 @@ def checkout():
         payment_methods.append({"slug": "platega", "name": "Platega.io", "icon": "🌍", "class": "ru preferred", "preferred": True})
     if (os.environ.get("CRYSTALPAY_AUTH_LOGIN") or "").strip() and (os.environ.get("CRYSTALPAY_AUTH_SECRET") or "").strip():
         payment_methods.append({"slug": "crystalpay", "name": "Crystal Pay", "icon": "💎", "class": "crypto", "preferred": False})
+    balance_ready, _balance_pricing = can_pay_for_plan_with_balance(current_user.id, plan_months, coupon_code)
+    if balance_ready:
+        payment_methods.insert(0, {"slug": "balance", "name": translate("Внутренний баланс"), "icon": "💰", "class": "preferred", "preferred": True})
     return render_template(
         "checkout.html",
         plan=plan_months,
@@ -364,6 +390,7 @@ def checkout():
         start_dt=start_dt,
         end_dt=end_dt,
         user_email=(current_user.email if current_user.is_authenticated else ""),
+        balance_amount_text=format_balance_cents(user_balance_cents(current_user.id)),
     )
 
 

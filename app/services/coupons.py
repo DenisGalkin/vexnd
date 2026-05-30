@@ -302,7 +302,10 @@ def create_intent_pricing(token: str, pricing: dict) -> PaymentIntentPricing | N
 
 
 def intent_pricing(intent: PaymentIntent | None) -> dict:
-    fallback_price = plan_price_usd(intent.plan_months if intent else 1)
+    if intent and getattr(intent, "purpose", "subscription") == "balance_topup":
+        fallback_price = Decimal(max(0, int(getattr(intent, "balance_amount_cents", 0) or 0))) / Decimal("100")
+    else:
+        fallback_price = plan_price_usd(intent.plan_months if intent else 1)
     base = {
         "coupon_code": None,
         "coupon_applied": False,
@@ -331,6 +334,11 @@ def intent_expected_amounts(intent: PaymentIntent | None) -> set[Decimal]:
     meta = PaymentIntentPricing.query.filter_by(intent_token=intent.token).first()
     if meta and meta.final_amount_usd:
         amounts.add(to_decimal_amount(meta.final_amount_usd))
+    if getattr(intent, "purpose", "subscription") == "balance_topup":
+        raw_cents = int(getattr(intent, "balance_amount_cents", 0) or 0)
+        if raw_cents > 0:
+            amounts.add(Decimal(raw_cents) / Decimal("100"))
+        return amounts
     try:
         amounts.add(to_decimal_amount(plan_price_usd(intent.plan_months)))
     except Exception:

@@ -5,6 +5,7 @@ from sqlalchemy import or_
 from app.bot.models import BotPromoRedemption, BotUserState, TelegramAccount
 from app.core.extensions import db
 from app.domain.models import (
+    BalanceTransaction,
     PaymentIntent,
     PaymentIntentPricing,
     ReferralCode,
@@ -15,6 +16,7 @@ from app.domain.models import (
     TelegramAuthChallenge,
     TrialGrant,
     User,
+    UserBalance,
     UserCouponRedemption,
     UserSecurity,
     WebSession,
@@ -44,6 +46,8 @@ def delete_user_account(user_id: int) -> bool:
         SubscriptionNotificationLog.query.filter_by(user_id=user.id).delete(synchronize_session=False)
         TrialGrant.query.filter_by(user_id=user.id).delete(synchronize_session=False)
         UserSecurity.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+        BalanceTransaction.query.filter_by(user_id=user.id).delete(synchronize_session=False)
+        UserBalance.query.filter_by(user_id=user.id).delete(synchronize_session=False)
         WebSession.query.filter_by(user_id=user.id).delete(synchronize_session=False)
         UserCouponRedemption.query.filter_by(user_id=user.id).delete(synchronize_session=False)
         ReferralFingerprint.query.filter_by(referred_user_id=user.id).delete(synchronize_session=False)

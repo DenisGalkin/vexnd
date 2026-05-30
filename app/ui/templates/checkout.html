@@ -10,6 +10,7 @@
             <div>
                 <h1 class="text-3xl font-bold">{{ _('Оплата') }}</h1>
                 <p class="text-gray-400 mt-1">{{ _('Выберите способ оплаты') }}</p>
+                <p class="text-gray-500 mt-2 text-sm">{{ _('Внутренний баланс:') }} <span class="text-white font-semibold">{{ balance_amount_text }}</span></p>
             </div>
             <div class="hidden sm:block text-right">
                 <p class="text-gray-400 text-sm">{{ _('Тариф:') }} <span class="text-white font-semibold">{{ plan_duration_label(plan) }}</span></p>
@@ -64,6 +65,8 @@
                     {% set target = url_for('start_payment', method='platega', plan=plan) %}
                 {% elif method.slug == 'heleket' %}
                     {% set target = url_for('start_payment', method='heleket', plan=plan) %}
+                {% elif method.slug == 'balance' %}
+                    {% set target = url_for('start_payment', method='balance', plan=plan) %}
                 {% endif %}
                 <button type="button"
                         class="payment-item {{ method.class }} glass-effect p-4 sm:p-6 rounded-xl md:hover:scale-105 transition-all cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
@@ -79,6 +82,8 @@
                             {% set m = method.slug %}
                             {% if m in ['cryptobot', 'heleket'] %}
                                 {% set subtitle = _('Криптовалюты') %}
+                            {% elif m == 'balance' %}
+                                {% set subtitle = _('Моментальное списание с внутреннего баланса') %}
                             {% elif m == 'platega' %}
                                 {% set subtitle = _('СБП (QR)') %}
                             {% elif m == 'crystalpay' %}

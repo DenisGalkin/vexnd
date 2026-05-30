@@ -18,6 +18,7 @@ from app.services.coupons import apply_coupon_redemption_for_intent, intent_expe
 from app.services.payment_intents import mark_processed_payment
 from app.services.referrals import apply_referral_bonus_if_eligible
 from app.services.security import get_webhook_secret
+from app.services.balance import fulfill_payment_intent
 from app.services.subscriptions import create_remnawave_subscription
 from app.http.helpers import public_url
 
@@ -30,7 +31,13 @@ def crystal_credentials() -> tuple[str, str]:
     return login, secret
 
 
-def create_crystal_invoice(user_id: int, plan_months: int, *, amount_usd: Decimal | None = None) -> tuple[dict, str]:
+def create_crystal_invoice(
+    user_id: int,
+    plan_months: int,
+    *,
+    amount_usd: Decimal | None = None,
+    description: str | None = None,
+) -> tuple[dict, str]:
     amount = format_usd_amount(amount_usd if amount_usd is not None else plan_price_usd(plan_months))
     auth_login, auth_secret = crystal_credentials()
     intent_token = secrets.token_urlsafe(24)
@@ -47,7 +54,7 @@ def create_crystal_invoice(user_id: int, plan_months: int, *, amount_usd: Decima
         "currency": "USD",
         "type": "purchase",
         "lifetime": 60,
-        "description": f"VEXND subscription for {plan_duration_label(plan_months, 'en')}",
+        "description": description or f"VEXND subscription for {plan_duration_label(plan_months, 'en')}",
         "payer_details": {"email": current_user.email} if current_user.is_authenticated and current_user.email else None,
         "extra": intent_token,
         "redirect_url": redirect_url,
@@ -120,9 +127,7 @@ def crystalpay_process_paid_invoice(invoice_id: str, payload_token: str | None =
         user_obj = User.query.get(intent.user_id)
         if not user_obj:
             return False, "user not found"
-        create_remnawave_subscription(user_obj, int(intent.plan_months), strict=True)
-        apply_coupon_redemption_for_intent(intent)
-        apply_referral_bonus_if_eligible(user_obj)
+        fulfill_payment_intent(intent, user_obj, invoice_id)
         mark_processed_payment(
             db_session=db.session,
             processed_model=ProcessedPayment,

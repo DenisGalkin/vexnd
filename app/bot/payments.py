@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import secrets
-from sqlalchemy.exc import IntegrityError
 
 from app.bot.common import (
     BOT_PLAN_CATALOG,
@@ -21,13 +20,8 @@ from app.bot.common import (
     replace_message_with_screen,
     t,
 )
-from app.bot.keyboards import (
-    keyboard,
-    main_menu,
-    payment_link_keyboard,
-    payment_methods_keyboard,
-    plans_keyboard,
-)
+from app.bot.keyboards import balance_keyboard, balance_topup_methods_keyboard, keyboard, main_menu, payment_link_keyboard, payment_methods_keyboard_for_user, plans_keyboard
+from app.bot.models import BotUserState
 from app.bot.subscriptions import (
     invalidate_remnawave_snapshot,
     remnawave_subscription_snapshot,
@@ -35,6 +29,7 @@ from app.bot.subscriptions import (
     subscription_markup,
 )
 from app.domain.models import PaymentIntent, User
+from app.services.balance import format_balance_cents, purchase_subscription_with_balance, topup_description, user_balance_cents
 from app.services.payments.crystalpay import crystal_credentials, crystal_invoice_info, crystalpay_process_paid_invoice
 from app.services.payments.cryptobot import cryptobot_api_base, cryptobot_get_invoice_by_id, cryptobot_process_paid_invoice
 from app.services.payments.heleket import heleket_credentials, heleket_json_dumps, heleket_payment_info, heleket_process_paid, heleket_sign_payload
@@ -134,29 +129,47 @@ def create_bot_heleket_invoice(plan_months: int = 0, amount_cents: int | None = 
     return invoice, intent_token
 
 
-def create_bot_payment(user: User, method: str, plan_months: int) -> tuple[str, str, int]:
+def create_bot_payment(
+    user: User,
+    method: str,
+    plan_months: int,
+    *,
+    purpose: str = "subscription",
+    amount_cents: int | None = None,
+    description: str | None = None,
+) -> tuple[str, str, int]:
     amount_usd = bot_plan_price_usd(plan_months)
+    if purpose == "balance_topup" and amount_cents is not None:
+        amount_usd = amount_cents / 100
     if method == "cryptobot":
-        invoice, intent_token = create_bot_crypto_invoice(plan_months)
+        invoice, intent_token = create_bot_crypto_invoice(plan_months, amount_cents=amount_cents, description=description)
         external_id = str(invoice.get("invoice_id") or invoice.get("invoiceId") or invoice.get("id") or "").strip()
         pay_url = str(invoice.get("bot_invoice_url") or invoice.get("pay_url") or "").strip()
     elif method == "crystal":
-        invoice, intent_token = create_bot_crystal_invoice(user, plan_months)
+        invoice, intent_token = create_bot_crystal_invoice(user, plan_months, amount_cents=amount_cents, description=description)
         external_id = str(invoice.get("id") or "").strip()
         pay_url = str(invoice.get("url") or "").strip()
     elif method == "platega":
-        invoice, intent_token = create_bot_platega_transaction(plan_months)
+        invoice, intent_token = create_bot_platega_transaction(plan_months, amount_cents=amount_cents, description=description)
         external_id = str(invoice.get("transactionId") or invoice.get("transaction_id") or invoice.get("id") or "").strip()
         pay_url = str(invoice.get("url") or invoice.get("redirect") or invoice.get("payformSuccessUrl") or "").strip()
     elif method == "heleket":
-        invoice, intent_token = create_bot_heleket_invoice(plan_months)
+        invoice, intent_token = create_bot_heleket_invoice(plan_months, amount_cents=amount_cents, description=description)
         external_id = str(invoice.get("uuid") or invoice.get("order_id") or invoice.get("id") or "").strip()
         pay_url = str(invoice.get("url") or "").strip()
     else:
         raise RuntimeError("Unknown payment method")
     if not external_id or not pay_url:
         raise RuntimeError("Provider response missing payment data")
-    intent = PaymentIntent(provider=PAYMENT_METHODS[method]["provider"], token=intent_token, user_id=user.id, plan_months=plan_months, external_id=external_id or None)
+    intent = PaymentIntent(
+        provider=PAYMENT_METHODS[method]["provider"],
+        token=intent_token,
+        user_id=user.id,
+        plan_months=plan_months,
+        purpose=purpose,
+        balance_amount_cents=amount_cents if purpose == "balance_topup" else None,
+        external_id=external_id or None,
+    )
     db.session.add(intent)
     db.session.add(create_bot_intent_pricing(intent_token, amount_usd))
     db.session.commit()
@@ -176,16 +189,74 @@ def handle_payment_method(chat_id: int, message_id: int, user: User, state: BotU
         edit_photo_caption(chat_id, message_id, "⚠️ Payment method unavailable. Choose another option:" if state.lang == "en" else "⚠️ Способ оплаты недоступен. Выберите другой вариант:", plans_keyboard(state, user))
         return
     if not is_payment_method_enabled(method):
-        edit_photo_caption(chat_id, message_id, "🛠 This payment method is not configured yet. Choose another one:" if state.lang == "en" else "🛠 Этот способ оплаты пока не настроен. Выберите другой:", payment_methods_keyboard(plan_months, state))
+        edit_photo_caption(chat_id, message_id, "🛠 This payment method is not configured yet. Choose another one:" if state.lang == "en" else "🛠 Этот способ оплаты пока не настроен. Выберите другой:", payment_methods_keyboard_for_user(plan_months, state, user))
+        return
+    if method == "balance":
+        try:
+            purchase_subscription_with_balance(user, plan_months)
+        except ValueError as exc:
+            db.session.rollback()
+            if str(exc) == "insufficient_balance":
+                edit_photo_caption(chat_id, message_id, t(state, "balance_not_enough"), payment_methods_keyboard_for_user(plan_months, state, user))
+            else:
+                edit_photo_caption(chat_id, message_id, str(exc), payment_methods_keyboard_for_user(plan_months, state, user))
+            return
+        except Exception as exc:
+            db.session.rollback()
+            print(f"Bot balance purchase failed: {exc}")
+            edit_photo_caption(chat_id, message_id, t(state, "invoice_error"), payment_methods_keyboard_for_user(plan_months, state, user))
+            return
+        invalidate_remnawave_snapshot(user.id)
+        snapshot = remnawave_subscription_snapshot(user, force_refresh=True)
+        text_out, _ = render_subscription_text(snapshot, state)
+        replace_message_with_screen(chat_id, message_id, "subscription", f"{t(state, 'balance_pay_ok')}\n\n{text_out}", subscription_markup(snapshot, state))
         return
     try:
         pay_url, label, intent_id = create_bot_payment(user, method, plan_months)
     except Exception as exc:
         db.session.rollback()
         print(f"Bot payment creation failed: {exc}")
-        edit_photo_caption(chat_id, message_id, t(state, "invoice_error"), payment_methods_keyboard(plan_months, state))
+        edit_photo_caption(chat_id, message_id, t(state, "invoice_error"), payment_methods_keyboard_for_user(plan_months, state, user))
         return
     edit_photo_caption(chat_id, message_id, f"{t(state, 'invoice_created')}\n\n{t(state, 'method')}: <b>{h(label)}</b>\n📦 {t(state, 'plan')}: <b>{h(bot_plan_label(plan_months, state))}</b>\n💰 {t(state, 'amount')}: <b>{money_amount(bot_plan_price_usd(plan_months))}</b>\n\n{t(state, 'after_pay')}", payment_link_keyboard(pay_url, intent_id, plan_months, state))
+
+
+def render_balance_text(state: BotUserState, user: User) -> str:
+    return (
+        f"{t(state, 'balance_title')}\n\n"
+        f"💵 {t(state, 'balance_current')}: <b>{format_balance_cents(user_balance_cents(user.id))}</b>\n\n"
+        f"{t(state, 'balance_topup_hint')}"
+    )
+
+
+def handle_balance_topup_method(chat_id: int, message_id: int, user: User, state: BotUserState, data: str) -> None:
+    try:
+        raw = data.removeprefix("balance_pm_")
+        method, amount_raw = raw.rsplit("_", 1)
+        amount_cents = int(amount_raw)
+    except Exception:
+        edit_photo_caption(chat_id, message_id, t(state, "invoice_error"), balance_keyboard(state))
+        return
+    try:
+        pay_url, label, intent_id = create_bot_payment(
+            user,
+            method,
+            0,
+            purpose="balance_topup",
+            amount_cents=amount_cents,
+            description=topup_description(amount_cents),
+        )
+    except Exception as exc:
+        db.session.rollback()
+        print(f"Bot balance top-up creation failed: {exc}")
+        edit_photo_caption(chat_id, message_id, t(state, "invoice_error"), balance_topup_methods_keyboard(amount_cents, state))
+        return
+    edit_photo_caption(
+        chat_id,
+        message_id,
+        f"{t(state, 'invoice_created')}\n\n{t(state, 'method')}: <b>{h(label)}</b>\n💰 {t(state, 'amount')}: <b>{format_balance_cents(amount_cents)}</b>\n\n{t(state, 'after_pay')}",
+        payment_link_keyboard(pay_url, intent_id, 0, state, return_callback="balance_topup"),
+    )
 
 def ensure_bot_schema() -> None:
     db.create_all()
@@ -239,6 +310,9 @@ def handle_payment_check(chat_id: int, message_id: int, user: User, state: BotUs
         processed, msg = False, "temporary error"
     if not processed:
         edit_photo_caption(chat_id, message_id, t(state, "payment_pending"), keyboard([[(t(state, "check_payment"), f"checkpay_{intent.id}")], [(t(state, "back_menu"), "menu")]]))
+        return
+    if (getattr(intent, "purpose", "subscription") or "subscription") == "balance_topup":
+        replace_message_with_screen(chat_id, message_id, "payment", f"{t(state, 'balance_topup_ok')}\n\n{render_balance_text(state, user)}", balance_keyboard(state))
         return
     invalidate_remnawave_snapshot(user.id)
     snapshot = remnawave_subscription_snapshot(user, force_refresh=True)

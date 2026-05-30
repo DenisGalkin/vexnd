@@ -25,6 +25,9 @@ from app.bot.common import (
 from app.bot.keyboards import (
     admin_link_name_keyboard,
     admin_panel_keyboard,
+    balance_keyboard,
+    balance_topup_amounts_keyboard,
+    balance_topup_methods_keyboard,
     connect_client_keyboard,
     connect_install_keyboard,
     help_keyboard,
@@ -32,7 +35,7 @@ from app.bot.keyboards import (
     legal_keyboard,
     language_keyboard,
     main_menu,
-    payment_methods_keyboard,
+    payment_methods_keyboard_for_user,
     plans_keyboard,
     qr_keyboard,
     referral_keyboard,
@@ -40,8 +43,10 @@ from app.bot.keyboards import (
 )
 from app.services.bot_admin_links import is_bot_admin, tracked_link_report
 from app.bot.payments import (
+    handle_balance_topup_method,
     handle_payment_check,
     handle_payment_method,
+    render_balance_text,
 )
 from app.bot.subscriptions import (
     build_bot_referral_link,
@@ -99,7 +104,7 @@ def handle_buy(chat_id: int, message_id: int, user, state, data: str) -> None:
             f"💰 {t(state, 'amount')}: <b>{money_amount(bot_plan_price_usd(plan_months))}</b>\n\n"
             f"{t(state, 'choose_payment')}"
         ),
-        payment_methods_keyboard(plan_months, state),
+        payment_methods_keyboard_for_user(plan_months, state, user),
     )
 
 
@@ -215,6 +220,21 @@ def handle_callback(callback: dict[str, object]) -> None:
             link = build_bot_referral_link(user)
             replace_message_with_screen(chat_id, message_id, "referrals", format_referral_text(user, state), referral_keyboard(link, state))
             return
+        if data == "balance":
+            answer_callback(callback_id)
+            clear_pending_action(state)
+            replace_message_with_screen(chat_id, message_id, "payment", render_balance_text(state, user), balance_keyboard(state))
+            return
+        if data == "balance_topup":
+            answer_callback(callback_id)
+            clear_pending_action(state)
+            edit_photo_caption(chat_id, message_id, f"{render_balance_text(state, user)}\n\n{t(state, 'balance_choose_amount')}", balance_topup_amounts_keyboard(state))
+            return
+        if data.startswith("balance_amount_"):
+            answer_callback(callback_id)
+            amount_cents = int(data.removeprefix("balance_amount_"))
+            edit_photo_caption(chat_id, message_id, f"{render_balance_text(state, user)}\n\n{t(state, 'balance_choose_method')}\n💰 <b>{amount_cents / 100:.2f} USD</b>", balance_topup_methods_keyboard(amount_cents, state))
+            return
         if data in ("setup", "connect"):
             answer_callback(callback_id)
             clear_pending_action(state)
@@ -310,6 +330,10 @@ def handle_callback(callback: dict[str, object]) -> None:
         if data.startswith("pm_"):
             answer_callback(callback_id)
             handle_payment_method(chat_id, message_id, user, state, data)
+            return
+        if data.startswith("balance_pm_"):
+            answer_callback(callback_id)
+            handle_balance_topup_method(chat_id, message_id, user, state, data)
             return
         if data == "promo_start":
             answer_callback(callback_id)

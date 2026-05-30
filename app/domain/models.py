@@ -80,6 +80,8 @@ class PaymentIntent(db.Model):
     token = db.Column(db.String(128), unique=True, nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     plan_months = db.Column(db.Integer, nullable=False)
+    purpose = db.Column(db.String(32), nullable=False, default="subscription")
+    balance_amount_cents = db.Column(db.Integer, nullable=True)
     external_id = db.Column(db.String(128), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     processed_at = db.Column(db.DateTime, nullable=True)
@@ -192,6 +194,28 @@ class UserCouponRedemption(db.Model):
     __table_args__ = (
         db.UniqueConstraint("user_id", "coupon_code", name="uq_user_coupon_redemption_user_coupon"),
     )
+
+
+class UserBalance(db.Model):
+    __tablename__ = "user_balance"
+
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), primary_key=True)
+    amount_cents = db.Column(db.Integer, nullable=False, default=0)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class BalanceTransaction(db.Model):
+    __tablename__ = "balance_transaction"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    direction = db.Column(db.String(16), nullable=False)
+    kind = db.Column(db.String(32), nullable=False)
+    amount_cents = db.Column(db.Integer, nullable=False)
+    balance_after_cents = db.Column(db.Integer, nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+    related_intent_token = db.Column(db.String(128), nullable=True, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 
 class PendingRegistration(db.Model):

@@ -16,6 +16,7 @@ from app.http.security.webhooks import intent_not_expired, payment_processing_lo
 from app.services.coupons import apply_coupon_redemption_for_intent, intent_expected_amounts
 from app.services.referrals import apply_referral_bonus_if_eligible
 from app.services.security import get_webhook_secret
+from app.services.balance import fulfill_payment_intent
 from app.services.subscriptions import create_remnawave_subscription
 from app.http.helpers import public_url
 
@@ -76,7 +77,13 @@ def platega_quote_amount(amount_usd: Decimal | float | int | str, *, payment_met
     return round(converted_amount, 2), target_currency, method
 
 
-def create_platega_transaction(user_id: int, plan_months: int, *, amount_usd: Decimal | None = None) -> tuple[dict, str]:
+def create_platega_transaction(
+    user_id: int,
+    plan_months: int,
+    *,
+    amount_usd: Decimal | None = None,
+    description: str | None = None,
+) -> tuple[dict, str]:
     merchant_id, secret = platega_credentials()
     intent_token = secrets.token_urlsafe(24)
     quoted_amount, currency, payment_method = platega_quote_amount(amount_usd)
@@ -89,6 +96,8 @@ def create_platega_transaction(user_id: int, plan_months: int, *, amount_usd: De
         "payload": intent_token,
         "failLink": public_url("platega_fail", plan=plan_months),
     }
+    if description:
+        payload["description"] = description
     headers = {"X-MerchantId": merchant_id, "X-Secret": secret, "Content-Type": "application/json", "Accept": "application/json"}
     resp = HTTP.post(f"{platega_api_base()}/transaction/process", headers=headers, json=payload, timeout=30)
     resp.raise_for_status()
@@ -157,9 +166,7 @@ def platega_process_paid_transaction(tx_id: str, payload_token: str | None = Non
         user_obj = User.query.get(intent.user_id)
         if not user_obj:
             return False, "user not found"
-        create_remnawave_subscription(user_obj, int(intent.plan_months), strict=True)
-        apply_coupon_redemption_for_intent(intent)
-        apply_referral_bonus_if_eligible(user_obj)
+        fulfill_payment_intent(intent, user_obj, tx_id)
         db.session.add(ProcessedPayment(provider="platega", external_id=tx_id))
         intent.processed_at = datetime.utcnow()
         db.session.commit()

@@ -20,6 +20,7 @@ from app.services.coupons import apply_coupon_redemption_for_intent, intent_expe
 from app.services.referrals import apply_referral_bonus_if_eligible
 from app.services.remnawave import get_remnawave_config
 from app.services.security import client_ip, get_webhook_secret
+from app.services.balance import fulfill_payment_intent
 from app.services.subscriptions import create_remnawave_subscription
 from app.http.helpers import public_url
 
@@ -42,7 +43,13 @@ def heleket_sign_payload(payload: dict, api_key: str) -> str:
     return hashlib.md5((b64 + api_key).encode("utf-8")).hexdigest()
 
 
-def create_heleket_invoice(user_id: int, plan_months: int, *, amount_usd: Decimal | None = None) -> tuple[dict, str]:
+def create_heleket_invoice(
+    user_id: int,
+    plan_months: int,
+    *,
+    amount_usd: Decimal | None = None,
+    description: str | None = None,
+) -> tuple[dict, str]:
     amount = format_usd_amount(amount_usd if amount_usd is not None else plan_price_usd(plan_months))
     merchant_id, api_key = heleket_credentials()
     intent_token = secrets.token_urlsafe(24)
@@ -62,6 +69,8 @@ def create_heleket_invoice(user_id: int, plan_months: int, *, amount_usd: Decima
         "url_success": url_return,
         "additional_data": intent_token,
     }
+    if description:
+        payload["description"] = description
     sign = heleket_sign_payload(payload, api_key)
     headers = {"merchant": merchant_id, "sign": sign, "Content-Type": "application/json", "Accept": "application/json"}
     body = heleket_json_dumps(payload)
@@ -172,9 +181,7 @@ def heleket_process_paid(ext: str | None = None, *, uuid: str | None = None, ord
         user_obj = User.query.get(intent.user_id)
         if not user_obj:
             return False, "user not found"
-        create_remnawave_subscription(user_obj, int(intent.plan_months), strict=True)
-        apply_coupon_redemption_for_intent(intent)
-        apply_referral_bonus_if_eligible(user_obj)
+        fulfill_payment_intent(intent, user_obj, uuid or order_id or ext or intent.external_id or "")
         ids_to_mark = {i for i in (uuid, order_id, ext, intent.external_id) if i}
         for pid in ids_to_mark:
             if not ProcessedPayment.query.filter_by(provider="heleket", external_id=pid).first():

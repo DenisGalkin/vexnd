@@ -32,8 +32,8 @@
   <section class="overview-metrics" aria-label="{{ _('Ключевые показатели') }}">
     <article class="overview-metric glass-effect">
       <div class="overview-metric__label">{{ _('Баланс') }}</div>
-      <div class="overview-metric__value">$0</div>
-      <p class="overview-metric__hint">{{ _('На покупки') }}</p>
+      <div class="overview-metric__value">{{ balance_amount_text }}</div>
+      <p class="overview-metric__hint">{{ _('На покупки и продление') }}</p>
     </article>
 
     <article class="overview-metric glass-effect">
@@ -53,6 +53,7 @@
     <h3 class="overview-panel__section-title">{{ _('Что дальше?') }}</h3>
     <div class="overview-shortcuts">
       <button type="button" class="overview-chip" data-dashboard-target="connection">{{ _('Подключение') }}</button>
+      <button type="button" class="overview-chip" data-dashboard-target="subscription">{{ _('Пополнить баланс') }}</button>
       <button type="button" class="overview-chip" data-dashboard-target="referrals">{{ _('Рефералы') }}</button>
       <button type="button" class="overview-chip" data-dashboard-target="settings">{{ _('Настройки') }}</button>
     </div>

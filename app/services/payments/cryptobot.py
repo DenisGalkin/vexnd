@@ -17,6 +17,7 @@ from app.http.security.webhooks import intent_not_expired, payment_processing_lo
 from app.services.coupons import apply_coupon_redemption_for_intent, intent_expected_amounts
 from app.services.payment_intents import mark_processed_payment
 from app.services.referrals import apply_referral_bonus_if_eligible
+from app.services.balance import fulfill_payment_intent
 from app.services.subscriptions import create_remnawave_subscription
 
 
@@ -25,7 +26,13 @@ def cryptobot_api_base() -> str:
     return "https://testnet-pay.crypt.bot/api" if is_testnet else "https://pay.crypt.bot/api"
 
 
-def create_crypto_invoice(user_id: int, plan_months: int, *, amount_usd: Decimal | None = None) -> tuple[dict, str]:
+def create_crypto_invoice(
+    user_id: int,
+    plan_months: int,
+    *,
+    amount_usd: Decimal | None = None,
+    description: str | None = None,
+) -> tuple[dict, str]:
     amount = format_usd_amount(amount_usd if amount_usd is not None else plan_price_usd(plan_months))
     token = os.environ.get("CRYPTO_PAY_API_TOKEN")
     if not token:
@@ -37,7 +44,7 @@ def create_crypto_invoice(user_id: int, plan_months: int, *, amount_usd: Decimal
         "fiat": "USD",
         "amount": str(amount),
         "accepted_assets": "USDT,TON,BTC,ETH,LTC,BNB,TRX,USDC",
-        "description": f"VEXND subscription for {plan_duration_label(plan_months, 'en')}",
+        "description": description or f"VEXND subscription for {plan_duration_label(plan_months, 'en')}",
         "payload": intent_token,
         "paid_btn_name": "callback",
         "paid_btn_url": callback_url,
@@ -130,9 +137,7 @@ def cryptobot_process_paid_invoice(invoice_id: str, payload_token: str | None = 
         user_obj = User.query.get(intent.user_id)
         if not user_obj:
             return False, "user not found"
-        create_remnawave_subscription(user_obj, int(intent.plan_months), strict=True)
-        apply_coupon_redemption_for_intent(intent)
-        apply_referral_bonus_if_eligible(user_obj)
+        fulfill_payment_intent(intent, user_obj, invoice_id)
         mark_processed_payment(
             db_session=db.session,
             processed_model=ProcessedPayment,

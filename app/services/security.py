@@ -39,6 +39,55 @@ def _ensure_supporting_indexes() -> None:
         connection.execute(text("PRAGMA optimize"))
 
 
+def _sqlite_column_names(table_name: str) -> set[str]:
+    with db.engine.begin() as connection:
+        rows = connection.execute(text(f"PRAGMA table_info({table_name})")).fetchall()
+    return {str(row[1]) for row in rows}
+
+
+def _ensure_balance_schema() -> None:
+    if db.engine.dialect.name != "sqlite":
+        return
+    payment_intent_columns = _sqlite_column_names("payment_intent")
+    statements: list[str] = []
+    if "purpose" not in payment_intent_columns:
+        statements.append("ALTER TABLE payment_intent ADD COLUMN purpose VARCHAR(32) NOT NULL DEFAULT 'subscription'")
+    if "balance_amount_cents" not in payment_intent_columns:
+        statements.append("ALTER TABLE payment_intent ADD COLUMN balance_amount_cents INTEGER")
+    with db.engine.begin() as connection:
+        for statement in statements:
+            connection.execute(text(statement))
+        if "purpose" in payment_intent_columns or statements:
+            connection.execute(text("UPDATE payment_intent SET purpose = 'subscription' WHERE purpose IS NULL OR purpose = ''"))
+        connection.execute(
+            text(
+                "CREATE TABLE IF NOT EXISTS user_balance ("
+                "user_id INTEGER NOT NULL PRIMARY KEY,"
+                "amount_cents INTEGER NOT NULL DEFAULT 0,"
+                "updated_at DATETIME NOT NULL"
+                ")"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE TABLE IF NOT EXISTS balance_transaction ("
+                "id INTEGER NOT NULL PRIMARY KEY,"
+                "user_id INTEGER NOT NULL,"
+                "direction VARCHAR(16) NOT NULL,"
+                "kind VARCHAR(32) NOT NULL,"
+                "amount_cents INTEGER NOT NULL,"
+                "balance_after_cents INTEGER NOT NULL,"
+                "description VARCHAR(255),"
+                "related_intent_token VARCHAR(128),"
+                "created_at DATETIME NOT NULL"
+                ")"
+            )
+        )
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_balance_transaction_user_id ON balance_transaction (user_id)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_balance_transaction_created_at ON balance_transaction (created_at)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_balance_transaction_related_intent_token ON balance_transaction (related_intent_token)"))
+
+
 def get_webhook_secret(env_name: str) -> str:
     return (os.environ.get(env_name) or "").strip()
 
@@ -54,10 +103,12 @@ def ensure_db_schema() -> None:
             with open(lock_path, "w") as lock_file:
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
                 db.create_all()
+                _ensure_balance_schema()
                 _ensure_supporting_indexes()
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
         else:
             db.create_all()
+            _ensure_balance_schema()
             _ensure_supporting_indexes()
         _DB_SCHEMA_READY = True
     except Exception as exc:

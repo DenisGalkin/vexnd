@@ -10,6 +10,13 @@ from flask_login import current_user, login_required
 from app.core.extensions import db
 from app.domain.models import PaymentIntent
 from app.http.security.webhooks import provider_error_id, secrets_match
+from app.services.balance import (
+    amount_to_cents,
+    can_pay_for_plan_with_balance,
+    clamp_topup_cents,
+    purchase_subscription_with_balance,
+    topup_description,
+)
 from app.services.coupons import coupon_pricing, create_intent_pricing
 from app.services.payment_intents import create_intent_with_pricing
 from app.services.payments.crystalpay import create_crystal_invoice, crystal_invoice_info, crystalpay_process_paid_invoice, crystalpay_webhook_impl
@@ -19,7 +26,7 @@ from app.services.payments.platega import create_platega_transaction, platega_pr
 from app.http.helpers import return_intent_visible, return_redirect_target, translate
 
 
-SUPPORTED_PAYMENT_METHODS = frozenset({"cryptobot", "crystalpay", "platega", "heleket"})
+SUPPORTED_PAYMENT_METHODS = frozenset({"cryptobot", "crystalpay", "platega", "heleket", "balance"})
 
 
 def normalize_payment_method(raw_method: str | None) -> str:
@@ -43,26 +50,39 @@ def start_payment(method):
         flash(pricing["error"], "error")
         return redirect(url_for("checkout", plan=plan_int))
     amount_usd = pricing["final_price"]
+    if method == "balance":
+        try:
+            purchase_subscription_with_balance(current_user, plan_int, request.form.get("coupon_code"))
+            flash(translate("Подписка активирована и оплачена с внутреннего баланса ✅"), "success")
+        except ValueError as exc:
+            if str(exc) == "insufficient_balance":
+                flash(translate("Недостаточно средств на внутреннем балансе."), "error")
+            else:
+                flash(str(exc), "error")
+        except Exception:
+            db.session.rollback()
+            flash(translate("Не удалось списать средства с баланса. Попробуйте позже."), "error")
+        return redirect(url_for("dashboard"))
     try:
         if method == "cryptobot":
             invoice, intent_token = create_crypto_invoice(current_user.id, plan_int, amount_usd=amount_usd)
             inv_id = str(invoice.get("invoice_id") or invoice.get("invoiceId") or invoice.get("id") or "").strip()
-            create_intent_with_pricing(db_session=db.session, intent_model=PaymentIntent, create_pricing_fn=create_intent_pricing, provider="cryptobot", token=intent_token, user_id=current_user.id, plan_months=plan_int, external_id=inv_id or None, pricing=pricing)
+            create_intent_with_pricing(db_session=db.session, intent_model=PaymentIntent, create_pricing_fn=create_intent_pricing, provider="cryptobot", token=intent_token, user_id=current_user.id, plan_months=plan_int, purpose="subscription", balance_amount_cents=None, external_id=inv_id or None, pricing=pricing)
             return redirect(invoice.get("bot_invoice_url") or invoice.get("pay_url"))
         if method == "crystalpay":
             invoice, intent_token = create_crystal_invoice(current_user.id, plan_int, amount_usd=amount_usd)
             inv_id = str(invoice.get("id") or "").strip()
-            create_intent_with_pricing(db_session=db.session, intent_model=PaymentIntent, create_pricing_fn=create_intent_pricing, provider="crystalpay", token=intent_token, user_id=current_user.id, plan_months=plan_int, external_id=inv_id or None, pricing=pricing)
+            create_intent_with_pricing(db_session=db.session, intent_model=PaymentIntent, create_pricing_fn=create_intent_pricing, provider="crystalpay", token=intent_token, user_id=current_user.id, plan_months=plan_int, purpose="subscription", balance_amount_cents=None, external_id=inv_id or None, pricing=pricing)
             return redirect(invoice.get("url"))
         if method == "platega":
             invoice, intent_token = create_platega_transaction(current_user.id, plan_int, amount_usd=amount_usd)
             tx_id = str(invoice.get("transactionId") or invoice.get("transaction_id") or invoice.get("id") or "").strip()
-            create_intent_with_pricing(db_session=db.session, intent_model=PaymentIntent, create_pricing_fn=create_intent_pricing, provider="platega", token=intent_token, user_id=current_user.id, plan_months=plan_int, external_id=tx_id or None, pricing=pricing)
+            create_intent_with_pricing(db_session=db.session, intent_model=PaymentIntent, create_pricing_fn=create_intent_pricing, provider="platega", token=intent_token, user_id=current_user.id, plan_months=plan_int, purpose="subscription", balance_amount_cents=None, external_id=tx_id or None, pricing=pricing)
             return redirect((invoice.get("url") or invoice.get("redirect") or invoice.get("payformSuccessUrl") or "").strip())
         if method == "heleket":
             invoice, intent_token = create_heleket_invoice(current_user.id, plan_int, amount_usd=amount_usd)
             ext_id = str(invoice.get("uuid") or invoice.get("order_id") or invoice.get("id") or "").strip()
-            create_intent_with_pricing(db_session=db.session, intent_model=PaymentIntent, create_pricing_fn=create_intent_pricing, provider="heleket", token=intent_token, user_id=current_user.id, plan_months=plan_int, external_id=ext_id, pricing=pricing)
+            create_intent_with_pricing(db_session=db.session, intent_model=PaymentIntent, create_pricing_fn=create_intent_pricing, provider="heleket", token=intent_token, user_id=current_user.id, plan_months=plan_int, purpose="subscription", balance_amount_cents=None, external_id=ext_id, pricing=pricing)
             return redirect(str(invoice.get("url") or "").strip())
     except Exception as exc:
         if method in {"platega", "heleket"}:
@@ -70,6 +90,64 @@ def start_payment(method):
             return redirect(url_for("checkout", plan=plan_int))
         return redirect(url_for("coming_soon"))
     return redirect(url_for("coming_soon"))
+
+
+@login_required
+def start_balance_payment(method):
+    method = normalize_payment_method(method)
+    if method not in SUPPORTED_PAYMENT_METHODS or method == "balance":
+        return redirect(url_for("coming_soon"))
+    raw_amount = (request.form.get("amount") or request.args.get("amount") or "").strip()
+    try:
+        amount_cents = clamp_topup_cents(amount_to_cents(raw_amount or "0"))
+    except Exception:
+        flash(translate("Укажите корректную сумму пополнения."), "error")
+        return redirect(url_for("dashboard"))
+    amount_usd = amount_cents / 100
+    pricing = {
+        "coupon_code": None,
+        "coupon_applied": False,
+        "original_price": amount_usd,
+        "final_price": amount_usd,
+        "discount_amount": 0,
+    }
+    description = topup_description(amount_cents)
+    try:
+        if method == "cryptobot":
+            invoice, intent_token = create_crypto_invoice(current_user.id, 0, amount_usd=amount_usd, description=description)
+            external_id = str(invoice.get("invoice_id") or invoice.get("invoiceId") or invoice.get("id") or "").strip()
+            pay_url = invoice.get("bot_invoice_url") or invoice.get("pay_url")
+        elif method == "crystalpay":
+            invoice, intent_token = create_crystal_invoice(current_user.id, 0, amount_usd=amount_usd, description=description)
+            external_id = str(invoice.get("id") or "").strip()
+            pay_url = invoice.get("url")
+        elif method == "platega":
+            invoice, intent_token = create_platega_transaction(current_user.id, 0, amount_usd=amount_usd, description=description)
+            external_id = str(invoice.get("transactionId") or invoice.get("transaction_id") or invoice.get("id") or "").strip()
+            pay_url = (invoice.get("url") or invoice.get("redirect") or invoice.get("payformSuccessUrl") or "").strip()
+        else:
+            invoice, intent_token = create_heleket_invoice(current_user.id, 0, amount_usd=amount_usd, description=description)
+            external_id = str(invoice.get("uuid") or invoice.get("order_id") or invoice.get("id") or "").strip()
+            pay_url = str(invoice.get("url") or "").strip()
+        create_intent_with_pricing(
+            db_session=db.session,
+            intent_model=PaymentIntent,
+            create_pricing_fn=create_intent_pricing,
+            provider="crystalpay" if method == "crystalpay" else method,
+            token=intent_token,
+            user_id=current_user.id,
+            plan_months=0,
+            purpose="balance_topup",
+            balance_amount_cents=amount_cents,
+            external_id=external_id or None,
+            pricing=pricing,
+        )
+        return redirect(pay_url)
+    except Exception as exc:
+        db.session.rollback()
+        print(f"Balance top-up creation failed: {exc}")
+        flash(translate("Не удалось создать пополнение баланса. Попробуйте позже."), "error")
+        return redirect(url_for("dashboard"))
 
 
 # The legacy /payment_callback endpoint has been removed.
@@ -259,6 +337,7 @@ def platega_callback_secret(secret: str):
 
 def register(app) -> None:
     app.add_url_rule("/start_payment/<method>", endpoint="start_payment", view_func=start_payment, methods=["POST"])
+    app.add_url_rule("/start_balance_payment/<method>", endpoint="start_balance_payment", view_func=start_balance_payment, methods=["POST"])
     # Removed deprecated /payment_callback endpoint registration.
     app.add_url_rule("/cryptobot/return", endpoint="cryptobot_return", view_func=cryptobot_return, methods=["GET"])
     app.add_url_rule("/crystalpay/return", endpoint="crystalpay_return", view_func=crystalpay_return, methods=["GET"])
