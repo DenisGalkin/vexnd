@@ -405,6 +405,28 @@ input, select, textarea {
     display: none;
 }
 
+.payment-method-icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 2.75rem;
+}
+
+.payment-method-icon--summary {
+    width: 3rem;
+    height: 3rem;
+    flex-basis: 3rem;
+}
+
+.payment-method-icon__image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
 /* Preferred payment methods: subtle highlight to increase conversion */
 .payment-item.preferred {
     border-color: rgba(37, 99, 235, 0.45);

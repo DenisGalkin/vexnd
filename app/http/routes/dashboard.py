@@ -5,6 +5,7 @@ import io
 import math
 import os
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Any
 
 import qrcode
@@ -18,7 +19,7 @@ from app.bot.subscriptions import local_subscription_snapshot, remnawave_subscri
 from app.core.extensions import db
 from app.domain.models import BalanceTransaction, PaymentIntent, ReferralSignup, Subscription, User, UserNotificationPreference
 from app.domain.plans import format_usd_amount, plan_details, plan_duration_label
-from app.services.balance import TOPUP_PRESET_CENTS, amount_to_cents, can_pay_for_plan_with_balance, format_balance_cents, user_balance_cents
+from app.services.balance import TOPUP_PRESET_CENTS, can_pay_for_plan_with_balance, format_balance_cents, user_balance_cents
 from app.services.coupons import coupon_pricing, intent_pricing, normalize_coupon_code
 from app.services.email_change_otp import get_pending_email_change
 from app.services.email_otp import OTP_TTL_MINUTES
@@ -380,20 +381,33 @@ def checkout():
     coupon_code = normalize_coupon_code(request.args.get("coupon"))
     pricing = coupon_pricing(plan_months, coupon_code, current_user.id if current_user.is_authenticated else None)
     price = format_usd_amount(pricing["final_price"])
-    balance_amount_cents = user_balance_cents(current_user.id)
-    total_due_cents = amount_to_cents(pricing["final_price"])
-    balance_shortfall_cents = max(0, total_due_cents - balance_amount_cents)
-    balance_ready = balance_amount_cents >= total_due_cents
     start_dt = datetime.utcnow()
     end_dt = start_dt + timedelta(days=30 * plan_months)
-    payment_methods = [{"slug": "cryptobot", "name": "Crypto Bot", "icon": "🤖", "class": "crypto preferred", "preferred": True}]
+    balance_cents = user_balance_cents(current_user.id)
+    shortfall_amount = max(Decimal("0.00"), Decimal(str(pricing["final_price"])) - (Decimal(balance_cents) / Decimal("100")))
+    shortfall_text = format_usd_amount(shortfall_amount)
+    payment_icon_urls = {
+        "cryptobot": url_for("static", filename="images/payments/cryptobot.png"),
+        "heleket": url_for("static", filename="images/payments/heleket.png"),
+        "platega": url_for("static", filename="images/payments/plategaio.png"),
+        "crystalpay": url_for("static", filename="images/payments/crystalpay.png"),
+    }
+    payment_methods = [{
+        "slug": "cryptobot",
+        "name": "Crypto Bot",
+        "icon": "🤖",
+        "icon_url": payment_icon_urls["cryptobot"],
+        "class": "crypto preferred",
+        "preferred": True,
+    }]
     if (os.environ.get("HELEKET_MERCHANT_ID") or "").strip() and (os.environ.get("HELEKET_API_KEY") or "").strip():
-        payment_methods.append({"slug": "heleket", "name": "Heleket", "icon": "🪙", "class": "crypto preferred", "preferred": True})
+        payment_methods.append({"slug": "heleket", "name": "Heleket", "icon": "🪙", "icon_url": payment_icon_urls["heleket"], "class": "crypto preferred", "preferred": True})
     if (os.environ.get("PLATEGA_MERCHANT_ID") or "").strip() and (os.environ.get("PLATEGA_SECRET") or "").strip():
-        payment_methods.append({"slug": "platega", "name": "Platega.io", "icon": "🌍", "class": "ru preferred", "preferred": True})
+        payment_methods.append({"slug": "platega", "name": "Platega.io", "icon": "🌍", "icon_url": payment_icon_urls["platega"], "class": "ru preferred", "preferred": True})
     if (os.environ.get("CRYSTALPAY_AUTH_LOGIN") or "").strip() and (os.environ.get("CRYSTALPAY_AUTH_SECRET") or "").strip():
-        payment_methods.append({"slug": "crystalpay", "name": "Crystal Pay", "icon": "💎", "class": "crypto", "preferred": False})
-    payment_methods.insert(0, {"slug": "balance", "name": translate("Внутренний баланс"), "icon": "💰", "class": "balance preferred", "preferred": balance_ready, "is_available": balance_ready})
+        payment_methods.append({"slug": "crystalpay", "name": "Crystal Pay", "icon": "💎", "icon_url": payment_icon_urls["crystalpay"], "class": "crypto", "preferred": False})
+    balance_ready, _balance_pricing = can_pay_for_plan_with_balance(current_user.id, plan_months, coupon_code)
+    payment_methods.insert(0, {"slug": "balance", "name": translate("Внутренний баланс"), "icon": "💰", "icon_url": None, "class": "balance preferred", "preferred": balance_ready, "is_available": balance_ready})
     return render_template(
         "checkout.html",
         plan=plan_months,
@@ -407,18 +421,20 @@ def checkout():
         start_dt=start_dt,
         end_dt=end_dt,
         user_email=(current_user.email if current_user.is_authenticated else ""),
-        balance_amount_text=format_balance_cents(balance_amount_cents),
-        balance_status_text=(
-            translate("Хватает для оплаты с баланса.")
-            if balance_ready
-            else translate("Не хватает %(amount)s для оплаты с баланса.") % {"amount": format_balance_cents(balance_shortfall_cents)}
-        ),
+        balance_amount_text=format_balance_cents(balance_cents),
+        balance_amount_value=format_usd_amount(balance_cents / 100),
         balance_ready=balance_ready,
+        balance_shortfall=shortfall_text,
     )
 
 
 @login_required
 def balance_page():
+    requested_amount = (request.args.get("amount") or "").strip()
+    try:
+        initial_amount = format_usd_amount(requested_amount) if requested_amount else "1.00"
+    except Exception:
+        initial_amount = "1.00"
     payment_methods = []
     if (os.environ.get("CRYPTO_PAY_API_TOKEN") or "").strip():
         payment_methods.append({"slug": "cryptobot", "name": "Crypto Bot", "icon": "🤖", "preferred": True})
@@ -433,6 +449,7 @@ def balance_page():
         balance_amount_text=format_balance_cents(user_balance_cents(current_user.id)),
         topup_presets=list(TOPUP_PRESET_CENTS),
         payment_methods=payment_methods,
+        initial_amount=initial_amount,
     )
 
 

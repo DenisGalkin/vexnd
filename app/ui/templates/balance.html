@@ -29,7 +29,7 @@
             {% set preset_value = '%.2f'|format(preset / 100) %}
             <button
               type="button"
-              class="balance-topup__option{% if loop.first %} is-active{% endif %}"
+              class="balance-topup__option{% if preset_value == initial_amount %} is-active{% endif %}"
               data-balance-preset
               data-amount="{{ preset_value }}"
             >
@@ -48,7 +48,7 @@
               min="1"
               max="500"
               step="0.01"
-              value="1.00"
+              value="{{ initial_amount }}"
               required
               class="form-input balance-topup__input"
             >
@@ -87,7 +87,7 @@
         <div class="balance-topup__summary">
           <div class="balance-topup__summary-row">
             <span class="balance-topup__summary-label">{{ _('Сумма') }}</span>
-            <span class="balance-topup__summary-value" data-summary-amount>$1.00</span>
+            <span class="balance-topup__summary-value" data-summary-amount>${{ initial_amount }}</span>
           </div>
           <div class="balance-topup__summary-row">
             <span class="balance-topup__summary-label">{{ _('Способ') }}</span>
@@ -98,7 +98,7 @@
         <button type="submit" class="overview-chip overview-chip--primary balance-topup__submit balance-topup__submit--inline" {% if not payment_methods %}disabled aria-disabled="true"{% endif %}>
           <span>{{ _('Пополнить баланс') }}</span>
           <span class="balance-topup__submit-separator">&middot;</span>
-          <span data-submit-amount>$1.00</span>
+          <span data-submit-amount>${{ initial_amount }}</span>
         </button>
       </section>
 
@@ -106,7 +106,7 @@
         <button type="submit" class="overview-chip overview-chip--primary balance-topup__submit balance-topup__submit--sticky" {% if not payment_methods %}disabled aria-disabled="true"{% endif %}>
           <span>{{ _('Пополнить баланс') }}</span>
           <span class="balance-topup__submit-separator">&middot;</span>
-          <span data-submit-amount>$1.00</span>
+          <span data-submit-amount>${{ initial_amount }}</span>
         </button>
       </div>
     </form>

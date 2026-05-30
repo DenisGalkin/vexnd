@@ -6,46 +6,26 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
     <!-- Step 1: Payment Methods -->
     <div class="glass-effect rounded-2xl p-5 sm:p-8">
-        <div class="mb-6 sm:mb-8">
-            <div class="flex flex-col gap-4 sm:gap-5">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">{{ _('Оплата') }}</h1>
-                        <p class="text-gray-400 mt-2 text-base sm:text-lg">{{ _('Выберите способ оплаты') }}</p>
-                    </div>
-                    <div class="self-start sm:self-auto rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 sm:px-5 sm:py-4 text-left sm:text-right shadow-[0_12px_32px_rgba(37,99,235,0.16)]">
-                        <div class="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.22em] text-blue-200/80">{{ _('К оплате') }}</div>
-                        <div id="header-price" class="mt-1 text-2xl sm:text-3xl font-extrabold text-white">${{ price }}</div>
-                    </div>
-                </div>
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-4 mb-5 sm:mb-6">
+            <div>
+                <h1 class="text-3xl font-bold">{{ _('Оплата') }}</h1>
+                <p class="text-gray-400 mt-1">{{ _('Выберите способ оплаты') }}</p>
+            </div>
+            <div class="hidden sm:block text-right">
+                <p class="text-gray-400 text-sm">{{ _('Тариф:') }} <span class="text-white font-semibold">{{ plan_duration_label(plan) }}</span></p>
+                <p class="text-gray-400 text-sm">{{ _('Сумма:') }} <span id="header-price" class="text-white font-semibold">${{ price }}</span></p>
+            </div>
+        </div>
 
-                <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-4 sm:p-6">
-                    <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.18),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.06),transparent_26%)]"></div>
-                    <div class="relative flex flex-col gap-4">
-                        <div class="grid gap-3 sm:grid-cols-2">
-                            <div class="rounded-2xl border border-white/8 bg-black/10 px-4 py-3">
-                                <div class="text-xs font-medium uppercase tracking-[0.16em] text-gray-500">{{ _('Тариф') }}</div>
-                                <div class="mt-2 flex items-baseline justify-between gap-3">
-                                    <span class="text-lg sm:text-xl font-semibold text-white">{{ plan_duration_label(plan) }}</span>
-                                    <span id="mobile-price" class="text-sm sm:text-base font-semibold text-blue-300">${{ price }}</span>
-                                </div>
-                            </div>
-                            <div class="rounded-2xl border border-white/8 bg-black/10 px-4 py-3">
-                                <div class="text-xs font-medium uppercase tracking-[0.16em] text-gray-500">{{ _('Баланс аккаунта') }}</div>
-                                <div id="checkout-balance-amount" class="mt-2 text-lg sm:text-xl font-semibold text-white">{{ balance_amount_text }}</div>
-                            </div>
-                        </div>
-
-                        <div class="flex flex-col gap-3 rounded-2xl border border-white/8 bg-black/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div id="checkout-balance-status" class="text-sm sm:text-base leading-relaxed {% if balance_ready %}text-emerald-300{% else %}text-gray-200{% endif %}">
-                                {{ balance_status_text }}
-                            </div>
-                            <a href="{{ url_lang('balance_page') }}" class="inline-flex items-center justify-center rounded-xl border border-blue-400/25 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-200 transition-all hover:bg-blue-500/15 hover:text-white">
-                                {{ _('Пополнить баланс') }}
-                            </a>
-                        </div>
-                    </div>
-                </div>
+        {# Mobile-only compact summary: keeps "Оплата" header clean #}
+        <div class="sm:hidden grid grid-cols-2 gap-2 mb-5">
+            <div class="glass-effect rounded-xl px-3 py-2">
+                <p class="text-[11px] text-gray-400">{{ _('Тариф') }}</p>
+                <p class="text-sm font-semibold text-white leading-tight">{{ plan_duration_label(plan) }}</p>
+            </div>
+            <div class="glass-effect rounded-xl px-3 py-2 text-right">
+                <p class="text-[11px] text-gray-400">{{ _('Сумма') }}</p>
+                <p id="mobile-price" class="text-sm font-semibold text-white leading-tight">${{ price }}</p>
             </div>
         </div>
         
@@ -89,13 +69,19 @@
                 <button type="button"
                         class="payment-item {{ method.class }} glass-effect p-4 sm:p-6 rounded-xl md:hover:scale-105 transition-all cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
                         data-target="{{ target }}"
-                        data-method-slug="{{ method.slug }}"
                         data-name="{{ method.name }}"
                         data-icon="{{ method.icon }}"
+                        data-icon-url="{{ method.icon_url or '' }}"
                         data-balance-available="{{ '1' if method.is_available is not defined or method.is_available else '0' }}"
                         onclick="selectPayment(this)">
                     <div class="pm-row flex items-center gap-4">
-                        <div class="text-3xl sm:text-4xl leading-none">{{ method.icon }}</div>
+                        <div class="payment-method-icon text-3xl sm:text-4xl leading-none">
+                            {% if method.icon_url %}
+                                <img src="{{ method.icon_url }}" alt="" class="payment-method-icon__image" loading="lazy">
+                            {% else %}
+                                <span aria-hidden="true">{{ method.icon }}</span>
+                            {% endif %}
+                        </div>
                         <div class="min-w-0 flex-1">
                             <h3 class="font-bold text-base sm:text-lg leading-snug">{{ method.name }}</h3>
                             {# Method-specific subtitle: show what the provider accepts #}
@@ -103,7 +89,7 @@
                             {% if m in ['cryptobot', 'heleket'] %}
                                 {% set subtitle = _('Криптовалюты') %}
                             {% elif m == 'balance' %}
-                                {% set subtitle = _('Моментальное списание с внутреннего баланса') if method.is_available else _('Недостаточно средств, сначала пополните баланс') %}
+                                {% set subtitle = _('Моментальное списание с внутреннего баланса') if method.is_available else (_('Не хватает $') ~ balance_shortfall) %}
                             {% elif m == 'platega' %}
                                 {% set subtitle = _('СБП (QR)') %}
                             {% elif m == 'crystalpay' %}
@@ -111,7 +97,7 @@
                             {% else %}
                                 {% set subtitle = _('Мгновенно • Без комиссии') %}
                             {% endif %}
-                            <p class="text-sm text-gray-400 mt-0.5"{% if m == 'balance' %} data-balance-method-subtitle{% endif %}>{{ subtitle }}</p>
+                            <p class="text-sm text-gray-400 mt-0.5">{{ subtitle }}</p>
                         </div>
 
 
@@ -136,7 +122,9 @@
         <!-- Header -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div class="flex items-start gap-4">
-                <div id="summary-icon" class="text-4xl leading-none">💳</div>
+                <div id="summary-icon" class="payment-method-icon payment-method-icon--summary text-4xl leading-none">
+                    <span aria-hidden="true">💳</span>
+                </div>
                 <div>
                     <h2 class="text-2xl font-bold">{{ _('Оформление заказа') }}</h2>
                     <p class="text-gray-400 mt-1">{{ _('Способ оплаты:') }} <span id="summary-method" class="text-white font-semibold"></span></p>
@@ -269,66 +257,42 @@
 <script>
 const couponPreviewUrl = "{{ url_lang('coupon_preview') }}";
 const checkoutPlan = {{ plan|int }};
-const balanceReadyText = {{ _('Хватает для оплаты с баланса.')|tojson }};
-const balanceShortTextTemplate = {{ _('Не хватает %(amount)s для оплаты с баланса.')|replace('%(amount)s', '__AMOUNT__')|tojson }};
-const defaultBalanceState = {
-    balance_ready: {{ 'true' if balance_ready else 'false' }},
-    balance_amount_text: {{ balance_amount_text|tojson }},
-    balance_status_text: {{ balance_status_text|tojson }},
-};
+const checkoutBalanceAmount = Number.parseFloat("{{ balance_amount_value }}") || 0;
+const balanceTopupBaseUrl = "{{ url_lang('balance_page') }}";
 
-function parseUsdText(text) {
-    return Number(String(text || '').replace(/[^0-9.]+/g, '')) || 0;
+function getCurrentCheckoutAmount() {
+    const summaryPrice = document.getElementById('summary-price');
+    const rawValue = (summaryPrice ? summaryPrice.textContent : '').replace(/[^0-9.,-]+/g, '').replace(',', '.');
+    const parsed = Number.parseFloat(rawValue);
+    return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function buildBalanceStateFromPrice(priceText) {
-    const balanceAmount = parseUsdText(defaultBalanceState.balance_amount_text);
-    const finalPrice = parseUsdText(priceText);
-    const shortfall = Math.max(0, finalPrice - balanceAmount);
-    const balanceReady = shortfall <= 0.0001;
-    const shortfallText = `$${shortfall.toFixed(2)}`;
-    return {
-        balance_ready: balanceReady,
-        balance_amount_text: defaultBalanceState.balance_amount_text,
-        balance_status_text: balanceReady
-            ? balanceReadyText
-            : balanceShortTextTemplate.replace('__AMOUNT__', shortfallText),
-    };
+function getCurrentShortfallAmount() {
+    return Math.max(0, getCurrentCheckoutAmount() - checkoutBalanceAmount);
 }
 
-function updateCheckoutHero(priceText, balanceState = defaultBalanceState) {
-    document.getElementById('header-price').textContent = `$${priceText}`;
-    document.getElementById('mobile-price').textContent = `$${priceText}`;
-
-    const status = document.getElementById('checkout-balance-status');
-    const amount = document.getElementById('checkout-balance-amount');
-
-    amount.textContent = balanceState.balance_amount_text || defaultBalanceState.balance_amount_text;
-    status.textContent = balanceState.balance_status_text || defaultBalanceState.balance_status_text;
-    status.classList.toggle('text-emerald-300', !!balanceState.balance_ready);
-    status.classList.toggle('text-gray-200', !balanceState.balance_ready);
+function buildBalanceTopupUrl() {
+    const target = new URL(balanceTopupBaseUrl, window.location.origin);
+    target.searchParams.set('amount', getCurrentShortfallAmount().toFixed(2));
+    return target.pathname + target.search;
 }
 
-function syncBalanceMethodState(balanceState = defaultBalanceState) {
-    const balanceItem = document.querySelector('.payment-item[data-method-slug="balance"]');
-    if (!balanceItem) {
-        return;
-    }
+function syncPayButtonState() {
+    const payBtn = document.getElementById('pay-btn');
+    const selected = document.querySelector('.payment-item.ring-2.ring-blue-500');
+    if (!payBtn || !selected) return;
 
-    balanceItem.dataset.balanceAvailable = balanceState.balance_ready ? '1' : '0';
-    const subtitle = balanceItem.querySelector('[data-balance-method-subtitle]');
-    if (subtitle) {
-        subtitle.textContent = balanceState.balance_ready
-            ? "{{ _('Моментальное списание с внутреннего баланса') }}"
-            : "{{ _('Недостаточно средств, сначала пополните баланс') }}";
-    }
+    const balanceAvailable = (selected.dataset.balanceAvailable || '1') === '1';
+    const isBalanceMethod = (selected.dataset.name || '').toLowerCase().includes('баланс') || (selected.dataset.name || '').toLowerCase().includes('balance');
+    const shortfallAmount = getCurrentShortfallAmount();
 
-    if (balanceItem.classList.contains('ring-2')) {
-        const payBtn = document.getElementById('pay-btn');
-        payBtn.disabled = !balanceState.balance_ready;
-        payBtn.textContent = balanceState.balance_ready
-            ? "{{ _('Перейти к оплате') }}"
-            : "{{ _('Сначала пополните баланс') }}";
+    payBtn.disabled = false;
+    payBtn.dataset.redirectUrl = '';
+    payBtn.textContent = "{{ _('Перейти к оплате') }}";
+
+    if (isBalanceMethod && !balanceAvailable) {
+        payBtn.textContent = "{{ _('Не хватает $') }}" + shortfallAmount.toFixed(2);
+        payBtn.dataset.redirectUrl = buildBalanceTopupUrl();
     }
 }
 
@@ -363,20 +327,21 @@ function selectPayment(el) {
     // Fill summary
     const name = el.dataset.name || '';
     const icon = el.dataset.icon || '💳';
+    const iconUrl = el.dataset.iconUrl || '';
     const target = el.dataset.target || '#';
     const balanceAvailable = (el.dataset.balanceAvailable || '1') === '1';
 
     document.getElementById('summary-method').textContent = name;
-    document.getElementById('summary-icon').textContent = icon;
+    const summaryIcon = document.getElementById('summary-icon');
+    if (iconUrl) {
+        summaryIcon.innerHTML = `<img src="${iconUrl}" alt="" class="payment-method-icon__image">`;
+    } else {
+        summaryIcon.innerHTML = `<span aria-hidden="true">${icon}</span>`;
+    }
 
     const payForm = document.getElementById('pay-form');
     payForm.action = target;
-    const payBtn = document.getElementById('pay-btn');
-    const isBalanceMethod = (name || '').toLowerCase().includes('баланс') || (name || '').toLowerCase().includes('balance');
-    payBtn.disabled = isBalanceMethod && !balanceAvailable;
-    payBtn.textContent = (isBalanceMethod && !balanceAvailable)
-        ? "{{ _('Сначала пополните баланс') }}"
-        : "{{ _('Перейти к оплате') }}";
+    syncPayButtonState();
 
     // Show summary
     const summary = document.getElementById('order-summary');
@@ -407,9 +372,8 @@ async function applyCoupon() {
         document.getElementById('coupon-code-hidden').value = '';
         document.getElementById('summary-original-wrap').classList.add('hidden');
         document.getElementById('summary-discount-wrap').classList.add('hidden');
-        const resetState = buildBalanceStateFromPrice("{{ original_price }}");
-        updateCheckoutHero("{{ original_price }}", resetState);
-        syncBalanceMethodState(resetState);
+        document.getElementById('header-price').textContent = `$${"{{ original_price }}"}`;
+        document.getElementById('mobile-price').textContent = `$${"{{ original_price }}"}`;
         document.getElementById('summary-price').textContent = `$${"{{ original_price }}"}`;
         document.getElementById('summary-original-price').textContent = "{{ original_price }}";
         document.getElementById('summary-discount').textContent = "0.00";
@@ -437,23 +401,24 @@ async function applyCoupon() {
         }
         document.getElementById('coupon-code-hidden').value = data.coupon_code || '';
         input.value = data.coupon_code || coupon;
-        updateCheckoutHero(data.final_price, data);
-        syncBalanceMethodState(data);
+        document.getElementById('header-price').textContent = `$${data.final_price}`;
+        document.getElementById('mobile-price').textContent = `$${data.final_price}`;
         document.getElementById('summary-price').textContent = `$${data.final_price}`;
         document.getElementById('summary-original-price').textContent = data.original_price;
         document.getElementById('summary-discount').textContent = data.discount_amount;
         document.getElementById('summary-original-wrap').classList.remove('hidden');
         document.getElementById('summary-discount-wrap').classList.remove('hidden');
         setCouponMessage(data.message || "{{ _('Промокод применён.') }}");
+        syncPayButtonState();
     } catch (err) {
         document.getElementById('coupon-code-hidden').value = '';
         document.getElementById('summary-original-wrap').classList.add('hidden');
         document.getElementById('summary-discount-wrap').classList.add('hidden');
-        const resetState = buildBalanceStateFromPrice("{{ original_price }}");
-        updateCheckoutHero("{{ original_price }}", resetState);
-        syncBalanceMethodState(resetState);
+        document.getElementById('header-price').textContent = `$${"{{ original_price }}"}`;
+        document.getElementById('mobile-price').textContent = `$${"{{ original_price }}"}`;
         document.getElementById('summary-price').textContent = `$${"{{ original_price }}"}`;
         setCouponMessage(err.message || "{{ _('Не удалось применить промокод.') }}", true);
+        syncPayButtonState();
     } finally {
         btn.disabled = false;
     }
@@ -467,6 +432,7 @@ function resetSelection() {
     summary.classList.add('hidden');
     const payBtn = document.getElementById('pay-btn');
     payBtn.disabled = false;
+    payBtn.dataset.redirectUrl = '';
     payBtn.textContent = "{{ _('Перейти к оплате') }}";
     // scroll back to methods
     const grid = document.getElementById('payment-grid');
@@ -490,7 +456,21 @@ function toggleIncluded() {
     }
 }
 
+document.getElementById('pay-btn').addEventListener('click', function (ev) {
+    const redirectUrl = this.dataset.redirectUrl || '';
+    if (!redirectUrl) return;
+    ev.preventDefault();
+    window.location.href = redirectUrl;
+});
+
 document.getElementById('pay-form').addEventListener('submit', async function (ev) {
+    const payBtn = document.getElementById('pay-btn');
+    const redirectUrl = payBtn.dataset.redirectUrl || '';
+    if (redirectUrl) {
+        ev.preventDefault();
+        window.location.href = redirectUrl;
+        return;
+    }
     const input = document.getElementById('coupon-input');
     const hidden = document.getElementById('coupon-code-hidden');
     const current = normalizeCouponClient(input.value);
@@ -507,9 +487,8 @@ document.getElementById('pay-form').addEventListener('submit', async function (e
         } else {
             document.getElementById('summary-original-wrap').classList.add('hidden');
             document.getElementById('summary-discount-wrap').classList.add('hidden');
-            const resetState = buildBalanceStateFromPrice("{{ original_price }}");
-            updateCheckoutHero("{{ original_price }}", resetState);
-            syncBalanceMethodState(resetState);
+            document.getElementById('header-price').textContent = `$${"{{ original_price }}"}`;
+            document.getElementById('mobile-price').textContent = `$${"{{ original_price }}"}`;
             document.getElementById('summary-price').textContent = `$${"{{ original_price }}"}`;
             const msg = document.getElementById('coupon-message');
             msg.textContent = "{{ _('Введите промокод после выбора способа оплаты.') }}";
