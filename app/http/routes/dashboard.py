@@ -272,8 +272,6 @@ def _build_dashboard_subscription_context(*, force_remote_refresh: bool = False)
         "qr_code": _subscription_qr_code(subscription_url),
         "has_subscription_record": has_subscription_record,
         "is_active": is_active,
-        "balance_amount_cents": user_balance_cents(current_user.id),
-        "balance_amount_text": format_balance_cents(user_balance_cents(current_user.id)),
         "balance_can_pay_1m": can_pay_for_plan_with_balance(current_user.id, 1)[0],
         "balance_can_pay_3m": can_pay_for_plan_with_balance(current_user.id, 3)[0],
         "balance_can_pay_12m": can_pay_for_plan_with_balance(current_user.id, 12)[0],
@@ -343,7 +341,6 @@ def dashboard():
         **referral_context,
         **settings_context,
         **subscription_context,
-        topup_presets=list(TOPUP_PRESET_CENTS),
     )
 
 
