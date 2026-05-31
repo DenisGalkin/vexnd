@@ -412,6 +412,7 @@ input, select, textarea {
     align-items: center;
     justify-content: center;
     flex: 0 0 2.75rem;
+    overflow: hidden;
 }
 
 .payment-method-icon--summary {
@@ -425,6 +426,42 @@ input, select, textarea {
     height: 100%;
     object-fit: contain;
     display: block;
+}
+
+.checkout-account-line__value {
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+@media (min-width: 641px) {
+    .payment-item .pm-row {
+        display: grid;
+        grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .payment-item .payment-method-icon {
+        width: 4.5rem;
+        height: 4.5rem;
+        flex-basis: 4.5rem;
+    }
+
+    .payment-item .pm-actions {
+        flex-shrink: 0;
+        align-self: center;
+    }
+}
+
+@media (max-width: 640px) {
+    .checkout-account-line__label,
+    .checkout-account-line__value {
+        display: block;
+    }
+
+    .checkout-account-line__value {
+        margin-top: 0.125rem;
+    }
 }
 
 /* Preferred payment methods: subtle highlight to increase conversion */

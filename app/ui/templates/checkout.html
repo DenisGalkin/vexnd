@@ -70,6 +70,7 @@
                         class="payment-item {{ method.class }} glass-effect p-4 sm:p-6 rounded-xl md:hover:scale-105 transition-all cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
                         data-target="{{ target }}"
                         data-name="{{ method.name }}"
+                        data-mobile-name="{{ method.mobile_name or method.name }}"
                         data-icon="{{ method.icon }}"
                         data-icon-url="{{ method.icon_url or '' }}"
                         data-balance-available="{{ '1' if method.is_available is not defined or method.is_available else '0' }}"
@@ -83,7 +84,10 @@
                             {% endif %}
                         </div>
                         <div class="min-w-0 flex-1">
-                            <h3 class="font-bold text-base sm:text-lg leading-snug">{{ method.name }}</h3>
+                            <h3 class="font-bold text-base sm:text-lg leading-snug">
+                                <span class="sm:hidden">{{ method.mobile_name or method.name }}</span>
+                                <span class="hidden sm:inline">{{ method.name }}</span>
+                            </h3>
                             {# Method-specific subtitle: show what the provider accepts #}
                             {% set m = method.slug %}
                             {% if m in ['cryptobot', 'heleket'] %}
@@ -144,7 +148,10 @@
                     <div>
                         <div class="text-xs font-semibold tracking-widest text-gray-400 uppercase">{{ _('План') }}</div>
                         <div class="text-lg font-bold text-white mt-1">{{ plan_duration_label(plan) }}</div>
-                        <div class="text-sm text-gray-400 mt-1">{{ _('Аккаунт:') }} <span class="text-gray-300 break-all">{{ user_email }}</span></div>
+                        <div class="checkout-account-line text-sm text-gray-400 mt-1">
+                            <span class="checkout-account-line__label">{{ _('Аккаунт:') }}</span>
+                            <span class="checkout-account-line__value text-gray-300">{{ user_email }}</span>
+                        </div>
                     </div>
                     <div class="text-right">
                         <div class="text-xs font-semibold tracking-widest text-gray-400 uppercase">{{ _('К оплате') }}</div>
@@ -326,12 +333,13 @@ function selectPayment(el) {
 
     // Fill summary
     const name = el.dataset.name || '';
+    const mobileName = el.dataset.mobileName || name;
     const icon = el.dataset.icon || '💳';
     const iconUrl = el.dataset.iconUrl || '';
     const target = el.dataset.target || '#';
     const balanceAvailable = (el.dataset.balanceAvailable || '1') === '1';
 
-    document.getElementById('summary-method').textContent = name;
+    document.getElementById('summary-method').textContent = window.matchMedia('(max-width: 640px)').matches ? mobileName : name;
     const summaryIcon = document.getElementById('summary-icon');
     if (iconUrl) {
         summaryIcon.innerHTML = `<img src="${iconUrl}" alt="" class="payment-method-icon__image">`;

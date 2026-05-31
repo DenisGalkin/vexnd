@@ -6,6 +6,7 @@ import re
 import sqlite3
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from flask import abort, current_app, flash, g, redirect, render_template, request, send_from_directory, session, url_for
 from flask_login import current_user, logout_user
@@ -106,8 +107,17 @@ def get_locale() -> str:
     return "en"
 
 
-def translate(text: str) -> str:
-    return translations.get(get_locale(), {}).get(text, text)
+def translate(text: str, **kwargs: Any) -> str:
+    value = translations.get(get_locale(), {}).get(text, text)
+    if not kwargs:
+        return value
+    try:
+        return value % kwargs
+    except (KeyError, TypeError, ValueError):
+        try:
+            return value.format(**kwargs)
+        except (KeyError, IndexError, ValueError):
+            return value
 
 
 def localized_url(endpoint: str, **values) -> str:

@@ -395,19 +395,20 @@ def checkout():
     payment_methods = [{
         "slug": "cryptobot",
         "name": "Crypto Bot",
+        "mobile_name": "Crypto Bot",
         "icon": "🤖",
         "icon_url": payment_icon_urls["cryptobot"],
         "class": "crypto preferred",
         "preferred": True,
     }]
     if (os.environ.get("HELEKET_MERCHANT_ID") or "").strip() and (os.environ.get("HELEKET_API_KEY") or "").strip():
-        payment_methods.append({"slug": "heleket", "name": "Heleket", "icon": "🪙", "icon_url": payment_icon_urls["heleket"], "class": "crypto preferred", "preferred": True})
+        payment_methods.append({"slug": "heleket", "name": "Heleket", "mobile_name": "Heleket", "icon": "🪙", "icon_url": payment_icon_urls["heleket"], "class": "crypto preferred", "preferred": True})
     if (os.environ.get("PLATEGA_MERCHANT_ID") or "").strip() and (os.environ.get("PLATEGA_SECRET") or "").strip():
-        payment_methods.append({"slug": "platega", "name": "Platega.io", "icon": "🌍", "icon_url": payment_icon_urls["platega"], "class": "ru preferred", "preferred": True})
+        payment_methods.append({"slug": "platega", "name": "Platega.io", "mobile_name": "Platega.io", "icon": "🌍", "icon_url": payment_icon_urls["platega"], "class": "ru preferred", "preferred": True})
     if (os.environ.get("CRYSTALPAY_AUTH_LOGIN") or "").strip() and (os.environ.get("CRYSTALPAY_AUTH_SECRET") or "").strip():
-        payment_methods.append({"slug": "crystalpay", "name": "Crystal Pay", "icon": "💎", "icon_url": payment_icon_urls["crystalpay"], "class": "crypto", "preferred": False})
+        payment_methods.append({"slug": "crystalpay", "name": "Crystal Pay", "mobile_name": "Crystal Pay", "icon": "💎", "icon_url": payment_icon_urls["crystalpay"], "class": "crypto", "preferred": False})
     balance_ready, _balance_pricing = can_pay_for_plan_with_balance(current_user.id, plan_months, coupon_code)
-    payment_methods.insert(0, {"slug": "balance", "name": translate("Внутренний баланс"), "icon": "💰", "icon_url": None, "class": "balance preferred", "preferred": balance_ready, "is_available": balance_ready})
+    payment_methods.insert(0, {"slug": "balance", "name": translate("Внутренний баланс"), "mobile_name": translate("Баланс"), "icon": "💰", "icon_url": None, "class": "balance preferred", "preferred": balance_ready, "is_available": balance_ready})
     return render_template(
         "checkout.html",
         plan=plan_months,
