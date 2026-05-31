@@ -20,16 +20,19 @@ from app.bot.keyboards import (
     main_menu,
     plans_keyboard,
     profile_keyboard,
+    balance_topup_methods_keyboard,
     telegram_auth_confirm_keyboard,
 )
 from app.bot.subscriptions import (
     capture_bot_referral,
     remnawave_subscription_snapshot,
+    render_profile_text,
     render_subscription_text,
     schedule_subscription_message_refresh,
     subscription_markup,
     user_has_local_subscription_data,
 )
+from app.services.balance import MAX_TOPUP_CENTS, MIN_TOPUP_CENTS
 from app.services.bot_admin_links import create_tracked_link, is_bot_admin, register_tracked_link_start, tracked_link_report, tracked_link_url
 from app.services.coupons import bot_coupon_benefits, normalize_coupon_code, record_coupon_redemption
 from app.services.subscriptions import create_remnawave_subscription
@@ -86,6 +89,38 @@ def handle_promo_code(chat_id: int, user, state, raw_code: str) -> None:
     send_message(chat_id, "\n\n".join(messages) if messages else t(state, "promo_not_found"), profile_keyboard(state))
 
 
+def handle_custom_balance_amount(chat_id: int, user, state, raw_amount: str) -> None:
+    normalized = (raw_amount or "").strip().replace("$", "").replace(",", ".")
+    try:
+        amount_value = float(normalized)
+        amount_cents = int(round(amount_value * 100))
+    except Exception:
+        send_message(chat_id, t(state, "balance_custom_amount_invalid"), keyboard([[(t(state, "back"), "profile")]]))
+        return
+
+    if amount_cents < MIN_TOPUP_CENTS or amount_cents > MAX_TOPUP_CENTS:
+        send_message(
+            chat_id,
+            t(
+                state,
+                "balance_custom_amount_out_of_range",
+                min_amount=f"{MIN_TOPUP_CENTS / 100:.2f}",
+                max_amount=f"{MAX_TOPUP_CENTS / 100:.2f}",
+            ),
+            keyboard([[(t(state, "back"), "profile")]]),
+        )
+        return
+
+    state.pending_action = None
+    state.updated_at = utc_now()
+    db.session.commit()
+    send_message(
+        chat_id,
+        t(state, "balance_choose_method") + f"\n💰 <b>${amount_cents / 100:.2f}</b>",
+        balance_topup_methods_keyboard(amount_cents, state),
+    )
+
+
 def handle_message(message: dict[str, object]) -> None:
     chat = message.get("chat") or {}
     tg_user = message.get("from") or {}
@@ -129,6 +164,9 @@ def handle_message(message: dict[str, object]) -> None:
 
         if state.pending_action == "promo" and text and not text.startswith("/"):
             handle_promo_code(chat_id, user, state, text)
+            return
+        if state.pending_action == "balance_custom_amount" and text and not text.startswith("/"):
+            handle_custom_balance_amount(chat_id, user, state, text)
             return
         if state.pending_action == "admin_link_name" and text and not text.startswith("/"):
             if not is_admin:
@@ -184,6 +222,9 @@ def handle_message(message: dict[str, object]) -> None:
             send_message(chat_id, t(state, "help_text"), help_keyboard(state))
             return
         if text.startswith("/profile") or text.startswith("/subscription"):
+            if text.startswith("/profile"):
+                send_screen(chat_id, "profile", render_profile_text(user, state), profile_keyboard(state))
+                return
             has_local_data = user_has_local_subscription_data(user)
             snapshot = remnawave_subscription_snapshot(user, schedule_async_refresh=not has_local_data)
             text_out, _ = render_subscription_text(snapshot, state)

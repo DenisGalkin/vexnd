@@ -26,6 +26,7 @@ from app.core.extensions import db
 from app.domain.models import ReferralCode, ReferralSignup, Subscription, SubscriptionNotificationLog, TrialGrant, User
 from app.bot.keyboards import subscription_keyboard
 from app.bot.models import BotUserState, utc_now
+from app.services.balance import format_balance_cents, user_balance_cents
 from app.services.referrals import get_or_create_referral_code
 from app.services.remnawave import (
     get_remnawave_config,
@@ -310,6 +311,39 @@ def schedule_subscription_message_refresh(user: User, state: BotUserState, chat_
 
 def format_profile(account: TelegramAccount, user: User, state: BotUserState) -> tuple[str, str | None]:
     return format_subscription(user, state)
+
+
+def _ru_days_label(days: int) -> str:
+    days = abs(int(days))
+    tail_10 = days % 10
+    tail_100 = days % 100
+    if tail_10 == 1 and tail_100 != 11:
+        return "день"
+    if tail_10 in {2, 3, 4} and tail_100 not in {12, 13, 14}:
+        return "дня"
+    return "дней"
+
+
+def _days_text(days: int, state: BotUserState) -> str:
+    days = max(0, int(days))
+    if state.lang == "en":
+        return f"{days} day" if days == 1 else f"{days} days"
+    return f"{days} {_ru_days_label(days)}"
+
+
+def render_profile_text(user: User, state: BotUserState) -> str:
+    invited_count = ReferralSignup.query.filter_by(referrer_user_id=user.id).count()
+    paid_count = ReferralSignup.query.filter(
+        ReferralSignup.referrer_user_id == user.id,
+        ReferralSignup.first_paid_at.isnot(None),
+    ).count()
+    referral_income_days = paid_count * 5
+    return (
+        f"{t(state, 'profile_title')}\n\n"
+        f"💰 {t(state, 'profile_balance')}: <b>{format_balance_cents(user_balance_cents(user.id))}</b>\n\n"
+        f"👥 {t(state, 'profile_invited')}: <b>{invited_count}</b>\n"
+        f"🎁 {t(state, 'profile_referral_income')}: <b>{_days_text(referral_income_days, state)}</b>"
+    )
 
 
 def build_bot_referral_link(user: User) -> str:

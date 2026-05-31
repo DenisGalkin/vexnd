@@ -57,6 +57,7 @@ BOT_SCREEN_IMAGES = {
     "subscription": os.path.join(BOT_ASSETS_DIR, "subscription.png"),
     "payment": os.path.join(BOT_ASSETS_DIR, "payment.png"),
     "referrals": os.path.join(BOT_ASSETS_DIR, "referrals.png"),
+    "profile": os.path.join(BOT_ASSETS_DIR, "profile.png"),
 }
 
 

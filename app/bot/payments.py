@@ -20,16 +20,17 @@ from app.bot.common import (
     replace_message_with_screen,
     t,
 )
-from app.bot.keyboards import balance_keyboard, balance_topup_methods_keyboard, keyboard, main_menu, payment_link_keyboard, payment_methods_keyboard_for_user, plans_keyboard
+from app.bot.keyboards import balance_topup_methods_keyboard, keyboard, main_menu, payment_link_keyboard, payment_methods_keyboard_for_user, plans_keyboard, profile_keyboard
 from app.bot.models import BotUserState
 from app.bot.subscriptions import (
     invalidate_remnawave_snapshot,
     remnawave_subscription_snapshot,
+    render_profile_text,
     render_subscription_text,
     subscription_markup,
 )
 from app.domain.models import PaymentIntent, User
-from app.services.balance import format_balance_cents, purchase_subscription_with_balance, topup_description, user_balance_cents
+from app.services.balance import MAX_TOPUP_CENTS, MIN_TOPUP_CENTS, amount_to_cents, can_pay_for_plan_with_balance, format_balance_cents, purchase_subscription_with_balance, topup_description, user_balance_cents
 from app.services.payments.crystalpay import crystal_credentials, crystal_invoice_info, crystalpay_process_paid_invoice
 from app.services.payments.cryptobot import cryptobot_api_base, cryptobot_get_invoice_by_id, cryptobot_process_paid_invoice
 from app.services.payments.heleket import heleket_credentials, heleket_json_dumps, heleket_payment_info, heleket_process_paid, heleket_sign_payload
@@ -192,6 +193,20 @@ def handle_payment_method(chat_id: int, message_id: int, user: User, state: BotU
         edit_photo_caption(chat_id, message_id, "🛠 This payment method is not configured yet. Choose another one:" if state.lang == "en" else "🛠 Этот способ оплаты пока не настроен. Выберите другой:", payment_methods_keyboard_for_user(plan_months, state, user))
         return
     if method == "balance":
+        shortfall_cents = balance_shortfall_cents(user, plan_months)
+        if shortfall_cents > 0:
+            edit_photo_caption(
+                chat_id,
+                message_id,
+                render_balance_shortfall_text(state, user, plan_months),
+                keyboard(
+                    [
+                        [(t(state, "balance_topup_shortfall", amount=format_balance_cents(shortfall_cents)), f"balance_shortfall_{plan_months}")],
+                        [(t(state, "other_method"), f"buy_{plan_months}")],
+                    ]
+                ),
+            )
+            return
         try:
             purchase_subscription_with_balance(user, plan_months)
         except ValueError as exc:
@@ -225,7 +240,27 @@ def render_balance_text(state: BotUserState, user: User) -> str:
     return (
         f"{t(state, 'balance_title')}\n\n"
         f"💵 {t(state, 'balance_current')}: <b>{format_balance_cents(user_balance_cents(user.id))}</b>\n\n"
+        f"{t(state, 'balance_topup_limits', min_amount=format_balance_cents(MIN_TOPUP_CENTS), max_amount=format_balance_cents(MAX_TOPUP_CENTS))}\n\n"
         f"{t(state, 'balance_topup_hint')}"
+    )
+
+
+def balance_shortfall_cents(user: User, plan_months: int) -> int:
+    allowed, pricing = can_pay_for_plan_with_balance(user.id, plan_months)
+    if allowed:
+        return 0
+    needed_cents = amount_to_cents(pricing["final_price"])
+    current_cents = user_balance_cents(user.id)
+    return max(0, needed_cents - current_cents)
+
+
+def render_balance_shortfall_text(state: BotUserState, user: User, plan_months: int) -> str:
+    shortfall_cents = balance_shortfall_cents(user, plan_months)
+    return (
+        f"{t(state, 'balance_not_enough')}\n\n"
+        f"💵 {t(state, 'balance_current')}: <b>{format_balance_cents(user_balance_cents(user.id))}</b>\n"
+        f"💳 {t(state, 'balance_shortfall')}: <b>{format_balance_cents(shortfall_cents)}</b>\n\n"
+        f"{t(state, 'balance_shortfall_hint')}"
     )
 
 
@@ -235,7 +270,7 @@ def handle_balance_topup_method(chat_id: int, message_id: int, user: User, state
         method, amount_raw = raw.rsplit("_", 1)
         amount_cents = int(amount_raw)
     except Exception:
-        edit_photo_caption(chat_id, message_id, t(state, "invoice_error"), balance_keyboard(state))
+        edit_photo_caption(chat_id, message_id, t(state, "invoice_error"), profile_keyboard(state))
         return
     try:
         pay_url, label, intent_id = create_bot_payment(
@@ -312,7 +347,7 @@ def handle_payment_check(chat_id: int, message_id: int, user: User, state: BotUs
         edit_photo_caption(chat_id, message_id, t(state, "payment_pending"), keyboard([[(t(state, "check_payment"), f"checkpay_{intent.id}")], [(t(state, "back_menu"), "menu")]]))
         return
     if (getattr(intent, "purpose", "subscription") or "subscription") == "balance_topup":
-        replace_message_with_screen(chat_id, message_id, "payment", f"{t(state, 'balance_topup_ok')}\n\n{render_balance_text(state, user)}", balance_keyboard(state))
+        replace_message_with_screen(chat_id, message_id, "profile", f"{t(state, 'balance_topup_ok')}\n\n{render_profile_text(user, state)}", profile_keyboard(state))
         return
     invalidate_remnawave_snapshot(user.id)
     snapshot = remnawave_subscription_snapshot(user, force_refresh=True)

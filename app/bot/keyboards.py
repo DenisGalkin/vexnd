@@ -20,7 +20,7 @@ from app.domain.models import User
 from app.services.subscriptions import is_trial_eligible
 from app.services.bot_admin_links import is_bot_admin
 from app.bot.models import BotUserState, TelegramAccount
-from app.services.balance import TOPUP_PRESET_CENTS, can_pay_for_plan_with_balance
+from app.services.balance import TOPUP_PRESET_CENTS
 
 
 def keyboard(rows: list[list[tuple[str, str]]]) -> dict[str, object]:
@@ -41,10 +41,11 @@ def payment_link_keyboard(pay_url: str, intent_id: int, plan_months: int, state:
 
 
 def main_menu(state: BotUserState, user: User | None = None) -> dict[str, object]:
-    rows = [[{"text": t(state, "setup"), "callback_data": "connect"}, {"text": t(state, "profile"), "callback_data": "subscription"}]]
+    rows = [[{"text": t(state, "profile"), "callback_data": "profile"}]]
     if user is not None and is_trial_eligible(user):
         rows.append([{"text": t(state, "trial_offer"), "callback_data": "trial_activate"}])
-    rows.append([{"text": t(state, "buy"), "callback_data": "plans"}, {"text": t(state, "balance"), "callback_data": "balance"}])
+    rows.append([{"text": t(state, "setup"), "callback_data": "connect"}])
+    rows.append([{"text": t(state, "buy"), "callback_data": "plans"}])
     rows.append([{"text": t(state, "referrals"), "callback_data": "referrals"}])
     account = TelegramAccount.query.filter_by(user_id=user.id).first() if user is not None else None
     if is_bot_admin(getattr(account, "telegram_id", None), getattr(account, "username", None)):
@@ -63,29 +64,22 @@ def payment_methods_keyboard(plan_months: int, state: BotUserState) -> dict[str,
 
 
 def payment_methods_keyboard_for_user(plan_months: int, state: BotUserState, user: User | None) -> dict[str, object]:
-    rows: list[list[tuple[str, str]]] = []
-    if user is not None and can_pay_for_plan_with_balance(user.id, plan_months)[0]:
-        rows.append([(t(state, "balance_buy"), f"pm_balance_{plan_months}")])
+    rows: list[list[tuple[str, str]]] = [[(t(state, "balance"), f"pm_balance_{plan_months}")]]
     rows.extend([[(PAYMENT_METHODS[code]["label"], f"pm_{code}_{plan_months}")] for code in ("platega", "cryptobot", "heleket", "crystal") if is_payment_method_enabled(code)])
     rows.append([(t(state, "back_plans"), "plans")])
     return keyboard(rows)
 
 
-def balance_keyboard(state: BotUserState) -> dict[str, object]:
-    rows = [[(t(state, "balance_topup"), "balance_topup"), (t(state, "buy"), "plans")]]
-    rows.append([(t(state, "back_menu"), "menu")])
-    return keyboard(rows)
-
-
 def balance_topup_amounts_keyboard(state: BotUserState) -> dict[str, object]:
     rows = [[(money_amount(preset / 100), f"balance_amount_{preset}") for preset in TOPUP_PRESET_CENTS[:2]], [(money_amount(preset / 100), f"balance_amount_{preset}") for preset in TOPUP_PRESET_CENTS[2:]]]
-    rows.append([(t(state, "back"), "balance")])
+    rows.append([(t(state, "balance_custom_amount"), "balance_amount_custom")])
+    rows.append([(t(state, "back"), "profile")])
     return keyboard(rows)
 
 
-def balance_topup_methods_keyboard(amount_cents: int, state: BotUserState) -> dict[str, object]:
+def balance_topup_methods_keyboard(amount_cents: int, state: BotUserState, *, back_callback: str = "balance_topup") -> dict[str, object]:
     rows = [[(PAYMENT_METHODS[code]["label"], f"balance_pm_{code}_{amount_cents}")] for code in ("platega", "cryptobot", "heleket", "crystal") if is_payment_method_enabled(code)]
-    rows.append([(t(state, "back"), "balance_topup")])
+    rows.append([(t(state, "back"), back_callback)])
     return keyboard(rows)
 
 
@@ -120,7 +114,13 @@ def qr_keyboard(state: BotUserState) -> dict[str, object]:
 
 
 def profile_keyboard(state: BotUserState) -> dict[str, object]:
-    return subscription_keyboard(state)
+    return keyboard(
+        [
+            [(t(state, "balance_topup_button"), "balance_topup")],
+            [(t(state, "activate_promo"), "promo_start")],
+            [(t(state, "back_menu"), "menu")],
+        ]
+    )
 
 
 def help_keyboard(state: BotUserState) -> dict[str, object]:

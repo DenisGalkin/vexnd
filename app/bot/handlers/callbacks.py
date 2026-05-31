@@ -25,7 +25,6 @@ from app.bot.common import (
 from app.bot.keyboards import (
     admin_link_name_keyboard,
     admin_panel_keyboard,
-    balance_keyboard,
     balance_topup_amounts_keyboard,
     balance_topup_methods_keyboard,
     connect_client_keyboard,
@@ -37,17 +36,21 @@ from app.bot.keyboards import (
     main_menu,
     payment_methods_keyboard_for_user,
     plans_keyboard,
+    profile_keyboard,
     qr_keyboard,
     referral_keyboard,
     subscription_keyboard,
 )
 from app.services.bot_admin_links import is_bot_admin, tracked_link_report
 from app.bot.payments import (
+    balance_shortfall_cents,
     handle_balance_topup_method,
     handle_payment_check,
     handle_payment_method,
+    render_balance_shortfall_text,
     render_balance_text,
 )
+from app.services.balance import format_balance_cents
 from app.bot.subscriptions import (
     build_bot_referral_link,
     connect_intro_text,
@@ -55,6 +58,7 @@ from app.bot.subscriptions import (
     format_subscription,
     invalidate_remnawave_snapshot,
     remnawave_subscription_snapshot,
+    render_profile_text,
     render_subscription_text,
     schedule_connect_message_refresh,
     schedule_subscription_message_refresh,
@@ -175,7 +179,12 @@ def handle_callback(callback: dict[str, object]) -> None:
             clear_pending_action(state)
             handle_trial_activation(chat_id, message_id, user, state)
             return
-        if data in ("profile", "subscription", "subscription_refresh"):
+        if data == "profile":
+            answer_callback(callback_id)
+            clear_pending_action(state)
+            replace_message_with_screen(chat_id, message_id, "profile", render_profile_text(user, state), profile_keyboard(state))
+            return
+        if data in ("subscription", "subscription_refresh"):
             answer_callback(callback_id)
             clear_pending_action(state)
             force_refresh = data == "subscription_refresh"
@@ -220,15 +229,31 @@ def handle_callback(callback: dict[str, object]) -> None:
             link = build_bot_referral_link(user)
             replace_message_with_screen(chat_id, message_id, "referrals", format_referral_text(user, state), referral_keyboard(link, state))
             return
-        if data == "balance":
-            answer_callback(callback_id)
-            clear_pending_action(state)
-            replace_message_with_screen(chat_id, message_id, "payment", render_balance_text(state, user), balance_keyboard(state))
-            return
         if data == "balance_topup":
             answer_callback(callback_id)
             clear_pending_action(state)
             edit_photo_caption(chat_id, message_id, f"{render_balance_text(state, user)}\n\n{t(state, 'balance_choose_amount')}", balance_topup_amounts_keyboard(state))
+            return
+        if data == "balance_amount_custom":
+            answer_callback(callback_id)
+            state.pending_action = "balance_custom_amount"
+            state.updated_at = utc_now()
+            db.session.commit()
+            edit_message(chat_id, message_id, t(state, "balance_custom_amount_prompt"), keyboard([[(t(state, "back"), "profile")]]))
+            return
+        if data.startswith("balance_shortfall_"):
+            answer_callback(callback_id)
+            plan_months = int(data.removeprefix("balance_shortfall_"))
+            amount_cents = balance_shortfall_cents(user, plan_months)
+            if amount_cents <= 0:
+                edit_photo_caption(chat_id, message_id, t(state, "balance_shortfall_cleared"), payment_methods_keyboard_for_user(plan_months, state, user))
+                return
+            edit_photo_caption(
+                chat_id,
+                message_id,
+                f"{render_balance_shortfall_text(state, user, plan_months)}\n\n{t(state, 'balance_choose_method')}\n💰 <b>{format_balance_cents(amount_cents)}</b>",
+                balance_topup_methods_keyboard(amount_cents, state, back_callback=f"buy_{plan_months}"),
+            )
             return
         if data.startswith("balance_amount_"):
             answer_callback(callback_id)
