@@ -139,9 +139,12 @@ def create_bot_payment(
     amount_cents: int | None = None,
     description: str | None = None,
 ) -> tuple[str, str, int]:
-    amount_usd = bot_plan_price_usd(plan_months)
-    if purpose == "balance_topup" and amount_cents is not None:
+    if purpose == "balance_topup":
+        if amount_cents is None:
+            raise RuntimeError("Balance top-up amount is required")
         amount_usd = amount_cents / 100
+    else:
+        amount_usd = bot_plan_price_usd(plan_months)
     if method == "cryptobot":
         invoice, intent_token = create_bot_crypto_invoice(plan_months, amount_cents=amount_cents, description=description)
         external_id = str(invoice.get("invoice_id") or invoice.get("invoiceId") or invoice.get("id") or "").strip()
