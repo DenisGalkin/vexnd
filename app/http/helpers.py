@@ -357,6 +357,10 @@ def _bad_request(_error):
     return redirect(request.referrer or url_for("index"))
 
 
+def _not_found(_error):
+    return render_template("404.html"), 404
+
+
 def _persist_and_canonicalize_language():
     if request.path.startswith("/static"):
         return None
@@ -448,6 +452,7 @@ def init_app(app) -> None:
     app.before_request(_security_before_request)
     app.after_request(_security_headers)
     app.errorhandler(400)(_bad_request)
+    app.errorhandler(404)(_not_found)
     app.before_request(_persist_and_canonicalize_language)
     app.before_request(_redirect_to_language_version)
     app.context_processor(_inject_globals)

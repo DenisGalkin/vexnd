@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Страница не найдена') }}{% endblock %}
+
+{% block meta_robots %}
+    <meta name="robots" content="noindex,nofollow">
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center px-4 py-12">
+    <div class="glass-effect max-w-lg w-full rounded-2xl p-12 text-center">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600/15 text-blue-400 text-2xl font-bold mb-6">
+            404
+        </div>
+        <h1 class="text-4xl font-bold mb-4">
+            {{ _('Страница не найдена') }}
+        </h1>
+        <p class="text-gray-400 mb-6">
+            {{ _('Похоже, такой страницы не существует или она была перемещена.') }}
+        </p>
+        <a href="{{ url_lang('index') }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-all">
+            {{ _('На главную') }}
+        </a>
+    </div>
+</div>
+{% endblock %}

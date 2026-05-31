@@ -1698,6 +1698,9 @@ translations = {'ru': {'Global Cards': 'Global Cards',
         'Этот способ оплаты или функция пока недоступны. Пожалуйста, загляните позже.': 'This payment method or '
                                                                                         'feature is not available yet. '
                                                                                         'Please check back later.',
+        'Страница не найдена': 'Page Not Found',
+        'Похоже, такой страницы не существует или она была перемещена.': 'It looks like this page does not exist or '
+                                                                          'has been moved.',
         'На главную': 'Back to Home',
         'Частые вопросы': 'Frequently Asked Questions',
         'Что такое VEXND?': 'What is VEXND?',
