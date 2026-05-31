@@ -18,6 +18,7 @@ from app.services.admin import (
     list_payments,
     list_users,
     payment_amount_decimal,
+    promo_dashboard_metrics,
     promo_detail,
     promo_list,
     send_user_bot_message,
@@ -36,7 +37,10 @@ def _admin_redirect(tab: str, **params):
 @login_required
 @admin_required
 def admin_panel():
+    allowed_tabs = {"dashboard", "users", "promos", "payments"}
     tab = (request.args.get("tab") or "dashboard").strip()
+    if tab not in allowed_tabs:
+        tab = "dashboard"
     selected_user_id = request.args.get("user", type=int)
     selected_promo_id = request.args.get("promo", type=int)
     user_page = request.args.get("user_page", type=int) or 1
@@ -61,6 +65,7 @@ def admin_panel():
         "admin.html",
         admin_tab=tab,
         admin_metrics=dashboard_metrics(),
+        promo_metrics=promo_dashboard_metrics(),
         users_data=users_data,
         payments_data=payments_data,
         promos=promos,

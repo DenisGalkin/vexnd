@@ -256,6 +256,29 @@ def dashboard_metrics() -> dict[str, object]:
         amount = sum(payment_amount_decimal(item) for item in external_successful_payments if day_start <= (item.paid_at or item.processed_at or item.created_at) < day_end)
         daily_revenue.append({"label": day_start.strftime("%d.%m"), "amount": amount})
 
+    growth_start = today_start - timedelta(days=13)
+    running_total_users = int(
+        db.session.query(func.count(User.id))
+        .filter(User.created_at < growth_start)
+        .scalar()
+        or 0
+    )
+    daily_user_growth: list[dict[str, object]] = []
+    daily_registrations: list[dict[str, object]] = []
+    for offset in range(13, -1, -1):
+        day_start = today_start - timedelta(days=offset)
+        day_end = day_start + timedelta(days=1)
+        registrations_count = int(
+            db.session.query(func.count(User.id))
+            .filter(User.created_at >= day_start, User.created_at < day_end)
+            .scalar()
+            or 0
+        )
+        running_total_users += registrations_count
+        label = day_start.strftime("%d.%m")
+        daily_registrations.append({"label": label, "count": registrations_count})
+        daily_user_growth.append({"label": label, "count": running_total_users})
+
     plan_revenue_rows = defaultdict(Decimal)
     for item in successful_subscription_payments:
         plan_revenue_rows[int(item.plan_months or 0)] += payment_amount_decimal(item)
@@ -313,6 +336,7 @@ def dashboard_metrics() -> dict[str, object]:
 
     return {
         "active_users_now": len(active_user_ids),
+        "total_users": total_users,
         "registrations_day": registrations_day,
         "registrations_week": registrations_week,
         "registrations_month": registrations_month,
@@ -325,11 +349,56 @@ def dashboard_metrics() -> dict[str, object]:
         "trials_total": trials_total,
         "trial_conversion": trial_conversion,
         "daily_revenue": daily_revenue,
+        "daily_registrations": daily_registrations,
+        "daily_user_growth": daily_user_growth,
         "revenue_by_plan": revenue_by_plan,
         "repeat_purchases": repeat_purchases,
         "failed_payments": failed_payments,
         "avg_check": avg_check,
         "best_channels": best_channels,
+    }
+
+
+def promo_dashboard_metrics() -> dict[str, object]:
+    now = datetime.utcnow()
+    today_start = datetime(now.year, now.month, now.day)
+    daily_activations: list[dict[str, object]] = []
+    for offset in range(13, -1, -1):
+        day_start = today_start - timedelta(days=offset)
+        day_end = day_start + timedelta(days=1)
+        activations_count = int(
+            db.session.query(func.count(PromoActivation.id))
+            .filter(PromoActivation.created_at >= day_start, PromoActivation.created_at < day_end)
+            .scalar()
+            or 0
+        )
+        daily_activations.append({"label": day_start.strftime("%d.%m"), "count": activations_count})
+
+    promo_rows = promo_list()
+    top_codes = sorted(
+        promo_rows,
+        key=lambda item: (
+            decimal_value(item["revenue"]),
+            int(item["total_activations"] or 0),
+        ),
+        reverse=True,
+    )[:5]
+
+    total_activations = sum(int(item["total_activations"] or 0) for item in promo_rows)
+    paid_activations = sum(int(item["paid_activations"] or 0) for item in promo_rows)
+    discount_values = [
+        float(decimal_value(item.percent_off))
+        for item in PromoCode.query.filter(PromoCode.percent_off.isnot(None)).all()
+        if item.percent_off is not None
+    ]
+    avg_discount = round(sum(discount_values) / len(discount_values), 1) if discount_values else 0.0
+    redemption_rate = round((paid_activations / total_activations) * 100, 1) if total_activations else 0.0
+
+    return {
+        "daily_activations": daily_activations,
+        "top_codes": top_codes,
+        "avg_discount": avg_discount,
+        "redemption_rate": redemption_rate,
     }
 
 
