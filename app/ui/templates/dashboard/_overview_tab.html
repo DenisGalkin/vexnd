@@ -50,27 +50,18 @@
     </article>
   </section>
 
-  <section class="overview-panel overview-panel--next overview-panel--mobile-hidden glass-effect">
-    <h3 class="overview-panel__section-title">{{ _('Что дальше?') }}</h3>
-    <div class="overview-shortcuts">
-      <button type="button" class="overview-chip" data-dashboard-target="connection">{{ _('Подключение') }}</button>
-      <button type="button" class="overview-chip" data-dashboard-target="referrals">{{ _('Рефералы') }}</button>
-      <button type="button" class="overview-chip" data-dashboard-target="settings">{{ _('Настройки') }}</button>
-    </div>
-  </section>
-
   <section class="overview-panel glass-effect">
     <h3 class="overview-panel__section-title">{{ _('Промокод') }}</h3>
     <p class="overview-panel__meta">{{ _('Сюда можно активировать бонусные дни и бонус на баланс. Скидочные коды по-прежнему работают на странице оплаты.') }}</p>
-    <form method="POST" action="{{ url_for('redeem_promo') }}" class="settings-form">
+    <form method="POST" action="{{ url_for('redeem_promo') }}" class="promo-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <label class="settings-field">
-          <span>{{ _('Код') }}</span>
+      <div class="promo-form__row">
+        <label class="promo-form__field">
+          <span class="promo-form__label">{{ _('Код') }}</span>
           <input type="text" name="promo_code" placeholder="WELCOME2026" autocomplete="off" required>
         </label>
-        <div class="flex items-end">
-          <button type="submit" class="dashboard-accent-btn w-full sm:w-auto">{{ _('Активировать') }}</button>
+        <div class="promo-form__action">
+          <button type="submit" class="dashboard-accent-btn promo-form__submit">{{ _('Активировать') }}</button>
         </div>
       </div>
     </form>

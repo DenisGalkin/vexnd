@@ -2113,6 +2113,62 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     gap: .75rem;
 }
 
+.promo-form {
+    margin-top: 1.25rem;
+    padding: 1.25rem;
+    border-radius: 1.25rem;
+    background: rgba(255,255,255,.025);
+    border: 1px solid rgba(255,255,255,.08);
+}
+
+.promo-form__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+.promo-form__field {
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    min-width: 0;
+}
+
+.promo-form__label {
+    font-size: .88rem;
+    color: rgba(156,163,175,.92);
+}
+
+.promo-form__field input {
+    width: 100%;
+    min-height: 3.35rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255,255,255,.09);
+    background: rgba(255,255,255,.045);
+    padding: .95rem 1rem;
+    color: #fff;
+    outline: none;
+    transition: border-color .18s ease, background-color .18s ease;
+}
+
+.promo-form__field input:focus {
+    border-color: rgba(0,96,251,.42);
+    background: rgba(255,255,255,.06);
+}
+
+.promo-form__action {
+    display: flex;
+    align-items: stretch;
+}
+
+.promo-form__submit {
+    min-height: 3.35rem;
+    padding: 0 1.35rem;
+    border-radius: 1rem;
+    white-space: nowrap;
+}
+
 .subscription-shell {
     gap: 1rem;
 }
@@ -3155,6 +3211,21 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
     .overview-shortcuts {
         flex-direction: column;
+    }
+
+    .promo-form {
+        padding: 1rem;
+        border-radius: 1.15rem;
+    }
+
+    .promo-form__row {
+        grid-template-columns: 1fr;
+        gap: .85rem;
+    }
+
+    .promo-form__action,
+    .promo-form__submit {
+        width: 100%;
     }
 
     .balance-topup__back-link,
