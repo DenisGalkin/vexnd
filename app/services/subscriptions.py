@@ -28,7 +28,14 @@ def restore_local_subscription_state(user: User, remote_user: dict | None) -> Su
     subscription_url = remnawave_subscription_url_from_user(remote_user)
     subscription = Subscription.query.filter_by(user_id=user.id).first()
     if not subscription:
-        subscription = Subscription(user_id=user.id, expiry_date=expiry_date or datetime.utcnow(), subscription_url=subscription_url, is_active=bool(expiry_date and expiry_date > datetime.utcnow()))
+        subscription = Subscription(
+            user_id=user.id,
+            expiry_date=expiry_date or datetime.utcnow(),
+            subscription_url=subscription_url,
+            is_active=bool(expiry_date and expiry_date > datetime.utcnow()),
+            source="sync",
+            updated_at=datetime.utcnow(),
+        )
         db.session.add(subscription)
     else:
         if expiry_date:
@@ -36,15 +43,29 @@ def restore_local_subscription_state(user: User, remote_user: dict | None) -> Su
         if subscription_url:
             subscription.subscription_url = subscription_url
         subscription.is_active = bool(expiry_date and expiry_date > datetime.utcnow())
+        subscription.updated_at = datetime.utcnow()
     db.session.commit()
     return subscription
 
 
-def create_remnawave_subscription(user: User, plan_months: int, *, strict: bool = False) -> str:
-    return create_remnawave_subscription_days(user, int(plan_months) * 30, strict=strict)
+def create_remnawave_subscription(user: User, plan_months: int, *, strict: bool = False, source: str = "payment") -> str:
+    return create_remnawave_subscription_days(
+        user,
+        int(plan_months) * 30,
+        strict=strict,
+        source=source,
+        current_plan_months=int(plan_months),
+    )
 
 
-def create_remnawave_subscription_days(user: User, days: int, *, strict: bool = False) -> str:
+def create_remnawave_subscription_days(
+    user: User,
+    days: int,
+    *,
+    strict: bool = False,
+    source: str = "payment",
+    current_plan_months: int | None = None,
+) -> str:
     expiry_date = datetime.utcnow() + timedelta(days=max(int(days), 1))
     cfg = get_remnawave_config()
     if not (cfg.base_url and cfg.token):
@@ -52,11 +73,24 @@ def create_remnawave_subscription_days(user: User, days: int, *, strict: bool = 
         if subscription and subscription.expiry_date and subscription.expiry_date > datetime.utcnow():
             expiry_date = subscription.expiry_date + timedelta(days=max(int(days), 1))
         if not subscription:
-            subscription = Subscription(user_id=user.id, expiry_date=expiry_date, subscription_url="", is_active=True)
+            subscription = Subscription(
+                user_id=user.id,
+                expiry_date=expiry_date,
+                subscription_url="",
+                is_active=True,
+                current_plan_months=current_plan_months,
+                source=source,
+                updated_at=datetime.utcnow(),
+            )
             db.session.add(subscription)
         else:
             subscription.expiry_date = expiry_date
             subscription.is_active = True
+            subscription.updated_at = datetime.utcnow()
+        if current_plan_months is not None:
+            subscription.current_plan_months = current_plan_months
+        if source:
+            subscription.source = source
         db.session.commit()
         return subscription.subscription_url or ""
     try:
@@ -76,13 +110,26 @@ def create_remnawave_subscription_days(user: User, days: int, *, strict: bool = 
             raise
         subscription = Subscription.query.filter_by(user_id=user.id).first()
         if not subscription:
-            subscription = Subscription(user_id=user.id, expiry_date=expiry_date, subscription_url="", is_active=True)
+            subscription = Subscription(
+                user_id=user.id,
+                expiry_date=expiry_date,
+                subscription_url="",
+                is_active=True,
+                current_plan_months=current_plan_months,
+                source=source,
+                updated_at=datetime.utcnow(),
+            )
             db.session.add(subscription)
         else:
             if subscription.expiry_date and subscription.expiry_date > datetime.utcnow():
                 expiry_date = subscription.expiry_date + timedelta(days=max(int(days), 1))
             subscription.expiry_date = expiry_date
             subscription.is_active = True
+            subscription.updated_at = datetime.utcnow()
+        if current_plan_months is not None:
+            subscription.current_plan_months = current_plan_months
+        if source:
+            subscription.source = source
         db.session.commit()
         return subscription.subscription_url or ""
 
@@ -127,13 +174,14 @@ def deactivate_local_subscription(subscription: Subscription | None) -> None:
         subscription.subscription_url = ""
         changed = True
     if changed:
+        subscription.updated_at = datetime.utcnow()
         try:
             db.session.commit()
         except Exception:
             db.session.rollback()
 
 
-def extend_subscription_days_local(user: User, days: int) -> None:
+def extend_subscription_days_local(user: User, days: int, *, source: str = "payment", current_plan_months: int | None = None) -> None:
     days = int(days)
     if days <= 0:
         return
@@ -144,19 +192,38 @@ def extend_subscription_days_local(user: User, days: int) -> None:
         base_dt = subscription.expiry_date
     new_expiry = base_dt + timedelta(days=days)
     if not subscription:
-        subscription = Subscription(user_id=user.id, expiry_date=new_expiry, subscription_url="", is_active=True)
+        subscription = Subscription(
+            user_id=user.id,
+            expiry_date=new_expiry,
+            subscription_url="",
+            is_active=True,
+            current_plan_months=current_plan_months,
+            source=source,
+            updated_at=datetime.utcnow(),
+        )
         db.session.add(subscription)
     else:
         subscription.expiry_date = new_expiry
         subscription.is_active = True
+        subscription.updated_at = datetime.utcnow()
+    if current_plan_months is not None:
+        subscription.current_plan_months = current_plan_months
+    if source:
+        subscription.source = source
     db.session.commit()
 
 
-def extend_remnawave_subscription_days(user: User, days: int) -> None:
+def extend_remnawave_subscription_days(
+    user: User,
+    days: int,
+    *,
+    source: str = "payment",
+    current_plan_months: int | None = None,
+) -> None:
     days = int(days)
     if days <= 0:
         return
-    extend_subscription_days_local(user, days)
+    extend_subscription_days_local(user, days, source=source, current_plan_months=current_plan_months)
     cfg = get_remnawave_config()
     if not (cfg.base_url and cfg.token):
         return
@@ -248,7 +315,7 @@ def activate_trial_subscription(user: User, *, source: str = "web", days: int = 
     if not is_trial_eligible(user, fail_open_on_remote_error=False, force_refresh=True):
         raise ValueError("trial_not_available")
     trial_days = max(int(days), 1)
-    create_remnawave_subscription_days(user, trial_days, strict=True)
+    create_remnawave_subscription_days(user, trial_days, strict=True, source="trial", current_plan_months=None)
     subscription = Subscription.query.filter_by(user_id=user.id).first()
     if not subscription or not subscription.expiry_date:
         raise RuntimeError("trial_activation_failed")

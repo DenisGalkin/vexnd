@@ -8,6 +8,7 @@ from flask import Flask
 from app.core.config import _env_bool, apply_flask_config
 from app.core.extensions import db, login_manager
 from app.http.routes.api import register as register_api_routes
+from app.http.routes.admin import register as register_admin_routes
 from app.http.routes.auth import register as register_auth_routes
 from app.http.routes.dashboard import register as register_dashboard_routes
 from app.http.routes.pages import register as register_page_routes
@@ -29,6 +30,7 @@ def create_app() -> Flask:
     register_page_routes(app)
     register_auth_routes(app)
     register_dashboard_routes(app)
+    register_admin_routes(app)
     register_api_routes(app)
     register_payment_routes(app)
 

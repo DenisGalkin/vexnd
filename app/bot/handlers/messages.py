@@ -49,7 +49,8 @@ from app.services.bot_admin_links import (
     tracked_link_url,
     update_tracked_link_commission,
 )
-from app.services.coupons import bot_coupon_benefits, normalize_coupon_code, record_coupon_redemption
+from app.services.coupons import normalize_coupon_code
+from app.services.promo_codes import apply_direct_promo_code
 from app.services.subscriptions import create_remnawave_subscription
 from app.services.telegram_auth import approve_telegram_auth_challenge
 
@@ -103,25 +104,26 @@ def handle_promo_code(chat_id: int, user, state, raw_code: str) -> None:
     code = normalize_coupon_code(raw_code)
     state.pending_action = None
     state.updated_at = utc_now()
-    benefit = bot_coupon_benefits(code, user.id if user else None)
-    if benefit["error"] in {"not_found", "exhausted"}:
+    result = apply_direct_promo_code(user, code, source="bot") if user else {"ok": False, "error": "not_found"}
+    if not result.get("ok"):
+        error = result.get("error")
+        db.session.rollback()
         db.session.commit()
+        if error == "already_used":
+            send_message(chat_id, t(state, "promo_used"), profile_keyboard(state))
+            return
+        if error == "payment_only":
+            send_message(chat_id, t(state, "promo_checkout_only"), profile_keyboard(state))
+            return
         send_message(chat_id, t(state, "promo_not_found"), profile_keyboard(state))
         return
-    if benefit["error"] == "already_used":
-        db.session.commit()
-        send_message(chat_id, t(state, "promo_used"), profile_keyboard(state))
-        return
-    if benefit["error"] == "checkout_only":
-        db.session.commit()
-        send_message(chat_id, t(state, "promo_checkout_only"), profile_keyboard(state))
-        return
-
-    record_coupon_redemption(user.id if user else None, code)
     messages: list[str] = []
-    if benefit["bot_plan_months"]:
-        create_remnawave_subscription(user, int(benefit["bot_plan_months"]), strict=True)
-        messages.append(t(state, "promo_ok_plan", months=benefit["bot_plan_months"]))
+    granted_days = int(result.get("granted_days") or 0)
+    granted_balance_cents = int(result.get("granted_balance_cents") or 0)
+    if granted_days:
+        messages.append(t(state, "promo_ok_days", days=granted_days))
+    if granted_balance_cents:
+        messages.append(t(state, "promo_ok_balance", amount=h(format_balance_cents(granted_balance_cents))))
     state.updated_at = utc_now()
     db.session.commit()
     send_message(chat_id, "\n\n".join(messages) if messages else t(state, "promo_not_found"), profile_keyboard(state))

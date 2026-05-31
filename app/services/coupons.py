@@ -8,6 +8,14 @@ from app.core.extensions import db
 from app.domain.models import PaymentIntent, PaymentIntentPricing, UserCouponRedemption
 from app.domain.plans import format_usd_amount, plan_details, plan_price_usd, to_decimal_amount
 from app.http.helpers import translate
+from app.services.promo_codes import (
+    apply_paid_promo_effects,
+    get_db_promo,
+    promo_activation_count,
+    promo_to_coupon_config,
+    promo_user_activation_count,
+    validate_promo,
+)
 
 
 def normalize_coupon_code(raw: str | None) -> str:
@@ -158,6 +166,9 @@ def coupon_config(coupon_code: str | None) -> dict | None:
     code = normalize_coupon_code(coupon_code)
     if not code:
         return None
+    db_promo = get_db_promo(code)
+    if db_promo:
+        return promo_to_coupon_config(db_promo)
     return coupon_configs().get(code)
 
 
@@ -165,6 +176,9 @@ def coupon_total_redemptions(coupon_code: str | None) -> int:
     code = normalize_coupon_code(coupon_code)
     if not code:
         return 0
+    db_promo = get_db_promo(code)
+    if db_promo:
+        return promo_activation_count(db_promo)
     current_count = UserCouponRedemption.query.filter_by(coupon_code=code).count()
     return current_count + _legacy_bot_coupon_redemptions_count(code)
 
@@ -182,6 +196,10 @@ def coupon_already_used_by_user(user_id: int | None, coupon_code: str | None) ->
     code = normalize_coupon_code(coupon_code)
     if not user_id or not code:
         return False
+    db_promo = get_db_promo(code)
+    if db_promo:
+        limit = int(db_promo.max_activations_per_user or 1)
+        return limit > 0 and promo_user_activation_count(db_promo, int(user_id)) >= limit
     return (
         UserCouponRedemption.query.filter_by(user_id=int(user_id), coupon_code=code).first() is not None
         or _legacy_bot_coupon_used_by_user(user_id, code)
@@ -213,12 +231,56 @@ def coupon_pricing(plan_months: int, coupon_code: str | None = None, user_id: in
     code = normalize_coupon_code(coupon_code)
     if not code:
         return result
-    if coupon_already_used_by_user(user_id, code):
-        result["error"] = translate("Этот промокод уже использован на вашем аккаунте.")
-        return result
     coupon = coupon_config(code)
     if not coupon:
         result["error"] = translate("Промокод не найден.")
+        return result
+    if coupon.get("kind") == "db":
+        user = None
+        if user_id:
+            from app.domain.models import User
+
+            user = db.session.get(User, int(user_id))
+        validation = validate_promo(get_db_promo(code), user=user, plan_months=plan["months"], for_checkout=True)
+        if not validation.ok:
+            error_map = {
+                "already_used": translate("Этот промокод уже использован на вашем аккаунте."),
+                "new_only": translate("Этот промокод доступен только новым пользователям."),
+                "existing_only": translate("Этот промокод доступен только существующим пользователям."),
+                "plan_mismatch": translate("Этот промокод не подходит для выбранного тарифа."),
+                "checkout_only": translate("Этот промокод нельзя применить к оплате."),
+                "not_started": translate("Промокод станет доступен позже."),
+                "expired": translate("Срок действия промокода истёк."),
+                "exhausted": translate("Промокод больше недоступен."),
+            }
+            result["error"] = error_map.get(validation.error or "", translate("Промокод недоступен."))
+            return result
+        percent_off = to_decimal_amount(coupon.get("percent_off") or "0")
+        fixed_off = to_decimal_amount(coupon.get("fixed_amount_usd") or "0")
+        if percent_off > Decimal("0.00"):
+            discount_amount = (original_price * percent_off / Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        else:
+            discount_amount = fixed_off
+        if discount_amount <= Decimal("0.00"):
+            result["error"] = translate("Этот промокод нельзя применить к оплате.")
+            return result
+        max_discount = max(original_price - Decimal("0.01"), Decimal("0.00"))
+        discount_amount = min(discount_amount, max_discount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        final_price = (original_price - discount_amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        if final_price >= original_price:
+            result["error"] = translate("Промокод не даёт скидку для этого тарифа.")
+            return result
+        result.update(
+            {
+                "coupon_code": code,
+                "coupon_applied": True,
+                "final_price": final_price,
+                "discount_amount": discount_amount,
+            }
+        )
+        return result
+    if coupon_already_used_by_user(user_id, code):
+        result["error"] = translate("Этот промокод уже использован на вашем аккаунте.")
         return result
     if coupon_exhausted(coupon):
         result["error"] = translate("Промокод больше недоступен.")
@@ -260,19 +322,47 @@ def bot_coupon_benefits(coupon_code: str | None, user_id: int | None = None) -> 
         "coupon_found": False,
         "coupon_applied": False,
         "bot_plan_months": None,
+        "bonus_days": 0,
+        "bonus_balance_cents": 0,
         "error": None,
     }
     if not code:
         result["error"] = "not_found"
-        return result
-    if coupon_already_used_by_user(user_id, code):
-        result["error"] = "already_used"
         return result
     coupon = coupon_config(code)
     if not coupon:
         result["error"] = "not_found"
         return result
     result["coupon_found"] = True
+    if coupon.get("kind") == "db":
+        user = None
+        if user_id:
+            from app.domain.models import User
+
+            user = db.session.get(User, int(user_id))
+        validation = validate_promo(get_db_promo(code), user=user, for_direct_activation=True)
+        if not validation.ok:
+            result["error"] = {
+                "already_used": "already_used",
+                "payment_only": "checkout_only",
+                "not_started": "not_found",
+                "expired": "not_found",
+                "exhausted": "exhausted",
+                "new_only": "not_found",
+                "existing_only": "not_found",
+            }.get(validation.error or "", "not_found")
+            return result
+        result.update(
+            {
+                "coupon_applied": True,
+                "bonus_days": int(coupon.get("bonus_days") or 0),
+                "bonus_balance_cents": int(coupon.get("bonus_balance_cents") or 0),
+            }
+        )
+        return result
+    if coupon_already_used_by_user(user_id, code):
+        result["error"] = "already_used"
+        return result
     if coupon_exhausted(coupon):
         result["error"] = "exhausted"
         return result
@@ -359,5 +449,20 @@ def apply_coupon_redemption_for_intent(intent: PaymentIntent | None) -> None:
         return
     pricing = intent_pricing(intent)
     if not pricing.get("coupon_applied"):
+        return
+    user = None
+    if getattr(intent, "user_id", None):
+        from app.domain.models import User
+
+        user = db.session.get(User, int(intent.user_id))
+    promo = get_db_promo(pricing.get("coupon_code"))
+    if promo and user:
+        apply_paid_promo_effects(
+            user=user,
+            code=pricing.get("coupon_code"),
+            payment_intent_token=intent.token,
+            discount_amount_usd=pricing.get("discount_amount"),
+            source=intent.provider or "checkout",
+        )
         return
     record_coupon_redemption(intent.user_id, pricing.get("coupon_code"), intent.token)

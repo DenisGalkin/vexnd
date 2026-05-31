@@ -30,6 +30,7 @@ LOCALIZED_PATHS = {
     "/setup",
     "/faq",
     "/pricing",
+    "/admin",
     "/soon",
     "/login",
     "/register",
@@ -54,6 +55,7 @@ LOCALIZED_ENDPOINTS = {
     "aup_page",
     "coupon_preview",
     "pricing",
+    "admin_panel",
 }
 
 LANGUAGE_REGION_MAP = {
@@ -260,6 +262,15 @@ def _persist_user_security(exc):
 def _sync_current_web_session():
     if not current_user.is_authenticated:
         return None
+    if getattr(current_user, "is_banned", False):
+        chosen = session.get("lang")
+        logout_user()
+        clear_current_web_session_token()
+        renew_session(preserve_keys=("lang",) if chosen else ())
+        if chosen:
+            session["lang"] = chosen
+        flash(translate("Аккаунт заблокирован. Обратитесь в поддержку."), "error")
+        return redirect(localized_url("login"))
     try:
         _token, revoked = ensure_current_web_session(current_user.id)
     except Exception:
@@ -443,6 +454,7 @@ def init_app(app) -> None:
     app.context_processor(_inject_locale)
     app.context_processor(_inject_seo_defaults)
     app.context_processor(lambda: dict(get_locale=get_locale))
+    app.context_processor(lambda: dict(is_admin_user=__import__("app.services.admin", fromlist=["is_admin_user"]).is_admin_user))
     app.jinja_env.globals.update(_=translate)
     from app.domain.plans import plan_duration_label
 
@@ -467,6 +479,8 @@ Allow: /
 # Private / auth
 Disallow: /dashboard
 Disallow: /en/dashboard
+Disallow: /admin
+Disallow: /en/admin
 Disallow: /login
 Disallow: /en/login
 Disallow: /register

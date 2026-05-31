@@ -21,6 +21,7 @@ from app.domain.models import BalanceTransaction, PaymentIntent, ReferralSignup,
 from app.domain.plans import format_usd_amount, plan_details, plan_duration_label
 from app.services.balance import TOPUP_PRESET_CENTS, can_pay_for_plan_with_balance, format_balance_cents, user_balance_cents
 from app.services.coupons import coupon_pricing, intent_pricing, normalize_coupon_code
+from app.services.promo_codes import apply_direct_promo_code
 from app.services.email_change_otp import get_pending_email_change
 from app.services.email_otp import OTP_TTL_MINUTES
 from app.services.password_reset_otp import get_pending_password_reset
@@ -454,6 +455,41 @@ def balance_page():
     )
 
 
+@login_required
+def redeem_promo():
+    code = normalize_coupon_code(request.form.get("promo_code"))
+    if not code:
+        flash(translate("Введите промокод."), "error")
+        return redirect(url_for("dashboard"))
+    try:
+        result = apply_direct_promo_code(current_user, code, source="web")
+        if not result.get("ok"):
+            error = result.get("error")
+            if error == "already_used":
+                flash(translate("Этот промокод уже использован на вашем аккаунте."), "error")
+            elif error == "payment_only":
+                flash(translate("Этот промокод применяется при оплате тарифа."), "info")
+            elif error == "new_only":
+                flash(translate("Этот промокод доступен только новым пользователям."), "error")
+            elif error == "existing_only":
+                flash(translate("Этот промокод доступен только существующим пользователям."), "error")
+            else:
+                flash(translate("Промокод недоступен."), "error")
+            db.session.rollback()
+            return redirect(url_for("dashboard"))
+        messages = []
+        if result.get("granted_days"):
+            messages.append(translate("Добавлено дней: ") + str(int(result["granted_days"])))
+        if result.get("granted_balance_cents"):
+            messages.append(translate("Начислено на баланс: ") + format_balance_cents(int(result["granted_balance_cents"])))
+        db.session.commit()
+        flash(" · ".join(messages) if messages else translate("Промокод активирован."), "success")
+    except Exception:
+        db.session.rollback()
+        flash(translate("Не удалось активировать промокод."), "error")
+    return redirect(url_for("dashboard"))
+
+
 def register(app) -> None:
     app.add_url_rule("/dashboard", endpoint="dashboard", view_func=dashboard, methods=["GET"])
     app.add_url_rule("/en/dashboard", endpoint="dashboard_en", view_func=dashboard, methods=["GET"])
@@ -462,3 +498,4 @@ def register(app) -> None:
     app.add_url_rule("/en/checkout", endpoint="checkout_en", view_func=checkout, methods=["GET"])
     app.add_url_rule("/balance", endpoint="balance_page", view_func=balance_page, methods=["GET"])
     app.add_url_rule("/en/balance", endpoint="balance_page_en", view_func=balance_page, methods=["GET"])
+    app.add_url_rule("/account/promo", endpoint="redeem_promo", view_func=redeem_promo, methods=["POST"])

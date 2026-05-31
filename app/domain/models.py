@@ -13,6 +13,10 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=True)
     password_hash = db.Column(db.String(200), nullable=False)
     lang = db.Column(db.String(2), default="en")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    is_banned = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    banned_at = db.Column(db.DateTime, nullable=True)
+    banned_reason = db.Column(db.String(255), nullable=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password, method="pbkdf2:sha256:120000")
@@ -28,6 +32,9 @@ class Subscription(db.Model):
     subscription_url = db.Column("vless_key", db.String(500), nullable=True)
     sub_id = db.Column(db.String(64), unique=True, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
+    current_plan_months = db.Column(db.Integer, nullable=True)
+    source = db.Column(db.String(32), nullable=False, default="payment")
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     # Add dedicated expiry_date index to speed up queries filtering by expiry_date.
     __table_args__ = (
@@ -85,10 +92,21 @@ class PaymentIntent(db.Model):
     external_id = db.Column(db.String(128), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     processed_at = db.Column(db.DateTime, nullable=True)
+    status = db.Column(db.String(32), nullable=False, default="pending", index=True)
+    currency = db.Column(db.String(8), nullable=False, default="USD")
+    expected_amount_usd = db.Column(db.String(32), nullable=True)
+    paid_amount_usd = db.Column(db.String(32), nullable=True)
+    paid_at = db.Column(db.DateTime, nullable=True)
+    last_checked_at = db.Column(db.DateTime, nullable=True)
+    manual_confirmed_at = db.Column(db.DateTime, nullable=True)
+    manual_confirmed_by_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    failure_reason = db.Column(db.String(255), nullable=True)
+    refunded_at = db.Column(db.DateTime, nullable=True)
 
     __table_args__ = (
         db.Index("ix_payment_intent_provider_external", "provider", "external_id"),
         db.Index("ix_payment_intent_user_processed_plan", "user_id", "processed_at", "plan_months"),
+        db.Index("ix_payment_intent_status_created", "status", "created_at"),
     )
 
 
@@ -194,6 +212,62 @@ class UserCouponRedemption(db.Model):
     __table_args__ = (
         db.UniqueConstraint("user_id", "coupon_code", name="uq_user_coupon_redemption_user_coupon"),
     )
+
+
+class PromoCode(db.Model):
+    __tablename__ = "promo_code"
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    name = db.Column(db.String(120), nullable=True)
+    description = db.Column(db.String(255), nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    percent_off = db.Column(db.String(32), nullable=True)
+    fixed_amount_usd = db.Column(db.String(32), nullable=True)
+    bonus_balance_cents = db.Column(db.Integer, nullable=True)
+    bonus_days = db.Column(db.Integer, nullable=True)
+    max_activations = db.Column(db.Integer, nullable=True)
+    max_activations_per_user = db.Column(db.Integer, nullable=True, default=1)
+    audience = db.Column(db.String(16), nullable=False, default="all")
+    plan_months_csv = db.Column(db.String(64), nullable=True)
+    valid_from = db.Column(db.DateTime, nullable=True)
+    valid_until = db.Column(db.DateTime, nullable=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class PromoActivation(db.Model):
+    __tablename__ = "promo_activation"
+
+    id = db.Column(db.Integer, primary_key=True)
+    promo_id = db.Column(db.Integer, db.ForeignKey("promo_code.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    payment_intent_token = db.Column(db.String(128), nullable=True, index=True)
+    source = db.Column(db.String(32), nullable=False, default="web")
+    status = db.Column(db.String(16), nullable=False, default="applied")
+    discount_amount_usd = db.Column(db.String(32), nullable=True)
+    granted_balance_cents = db.Column(db.Integer, nullable=False, default=0)
+    granted_days = db.Column(db.Integer, nullable=False, default=0)
+    notes = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.Index("ix_promo_activation_user_promo_created", "user_id", "promo_id", "created_at"),
+    )
+
+
+class AdminAuditLog(db.Model):
+    __tablename__ = "admin_audit_log"
+
+    id = db.Column(db.Integer, primary_key=True)
+    actor_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    action = db.Column(db.String(64), nullable=False, index=True)
+    target_type = db.Column(db.String(32), nullable=False)
+    target_id = db.Column(db.String(64), nullable=True)
+    summary = db.Column(db.String(255), nullable=True)
+    ip_address = db.Column(db.String(64), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 
 class UserBalance(db.Model):

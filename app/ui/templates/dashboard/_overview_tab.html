@@ -58,4 +58,21 @@
       <button type="button" class="overview-chip" data-dashboard-target="settings">{{ _('Настройки') }}</button>
     </div>
   </section>
+
+  <section class="overview-panel glass-effect">
+    <h3 class="overview-panel__section-title">{{ _('Промокод') }}</h3>
+    <p class="overview-panel__meta">{{ _('Сюда можно активировать бонусные дни и бонус на баланс. Скидочные коды по-прежнему работают на странице оплаты.') }}</p>
+    <form method="POST" action="{{ url_for('redeem_promo') }}" class="settings-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <label class="settings-field">
+          <span>{{ _('Код') }}</span>
+          <input type="text" name="promo_code" placeholder="WELCOME2026" autocomplete="off" required>
+        </label>
+        <div class="flex items-end">
+          <button type="submit" class="dashboard-accent-btn w-full sm:w-auto">{{ _('Активировать') }}</button>
+        </div>
+      </div>
+    </form>
+  </section>
 </div>

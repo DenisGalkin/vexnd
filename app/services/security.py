@@ -7,7 +7,7 @@ import secrets
 import tempfile
 from datetime import datetime, timedelta
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 
 try:
     import fcntl
@@ -20,6 +20,7 @@ from app.core.config import _env_bool
 from app.core.extensions import db
 from app.domain.models import AuthThrottle
 from app.services.bot_admin_links import ensure_bot_admin_schema
+from app.domain.models import AdminAuditLog, PromoActivation, PromoCode
 
 
 _DB_SCHEMA_READY = False
@@ -46,19 +47,35 @@ def _sqlite_column_names(table_name: str) -> set[str]:
     return {str(row[1]) for row in rows}
 
 
-def _ensure_balance_schema() -> None:
-    if db.engine.dialect.name != "sqlite":
+def _table_column_names(table_name: str) -> set[str]:
+    inspector = inspect(db.engine)
+    if not inspector.has_table(table_name):
+        return set()
+    return {column["name"] for column in inspector.get_columns(table_name)}
+
+
+def _add_missing_columns(table_name: str, columns: list[tuple[str, str]]) -> None:
+    existing = _table_column_names(table_name)
+    if not existing:
         return
-    payment_intent_columns = _sqlite_column_names("payment_intent")
-    statements: list[str] = []
-    if "purpose" not in payment_intent_columns:
-        statements.append("ALTER TABLE payment_intent ADD COLUMN purpose VARCHAR(32) NOT NULL DEFAULT 'subscription'")
-    if "balance_amount_cents" not in payment_intent_columns:
-        statements.append("ALTER TABLE payment_intent ADD COLUMN balance_amount_cents INTEGER")
     with db.engine.begin() as connection:
-        for statement in statements:
-            connection.execute(text(statement))
-        if "purpose" in payment_intent_columns or statements:
+        for column_name, definition in columns:
+            if column_name in existing:
+                continue
+            connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}"))
+
+
+def _ensure_balance_schema() -> None:
+    payment_intent_columns = _table_column_names("payment_intent")
+    _add_missing_columns(
+        "payment_intent",
+        [
+            ("purpose", "VARCHAR(32) NOT NULL DEFAULT 'subscription'"),
+            ("balance_amount_cents", "INTEGER"),
+        ],
+    )
+    with db.engine.begin() as connection:
+        if payment_intent_columns:
             connection.execute(text("UPDATE payment_intent SET purpose = 'subscription' WHERE purpose IS NULL OR purpose = ''"))
         connection.execute(
             text(
@@ -89,6 +106,72 @@ def _ensure_balance_schema() -> None:
         connection.execute(text("CREATE INDEX IF NOT EXISTS ix_balance_transaction_related_intent_token ON balance_transaction (related_intent_token)"))
 
 
+def _ensure_admin_schema() -> None:
+    PromoCode.__table__.create(db.engine, checkfirst=True)
+    PromoActivation.__table__.create(db.engine, checkfirst=True)
+    AdminAuditLog.__table__.create(db.engine, checkfirst=True)
+
+    _add_missing_columns(
+        "user",
+        [
+            ("created_at", "DATETIME"),
+            ("is_banned", "BOOLEAN NOT NULL DEFAULT 0"),
+            ("banned_at", "DATETIME"),
+            ("banned_reason", "VARCHAR(255)"),
+        ],
+    )
+    _add_missing_columns(
+        "subscription",
+        [
+            ("current_plan_months", "INTEGER"),
+            ("source", "VARCHAR(32) NOT NULL DEFAULT 'payment'"),
+            ("updated_at", "DATETIME"),
+        ],
+    )
+    _add_missing_columns(
+        "payment_intent",
+        [
+            ("status", "VARCHAR(32) NOT NULL DEFAULT 'pending'"),
+            ("currency", "VARCHAR(8) NOT NULL DEFAULT 'USD'"),
+            ("expected_amount_usd", "VARCHAR(32)"),
+            ("paid_amount_usd", "VARCHAR(32)"),
+            ("paid_at", "DATETIME"),
+            ("last_checked_at", "DATETIME"),
+            ("manual_confirmed_at", "DATETIME"),
+            ("manual_confirmed_by_user_id", "INTEGER"),
+            ("failure_reason", "VARCHAR(255)"),
+            ("refunded_at", "DATETIME"),
+        ],
+    )
+
+    with db.engine.begin() as connection:
+        connection.execute(text("UPDATE user SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL"))
+        connection.execute(text("UPDATE user SET is_banned = 0 WHERE is_banned IS NULL"))
+        connection.execute(text("UPDATE subscription SET source = 'payment' WHERE source IS NULL OR source = ''"))
+        connection.execute(text("UPDATE subscription SET updated_at = COALESCE(updated_at, expiry_date, CURRENT_TIMESTAMP)"))
+        connection.execute(
+            text(
+                "UPDATE payment_intent "
+                "SET status = CASE "
+                "WHEN processed_at IS NOT NULL THEN 'success' "
+                "WHEN status IS NULL OR status = '' THEN 'pending' "
+                "ELSE status END"
+            )
+        )
+        connection.execute(text("UPDATE payment_intent SET currency = 'USD' WHERE currency IS NULL OR currency = ''"))
+        connection.execute(
+            text(
+                "UPDATE payment_intent "
+                "SET paid_at = COALESCE(paid_at, processed_at), "
+                "paid_amount_usd = COALESCE(paid_amount_usd, expected_amount_usd) "
+                "WHERE processed_at IS NOT NULL"
+            )
+        )
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_user_created_at ON user (created_at)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_user_is_banned ON user (is_banned)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_payment_intent_status_created ON payment_intent (status, created_at)"))
+
+
 def get_webhook_secret(env_name: str) -> str:
     return (os.environ.get(env_name) or "").strip()
 
@@ -106,12 +189,14 @@ def ensure_db_schema() -> None:
                 db.create_all()
                 ensure_bot_admin_schema()
                 _ensure_balance_schema()
+                _ensure_admin_schema()
                 _ensure_supporting_indexes()
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
         else:
             db.create_all()
             ensure_bot_admin_schema()
             _ensure_balance_schema()
+            _ensure_admin_schema()
             _ensure_supporting_indexes()
         _DB_SCHEMA_READY = True
     except Exception as exc:

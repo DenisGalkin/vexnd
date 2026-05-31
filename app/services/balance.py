@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import secrets
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 
 from app.core.extensions import db
 from app.domain.models import BalanceTransaction, PaymentIntent, User, UserBalance
 from app.domain.plans import plan_duration_label
-from app.services.coupons import apply_coupon_redemption_for_intent, coupon_pricing, intent_pricing
+from app.services.coupons import apply_coupon_redemption_for_intent, coupon_pricing, create_intent_pricing, intent_pricing
 from app.services.referrals import apply_referral_bonus_if_eligible
 from app.services.bot_admin_links import record_tracked_link_payment
 from app.services.subscriptions import create_remnawave_subscription
@@ -146,18 +147,41 @@ def purchase_subscription_with_balance(user: User, plan_months: int, coupon_code
     if pricing.get("error"):
         raise ValueError(str(pricing["error"]))
     amount_cents = amount_to_cents(pricing["final_price"])
+    intent = PaymentIntent(
+        provider="balance",
+        token=secrets.token_urlsafe(24),
+        user_id=user.id,
+        plan_months=int(plan_months),
+        purpose="subscription",
+        external_id=f"balance-{user.id}-{int(datetime.utcnow().timestamp())}",
+        created_at=datetime.utcnow(),
+        processed_at=datetime.utcnow(),
+        status="success",
+        currency="USD",
+        expected_amount_usd=f"{pricing['final_price']:.2f}",
+        paid_amount_usd=f"{pricing['final_price']:.2f}",
+        paid_at=datetime.utcnow(),
+        manual_confirmed_at=datetime.utcnow(),
+    )
+    db.session.add(intent)
+    intent_pricing = create_intent_pricing(intent.token, pricing)
+    if intent_pricing:
+        db.session.add(intent_pricing)
     try:
         debit_user_balance(
             user_id=user.id,
             amount_cents=amount_cents,
             kind="subscription_purchase",
             description=subscription_balance_description(plan_months),
+            related_intent_token=intent.token,
         )
     except ValueError as exc:
+        db.session.rollback()
         if str(exc) == "insufficient_balance":
             raise ValueError("insufficient_balance") from exc
         raise
-    create_remnawave_subscription(user, int(plan_months), strict=True)
+    create_remnawave_subscription(user, int(plan_months), strict=True, source="balance")
+    apply_coupon_redemption_for_intent(intent)
     apply_referral_bonus_if_eligible(user)
     db.session.commit()
     return pricing
@@ -179,7 +203,7 @@ def fulfill_payment_intent(intent: PaymentIntent, user: User, external_id: str) 
         )
         record_tracked_link_payment(intent, user)
         return
-    create_remnawave_subscription(user, int(intent.plan_months), strict=True)
+    create_remnawave_subscription(user, int(intent.plan_months), strict=True, source=intent.provider or "payment")
     apply_coupon_redemption_for_intent(intent)
     apply_referral_bonus_if_eligible(user)
     record_tracked_link_payment(intent, user)

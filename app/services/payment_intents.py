@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Callable, Any
 from sqlalchemy.exc import IntegrityError
 
@@ -20,6 +21,7 @@ def create_intent_with_pricing(
     pricing: dict,
 ) -> Any:
     """Create PaymentIntent (+ optional pricing snapshot) in one transaction."""
+    final_amount = pricing.get("final_price") if isinstance(pricing, dict) else None
     intent = intent_model(
         provider=provider,
         token=token,
@@ -28,6 +30,9 @@ def create_intent_with_pricing(
         purpose=purpose,
         balance_amount_cents=balance_amount_cents,
         external_id=external_id or None,
+        status="pending",
+        currency="USD",
+        expected_amount_usd=(f"{Decimal(str(final_amount)).quantize(Decimal('0.01')):.2f}" if final_amount is not None else None),
     )
     db_session.add(intent)
     intent_pricing = create_pricing_fn(token, pricing)
@@ -48,6 +53,11 @@ def mark_processed_payment(
     """Persist processed marker and mark intent processed atomically."""
     db_session.add(processed_model(provider=provider, external_id=external_id))
     intent.processed_at = getattr(intent, "processed_at", None) or datetime.utcnow()
+    intent.status = "success"
+    intent.paid_at = getattr(intent, "paid_at", None) or intent.processed_at
+    if not getattr(intent, "paid_amount_usd", None):
+        intent.paid_amount_usd = getattr(intent, "expected_amount_usd", None)
+    intent.failure_reason = None
     try:
         db_session.commit()
     except IntegrityError:

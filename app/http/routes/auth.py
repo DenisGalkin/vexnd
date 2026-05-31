@@ -416,6 +416,9 @@ def login():
             return render_template("auth/login.html", **template_context), 429
         user = User.query.filter_by(email=email.lower().strip() if email else email).first()
         if user and user.check_password(password):
+            if user.is_banned:
+                flash(translate("Аккаунт заблокирован. Обратитесь в поддержку."), "error")
+                return render_template("auth/login.html", **template_context), 403
             chosen = _normalized_lang()
             renew_session(preserve_keys=("lang",))
             login_user(user, remember=remember)

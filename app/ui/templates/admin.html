@@ -1,0 +1,622 @@
+{% extends "base.html" %}
+
+{% block title %}Админ-панель{% endblock %}
+{% block meta_robots %}<meta name="robots" content="noindex,nofollow">{% endblock %}
+{% block body_class %}admin-body{% endblock %}
+
+{% block content %}
+<main class="admin-shell pt-24 pb-12">
+  <div class="admin-layout">
+    <aside class="admin-sidebar glass-effect">
+      <div class="admin-sidebar__eyebrow">VEXND Control</div>
+      <h1 class="admin-sidebar__title">Админ-панель</h1>
+      <p class="admin-sidebar__text">Сайт, бот, платежи, подписки и промо в одном интерфейсе.</p>
+
+      <nav class="admin-sidebar__nav" aria-label="Разделы админки">
+        <a href="{{ url_lang('admin_panel', tab='dashboard') }}" class="admin-nav-link {% if admin_tab == 'dashboard' %}is-active{% endif %}">Обзор</a>
+        <a href="{{ url_lang('admin_panel', tab='users') }}" class="admin-nav-link {% if admin_tab == 'users' %}is-active{% endif %}">Пользователи</a>
+        <a href="{{ url_lang('admin_panel', tab='promos') }}" class="admin-nav-link {% if admin_tab == 'promos' %}is-active{% endif %}">Промокоды</a>
+        <a href="{{ url_lang('admin_panel', tab='payments') }}" class="admin-nav-link {% if admin_tab == 'payments' %}is-active{% endif %}">Платежи</a>
+      </nav>
+    </aside>
+
+    <section class="admin-main">
+      {% if admin_tab == 'dashboard' %}
+        <section class="admin-section">
+          <header class="admin-section__head">
+            <div>
+              <div class="admin-section__eyebrow">Dashboard</div>
+              <h2 class="admin-section__title">Ключевые показатели</h2>
+            </div>
+          </header>
+
+          <div class="admin-metric-grid">
+            <article class="admin-metric-card glass-effect">
+              <span class="admin-metric-card__label">Активные пользователи сейчас</span>
+              <strong class="admin-metric-card__value">{{ admin_metrics.active_users_now }}</strong>
+              <span class="admin-metric-card__hint">Веб-сессии + активность в боте за 15 минут</span>
+            </article>
+            <article class="admin-metric-card glass-effect">
+              <span class="admin-metric-card__label">Новые регистрации</span>
+              <strong class="admin-metric-card__value">{{ admin_metrics.registrations_day }} / {{ admin_metrics.registrations_week }} / {{ admin_metrics.registrations_month }}</strong>
+              <span class="admin-metric-card__hint">День / неделя / месяц</span>
+            </article>
+            <article class="admin-metric-card glass-effect">
+              <span class="admin-metric-card__label">Активные подписки</span>
+              <strong class="admin-metric-card__value">{{ admin_metrics.active_subscriptions }}</strong>
+              <span class="admin-metric-card__hint">С оплаченной или выданной активной подпиской</span>
+            </article>
+            <article class="admin-metric-card glass-effect">
+              <span class="admin-metric-card__label">Выручка</span>
+              <strong class="admin-metric-card__value">${{ '%.2f'|format(admin_metrics.revenue_today) }} / ${{ '%.2f'|format(admin_metrics.revenue_month) }}</strong>
+              <span class="admin-metric-card__hint">Сегодня / месяц</span>
+            </article>
+            <article class="admin-metric-card glass-effect">
+              <span class="admin-metric-card__label">MRR</span>
+              <strong class="admin-metric-card__value">${{ '%.2f'|format(admin_metrics.mrr) }}</strong>
+              <span class="admin-metric-card__hint">Нормализовано по активным тарифам</span>
+            </article>
+            <article class="admin-metric-card glass-effect">
+              <span class="admin-metric-card__label">ARPU / LTV</span>
+              <strong class="admin-metric-card__value">${{ '%.2f'|format(admin_metrics.arpu) }} / ${{ '%.2f'|format(admin_metrics.ltv) }}</strong>
+              <span class="admin-metric-card__hint">Средний доход на пользователя / плательщика</span>
+            </article>
+            <article class="admin-metric-card glass-effect">
+              <span class="admin-metric-card__label">Пробные периоды</span>
+              <strong class="admin-metric-card__value">{{ admin_metrics.trials_total }}</strong>
+              <span class="admin-metric-card__hint">Активные trial сейчас</span>
+            </article>
+            <article class="admin-metric-card glass-effect">
+              <span class="admin-metric-card__label">Trial → Paid</span>
+              <strong class="admin-metric-card__value">{{ admin_metrics.trial_conversion }}%</strong>
+              <span class="admin-metric-card__hint">Конверсия пользователей с trial</span>
+            </article>
+          </div>
+
+          <div class="admin-chart-grid">
+            <article class="admin-panel-card glass-effect">
+              <div class="admin-panel-card__head">
+                <h3>Выручка по дням</h3>
+              </div>
+              {% set max_daily_revenue = (admin_metrics.daily_revenue | map(attribute='amount') | max) if admin_metrics.daily_revenue else 0 %}
+              <div class="admin-bar-list">
+                {% for item in admin_metrics.daily_revenue %}
+                  <div class="admin-bar-row">
+                    <span class="admin-bar-row__label">{{ item.label }}</span>
+                    <div class="admin-bar-row__track">
+                      <span class="admin-bar-row__fill" style="width: {{ (item.amount / max_daily_revenue * 100) if max_daily_revenue else 0 }}%"></span>
+                    </div>
+                    <span class="admin-bar-row__value">${{ '%.2f'|format(item.amount) }}</span>
+                  </div>
+                {% endfor %}
+              </div>
+            </article>
+
+            <article class="admin-panel-card glass-effect">
+              <div class="admin-panel-card__head">
+                <h3>Выручка по тарифам</h3>
+              </div>
+              {% set max_plan_revenue = (admin_metrics.revenue_by_plan | map(attribute='amount') | max) if admin_metrics.revenue_by_plan else 0 %}
+              <div class="admin-bar-list">
+                {% for item in admin_metrics.revenue_by_plan %}
+                  <div class="admin-bar-row">
+                    <span class="admin-bar-row__label">{{ item.label }}</span>
+                    <div class="admin-bar-row__track">
+                      <span class="admin-bar-row__fill is-alt" style="width: {{ (item.amount / max_plan_revenue * 100) if max_plan_revenue else 0 }}%"></span>
+                    </div>
+                    <span class="admin-bar-row__value">${{ '%.2f'|format(item.amount) }}</span>
+                  </div>
+                {% else %}
+                  <p class="admin-empty-state">Пока нет оплаченных тарифов.</p>
+                {% endfor %}
+              </div>
+            </article>
+          </div>
+
+          <div class="admin-chart-grid">
+            <article class="admin-panel-card glass-effect">
+              <div class="admin-panel-card__head">
+                <h3>Платежная статистика</h3>
+              </div>
+              <div class="admin-kv-list">
+                <div><span>Повторные покупки</span><strong>{{ admin_metrics.repeat_purchases }}</strong></div>
+                <div><span>Неуспешные платежи</span><strong>{{ admin_metrics.failed_payments }}</strong></div>
+                <div><span>Средний чек</span><strong>${{ '%.2f'|format(admin_metrics.avg_check) }}</strong></div>
+              </div>
+            </article>
+
+            <article class="admin-panel-card glass-effect">
+              <div class="admin-panel-card__head">
+                <h3>Лучшие каналы привлечения</h3>
+              </div>
+              <div class="admin-channel-list">
+                {% for item in admin_metrics.best_channels %}
+                  <div class="admin-channel-card">
+                    <div>
+                      <strong>{{ item.name }}</strong>
+                      <span>{{ item.payments }} оплат</span>
+                    </div>
+                    <strong>${{ '%.2f'|format(item.revenue) }}</strong>
+                  </div>
+                {% else %}
+                  <p class="admin-empty-state">Пока нет данных по каналам.</p>
+                {% endfor %}
+              </div>
+            </article>
+          </div>
+        </section>
+      {% endif %}
+
+      {% if admin_tab == 'users' %}
+        <section class="admin-section">
+          <header class="admin-section__head">
+            <div>
+              <div class="admin-section__eyebrow">Users</div>
+              <h2 class="admin-section__title">Пользователи</h2>
+            </div>
+          </header>
+
+          <form method="GET" action="{{ url_lang('admin_panel') }}" class="admin-filter-bar glass-effect">
+            <input type="hidden" name="tab" value="users">
+            <label class="admin-field">
+              <span>Поиск</span>
+              <input type="text" name="user_search" value="{{ request.args.get('user_search', '') }}" placeholder="Email / Telegram ID / username / user ID">
+            </label>
+            <label class="admin-field">
+              <span>Фильтр</span>
+              <select name="user_filter">
+                {% set current_filter = request.args.get('user_filter', 'all') %}
+                <option value="all" {% if current_filter == 'all' %}selected{% endif %}>Все</option>
+                <option value="active" {% if current_filter == 'active' %}selected{% endif %}>Активные</option>
+                <option value="without_subscription" {% if current_filter == 'without_subscription' %}selected{% endif %}>Без подписки</option>
+                <option value="expires_today" {% if current_filter == 'expires_today' %}selected{% endif %}>Истекает сегодня</option>
+                <option value="expires_tomorrow" {% if current_filter == 'expires_tomorrow' %}selected{% endif %}>Истекает завтра</option>
+                <option value="expires_3d" {% if current_filter == 'expires_3d' %}selected{% endif %}>Истекает за 3 дня</option>
+                <option value="trial_unpaid" {% if current_filter == 'trial_unpaid' %}selected{% endif %}>Не оплатили после trial</option>
+                <option value="banned" {% if current_filter == 'banned' %}selected{% endif %}>Заблокированные</option>
+              </select>
+            </label>
+            <label class="admin-field admin-field--small">
+              <span>Покупок ≥</span>
+              <input type="number" min="0" name="min_purchases" value="{{ request.args.get('min_purchases', '') }}" placeholder="0">
+            </label>
+            <button type="submit" class="admin-button admin-button--primary">Применить</button>
+          </form>
+
+          <div class="admin-data-grid">
+            <article class="admin-panel-card glass-effect">
+              <div class="admin-panel-card__head">
+                <h3>Список пользователей</h3>
+                <span>{{ users_data.total }} всего</span>
+              </div>
+              <div class="admin-table-wrap">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Пользователь</th>
+                      <th>Статус</th>
+                      <th>Тариф</th>
+                      <th>Истекает</th>
+                      <th>Покупки</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in users_data["items"] %}
+                      <tr class="{% if selected_user and selected_user.user.id == item.id %}is-selected{% endif %}">
+                        <td><a href="{{ url_lang('admin_panel', tab='users', user=item.id, user_search=request.args.get('user_search'), user_filter=request.args.get('user_filter'), min_purchases=request.args.get('min_purchases'), user_page=users_data.page) }}">{{ item.id }}</a></td>
+                        <td>
+                          <div class="admin-table-user">
+                            <strong>{{ item.email }}</strong>
+                            <span>{% if item.telegram_id %}TG {{ item.telegram_id }}{% else %}Без Telegram{% endif %}{% if item.username %} · @{{ item.username.lstrip('@') }}{% endif %}</span>
+                          </div>
+                        </td>
+                        <td><span class="admin-status-pill is-{{ item.status }}">{{ item.status }}</span></td>
+                        <td>{{ item.plan_name }}</td>
+                        <td>{{ item.subscription_expires_at.strftime('%d.%m.%Y %H:%M') if item.subscription_expires_at else '—' }}</td>
+                        <td>{{ item.purchase_count }}</td>
+                      </tr>
+                    {% else %}
+                      <tr><td colspan="6" class="admin-empty-cell">Ничего не найдено.</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="admin-panel-card glass-effect">
+              {% if selected_user %}
+                {% set detail = selected_user %}
+                <div class="admin-panel-card__head">
+                  <div>
+                    <h3>Карточка пользователя #{{ detail.user.id }}</h3>
+                    <span>{{ detail.user.email or 'Без email' }}</span>
+                  </div>
+                  <span class="admin-status-pill is-{{ detail.status }}">{{ detail.status }}</span>
+                </div>
+
+                <div class="admin-kv-list admin-kv-list--detail">
+                  <div><span>Telegram ID</span><strong>{{ detail.telegram.telegram_id if detail.telegram else '—' }}</strong></div>
+                  <div><span>Username</span><strong>{{ ('@' ~ detail.telegram.username.lstrip('@')) if detail.telegram and detail.telegram.username else '—' }}</strong></div>
+                  <div><span>Регистрация</span><strong>{{ detail.user.created_at.strftime('%d.%m.%Y %H:%M') if detail.user.created_at else '—' }}</strong></div>
+                  <div><span>Текущий тариф</span><strong>{{ detail.plan_name }}</strong></div>
+                  <div><span>Подписка до</span><strong>{{ detail.subscription.expiry_date.strftime('%d.%m.%Y %H:%M') if detail.subscription and detail.subscription.expiry_date else '—' }}</strong></div>
+                  <div><span>Баланс</span><strong>${{ '%.2f'|format(detail.balance_cents / 100) }}</strong></div>
+                  <div><span>Трафик</span><strong>{{ detail.remote.used_bytes if detail.remote.used_bytes is not none else '—' }} / {{ detail.remote.limit_bytes if detail.remote.limit_bytes is not none else '—' }}</strong></div>
+                  <div><span>Подключения</span><strong>{{ detail.remote.connections if detail.remote.connections is not none else detail.sessions|length }}</strong></div>
+                </div>
+
+                {% if detail.remote.devices %}
+                  <div class="admin-inline-list">
+                    {% for device in detail.remote.devices %}
+                      <span>{{ device }}</span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
+                <div class="admin-action-grid">
+                  <form method="POST" action="{{ url_for('admin_user_extend', user_id=detail.user.id) }}" class="admin-inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label class="admin-field">
+                      <span>Ручное продление, дней</span>
+                      <input type="number" min="1" name="days" value="30" required>
+                    </label>
+                    <button type="submit" class="admin-button admin-button--primary">Продлить</button>
+                  </form>
+
+                  <form method="POST" action="{{ url_for('admin_user_ban', user_id=detail.user.id) }}" class="admin-inline-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <label class="admin-field">
+                      <span>Причина</span>
+                      <input type="text" name="reason" placeholder="Комментарий к блокировке">
+                    </label>
+                    <button type="submit" class="admin-button {% if detail.user.is_banned %}admin-button--ghost{% else %}admin-button--danger{% endif %}">
+                      {% if detail.user.is_banned %}Разблокировать{% else %}Заблокировать{% endif %}
+                    </button>
+                  </form>
+                </div>
+
+                <form method="POST" action="{{ url_for('admin_user_message', user_id=detail.user.id) }}" class="admin-message-form">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <label class="admin-field">
+                    <span>Личное сообщение через бота</span>
+                    <textarea name="message" rows="4" placeholder="Текст сообщения пользователю" {% if not detail.telegram %}disabled{% endif %}></textarea>
+                  </label>
+                  <button type="submit" class="admin-button admin-button--primary" {% if not detail.telegram %}disabled{% endif %}>Отправить</button>
+                </form>
+
+                <div class="admin-subgrid">
+                  <section class="admin-subcard">
+                    <h4>История оплат</h4>
+                    <div class="admin-history-list">
+                      {% for payment in detail.payments %}
+                        <div class="admin-history-item">
+                          <div>
+                            <strong>{{ payment.provider }} · {{ 'Пополнение баланса' if payment.plan_months == 0 else plan_duration_label(payment.plan_months, 'ru') }}</strong>
+                            <span>{{ (payment.paid_at or payment.processed_at or payment.created_at).strftime('%d.%m.%Y %H:%M') }}</span>
+                          </div>
+                          <div class="admin-history-item__side">
+                            <strong>${{ '%.2f'|format(payment_amount_decimal(payment)) }}</strong>
+                            <span class="admin-status-pill is-{{ payment.status }}">{{ payment.status }}</span>
+                          </div>
+                        </div>
+                      {% else %}
+                        <p class="admin-empty-state">Платежей пока нет.</p>
+                      {% endfor %}
+                    </div>
+                  </section>
+
+                  <section class="admin-subcard">
+                    <h4>История промокодов</h4>
+                    <div class="admin-history-list">
+                      {% for activation, promo in detail.promo_activations %}
+                        <div class="admin-history-item">
+                          <div>
+                            <strong>{{ promo.code }}</strong>
+                            <span>{{ activation.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                          </div>
+                          <div class="admin-history-item__side">
+                            <strong>{% if activation.granted_days %}+{{ activation.granted_days }} дн.{% elif activation.granted_balance_cents %}+${{ '%.2f'|format(activation.granted_balance_cents / 100) }}{% else %}Скидка{% endif %}</strong>
+                            <span class="admin-status-pill is-{{ activation.status }}">{{ activation.status }}</span>
+                          </div>
+                        </div>
+                      {% endfor %}
+                      {% for activation in detail.legacy_redemptions %}
+                        <div class="admin-history-item">
+                          <div>
+                            <strong>{{ activation.coupon_code }}</strong>
+                            <span>{{ activation.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                          </div>
+                          <div class="admin-history-item__side">
+                            <strong>Legacy</strong>
+                          </div>
+                        </div>
+                      {% endfor %}
+                      {% if not detail.promo_activations and not detail.legacy_redemptions %}
+                        <p class="admin-empty-state">Промокоды не использовались.</p>
+                      {% endif %}
+                    </div>
+                  </section>
+                </div>
+
+                <div class="admin-subgrid">
+                  <section class="admin-subcard">
+                    <h4>Реферальная информация</h4>
+                    <div class="admin-kv-list admin-kv-list--detail">
+                      <div><span>Собственный код</span><strong>{{ detail.referral_code or '—' }}</strong></div>
+                      <div><span>Пригласивший</span><strong>{{ detail.invited_by.code_used if detail.invited_by else '—' }}</strong></div>
+                      <div><span>Приглашено</span><strong>{{ detail.referrals|length }}</strong></div>
+                    </div>
+                  </section>
+                  <section class="admin-subcard">
+                    <h4>Устройства / сессии</h4>
+                    <div class="admin-history-list">
+                      {% for session in detail.sessions %}
+                        <div class="admin-history-item">
+                          <div>
+                            <strong>{{ session.last_user_agent or 'Unknown device' }}</strong>
+                            <span>{{ session.last_ip or '—' }}</span>
+                          </div>
+                          <div class="admin-history-item__side">
+                            <span>{{ session.last_seen_at.strftime('%d.%m.%Y %H:%M') if session.last_seen_at else '—' }}</span>
+                          </div>
+                        </div>
+                      {% else %}
+                        <p class="admin-empty-state">Нет активных веб-сессий.</p>
+                      {% endfor %}
+                    </div>
+                  </section>
+                </div>
+              {% else %}
+                <div class="admin-empty-card">
+                  <h3>Выберите пользователя</h3>
+                  <p>Справа откроется полная карточка с подпиской, трафиком, платежами, промокодами и действиями администратора.</p>
+                </div>
+              {% endif %}
+            </article>
+          </div>
+        </section>
+      {% endif %}
+
+      {% if admin_tab == 'promos' %}
+        <section class="admin-section">
+          <header class="admin-section__head">
+            <div>
+              <div class="admin-section__eyebrow">Promos</div>
+              <h2 class="admin-section__title">Промокоды</h2>
+            </div>
+          </header>
+
+          <div class="admin-data-grid">
+            <article class="admin-panel-card glass-effect">
+              <div class="admin-panel-card__head">
+                <h3>Список промокодов</h3>
+              </div>
+              <div class="admin-history-list">
+                {% for item in promos %}
+                  <div class="admin-promo-card">
+                    <div class="admin-promo-card__head">
+                      <div>
+                        <strong><a href="{{ url_lang('admin_panel', tab='promos', promo=item.promo.id) }}">{{ item.promo.code }}</a></strong>
+                        <span>{{ item.promo.name or 'Без названия' }}</span>
+                      </div>
+                      <span class="admin-status-pill {% if item.promo.is_active %}is-active{% else %}is-failed{% endif %}">{{ 'active' if item.promo.is_active else 'disabled' }}</span>
+                    </div>
+                    <div class="admin-promo-card__meta">
+                      <span>Активаций: {{ item.total_activations }}</span>
+                      <span>Конверсий: {{ item.paid_activations }}</span>
+                      <span>Выручка: ${{ '%.2f'|format(item.revenue) }}</span>
+                    </div>
+                    <div class="admin-inline-list">
+                      {% if item.promo.percent_off %}<span>{{ item.promo.percent_off }}%</span>{% endif %}
+                      {% if item.promo.fixed_amount_usd %}<span>-${{ item.promo.fixed_amount_usd }}</span>{% endif %}
+                      {% if item.promo.bonus_balance_cents %}<span>+${{ '%.2f'|format(item.promo.bonus_balance_cents / 100) }} balance</span>{% endif %}
+                      {% if item.promo.bonus_days %}<span>+{{ item.promo.bonus_days }} days</span>{% endif %}
+                      {% if item.plan_set %}<span>Plans: {{ item.plan_set|join(', ') }}</span>{% endif %}
+                    </div>
+                    <form method="POST" action="{{ url_for('admin_promo_toggle', promo_id=item.promo.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="admin-button admin-button--ghost">{% if item.promo.is_active %}Отключить{% else %}Включить{% endif %}</button>
+                    </form>
+                  </div>
+                {% else %}
+                  <p class="admin-empty-state">Промокодов пока нет.</p>
+                {% endfor %}
+              </div>
+            </article>
+
+            <article class="admin-panel-card glass-effect">
+              <div class="admin-panel-card__head">
+                <h3>{% if selected_promo_form %}Редактирование{% else %}Новый промокод{% endif %}</h3>
+                {% if selected_promo_form %}<span>{{ selected_promo_form.code }}</span>{% endif %}
+              </div>
+
+              <form method="POST" action="{{ url_for('admin_promo_save') }}" class="admin-form-grid">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="promo_id" value="{{ selected_promo_form.id if selected_promo_form else '' }}">
+                <label class="admin-field">
+                  <span>Код</span>
+                  <input type="text" name="code" value="{{ selected_promo_form.code if selected_promo_form else '' }}" required>
+                </label>
+                <label class="admin-field">
+                  <span>Название</span>
+                  <input type="text" name="name" value="{{ selected_promo_form.name if selected_promo_form else '' }}">
+                </label>
+                <label class="admin-field admin-field--full">
+                  <span>Описание</span>
+                  <input type="text" name="description" value="{{ selected_promo_form.description if selected_promo_form else '' }}">
+                </label>
+                <label class="admin-field">
+                  <span>Скидка, %</span>
+                  <input type="number" step="0.01" min="0" max="100" name="percent_off" value="{{ selected_promo_form.percent_off if selected_promo_form else '' }}">
+                </label>
+                <label class="admin-field">
+                  <span>Фикс. скидка, USD</span>
+                  <input type="number" step="0.01" min="0" name="fixed_amount_usd" value="{{ selected_promo_form.fixed_amount_usd if selected_promo_form else '' }}">
+                </label>
+                <label class="admin-field">
+                  <span>Бонус на баланс, USD</span>
+                  <input type="number" step="0.01" min="0" name="bonus_balance_usd" value="{{ ('%.2f'|format(selected_promo_form.bonus_balance_cents / 100)) if selected_promo_form and selected_promo_form.bonus_balance_cents else '' }}">
+                </label>
+                <label class="admin-field">
+                  <span>Бонусные дни</span>
+                  <input type="number" min="0" name="bonus_days" value="{{ selected_promo_form.bonus_days if selected_promo_form else '' }}">
+                </label>
+                <label class="admin-field">
+                  <span>Лимит активаций</span>
+                  <input type="number" min="1" name="max_activations" value="{{ selected_promo_form.max_activations if selected_promo_form else '' }}">
+                </label>
+                <label class="admin-field">
+                  <span>Лимит на пользователя</span>
+                  <input type="number" min="1" name="max_activations_per_user" value="{{ selected_promo_form.max_activations_per_user if selected_promo_form else 1 }}">
+                </label>
+                <label class="admin-field">
+                  <span>Аудитория</span>
+                  {% set promo_audience = selected_promo_form.audience if selected_promo_form else 'all' %}
+                  <select name="audience">
+                    <option value="all" {% if promo_audience == 'all' %}selected{% endif %}>Все</option>
+                    <option value="new" {% if promo_audience == 'new' %}selected{% endif %}>Только новые</option>
+                    <option value="existing" {% if promo_audience == 'existing' %}selected{% endif %}>Только старые</option>
+                  </select>
+                </label>
+                <label class="admin-field">
+                  <span>Тарифы</span>
+                  <input type="text" name="plan_months_csv" placeholder="1,3,12" value="{{ selected_promo_form.plan_months_csv if selected_promo_form else '' }}">
+                </label>
+                <label class="admin-field">
+                  <span>Действует с</span>
+                  <input type="datetime-local" name="valid_from" value="{{ selected_promo_form.valid_from.strftime('%Y-%m-%dT%H:%M') if selected_promo_form and selected_promo_form.valid_from else '' }}">
+                </label>
+                <label class="admin-field">
+                  <span>Действует до</span>
+                  <input type="datetime-local" name="valid_until" value="{{ selected_promo_form.valid_until.strftime('%Y-%m-%dT%H:%M') if selected_promo_form and selected_promo_form.valid_until else '' }}">
+                </label>
+                <label class="admin-checkbox admin-field--full">
+                  <input type="checkbox" name="is_active" value="1" {% if not selected_promo_form or selected_promo_form.is_active %}checked{% endif %}>
+                  <span>Промокод активен</span>
+                </label>
+                <button type="submit" class="admin-button admin-button--primary">Сохранить промокод</button>
+              </form>
+
+              {% if selected_promo %}
+                <div class="admin-subcard admin-subcard--spaced">
+                  <h4>Кто активировал</h4>
+                  <div class="admin-history-list">
+                    {% for activation, user, telegram, payment in selected_promo.activations %}
+                      <div class="admin-history-item">
+                        <div>
+                          <strong>#{{ user.id }} · {{ user.email or 'Без email' }}</strong>
+                          <span>{{ activation.created_at.strftime('%d.%m.%Y %H:%M') }}{% if telegram %} · TG {{ telegram.telegram_id }}{% endif %}</span>
+                        </div>
+                        <div class="admin-history-item__side">
+                          <strong>{% if activation.granted_days %}+{{ activation.granted_days }} дн.{% elif activation.granted_balance_cents %}+${{ '%.2f'|format(activation.granted_balance_cents / 100) }}{% elif activation.discount_amount_usd %}-${{ activation.discount_amount_usd }}{% else %}—{% endif %}</strong>
+                          <span class="admin-status-pill is-{{ payment.status if payment else activation.status }}">{{ payment.status if payment else activation.status }}</span>
+                        </div>
+                      </div>
+                    {% else %}
+                      <p class="admin-empty-state">Активаций пока нет.</p>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+            </article>
+          </div>
+        </section>
+      {% endif %}
+
+      {% if admin_tab == 'payments' %}
+        <section class="admin-section">
+          <header class="admin-section__head">
+            <div>
+              <div class="admin-section__eyebrow">Payments</div>
+              <h2 class="admin-section__title">Платежи</h2>
+            </div>
+          </header>
+
+          <form method="GET" action="{{ url_lang('admin_panel') }}" class="admin-filter-bar glass-effect">
+            <input type="hidden" name="tab" value="payments">
+            <label class="admin-field">
+              <span>Поиск</span>
+              <input type="text" name="payment_search" value="{{ request.args.get('payment_search', '') }}" placeholder="payment ID / token / email">
+            </label>
+            <label class="admin-field">
+              <span>Статус</span>
+              {% set payment_status_filter = request.args.get('payment_status', 'all') %}
+              <select name="payment_status">
+                <option value="all" {% if payment_status_filter == 'all' %}selected{% endif %}>Все</option>
+                <option value="success" {% if payment_status_filter == 'success' %}selected{% endif %}>Success</option>
+                <option value="pending" {% if payment_status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="failed" {% if payment_status_filter == 'failed' %}selected{% endif %}>Failed</option>
+                <option value="refunded" {% if payment_status_filter == 'refunded' %}selected{% endif %}>Refunded</option>
+              </select>
+            </label>
+            <button type="submit" class="admin-button admin-button--primary">Применить</button>
+          </form>
+
+          <div class="admin-table-wrap glass-effect admin-table-wrap--card">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Статус</th>
+                  <th>Сумма</th>
+                  <th>Валюта</th>
+                  <th>Платежная система</th>
+                  <th>Пользователь</th>
+                  <th>Тариф</th>
+                  <th>Дата</th>
+                  <th>Transaction ID</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in payments_data["items"] %}
+                  {% set intent = row.intent %}
+                  <tr>
+                    <td>#{{ intent.id }}</td>
+                    <td><span class="admin-status-pill is-{{ intent.status }}">{{ intent.status }}</span></td>
+                    <td>${{ '%.2f'|format(row.amount) }}</td>
+                    <td>{{ intent.currency or 'USD' }}</td>
+                    <td>{{ intent.provider }}</td>
+                    <td>
+                      <div class="admin-table-user">
+                        <strong>{{ row.user.email or 'Без email' }}</strong>
+                        <span>ID {{ row.user.id }}{% if row.telegram %} · TG {{ row.telegram.telegram_id }}{% endif %}</span>
+                      </div>
+                    </td>
+                    <td>{{ row.plan_name }}</td>
+                    <td>{{ (intent.paid_at or intent.processed_at or intent.created_at).strftime('%d.%m.%Y %H:%M') }}</td>
+                    <td>{{ intent.external_id or intent.token }}</td>
+                    <td>
+                      <div class="admin-payment-actions">
+                        {% if intent.status != 'success' %}
+                          <form method="POST" action="{{ url_for('admin_payment_confirm', payment_id=intent.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="admin-button admin-button--primary">Подтвердить</button>
+                          </form>
+                        {% endif %}
+                        <form method="POST" action="{{ url_for('admin_payment_status', payment_id=intent.id) }}" class="admin-payment-status-form">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <select name="status">
+                            <option value="pending">pending</option>
+                            <option value="failed">failed</option>
+                            <option value="refunded">refunded</option>
+                          </select>
+                          <input type="text" name="failure_reason" placeholder="Комментарий">
+                          <button type="submit" class="admin-button admin-button--ghost">Обновить</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="10" class="admin-empty-cell">Платежей пока нет.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      {% endif %}
+    </section>
+  </div>
+</main>
+{% endblock %}

@@ -80,6 +80,12 @@
                             {{ _('Инструкции') }}
                             <span class="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
                         </a>
+                        {% if is_admin_user(current_user) %}
+                            <a href="{{ url_lang('admin_panel') }}" class="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition-colors relative group">
+                                {{ _('Админ') }}
+                                <span class="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform"></span>
+                            </a>
+                        {% endif %}
                     {% else %}
                         <a href="{{ url_lang('login') }}" class="text-gray-300 hover:text-white px-3 py-2 text-sm font-medium transition-colors relative group">
                             {{ _('Войти') }}
@@ -165,6 +171,11 @@
                     <a href="{{ url_lang('setup') }}" class="block px-3 py-2 rounded-lg hover:bg-white/5 transition-all">
                         {{ _('Инструкции') }}
                     </a>
+                    {% if is_admin_user(current_user) %}
+                        <a href="{{ url_lang('admin_panel') }}" class="block px-3 py-2 rounded-lg hover:bg-white/5 transition-all">
+                            {{ _('Админ') }}
+                        </a>
+                    {% endif %}
                     <form method="POST" action="{{ url_for('logout') }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="block w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-all text-gray-300">
