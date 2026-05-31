@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from app.bot.common import (
     app,
     db,
@@ -13,6 +15,10 @@ from app.bot.common import (
     utc_now,
 )
 from app.bot.keyboards import (
+    admin_link_menu_keyboard,
+    admin_link_percent_keyboard,
+    admin_link_settings_keyboard,
+    admin_links_keyboard,
     admin_panel_keyboard,
     first_language_keyboard,
     help_keyboard,
@@ -32,11 +38,25 @@ from app.bot.subscriptions import (
     subscription_markup,
     user_has_local_subscription_data,
 )
-from app.services.balance import MAX_TOPUP_CENTS, MIN_TOPUP_CENTS
-from app.services.bot_admin_links import create_tracked_link, is_bot_admin, register_tracked_link_start, tracked_link_report, tracked_link_url
+from app.services.balance import MAX_TOPUP_CENTS, MIN_TOPUP_CENTS, format_balance_cents
+from app.services.bot_admin_links import (
+    create_tracked_link,
+    format_commission_percent,
+    is_bot_admin,
+    parse_commission_percent,
+    register_tracked_link_start,
+    tracked_link_details,
+    tracked_link_report,
+    tracked_link_url,
+    update_tracked_link_commission,
+)
 from app.services.coupons import bot_coupon_benefits, normalize_coupon_code, record_coupon_redemption
 from app.services.subscriptions import create_remnawave_subscription
 from app.services.telegram_auth import approve_telegram_auth_challenge
+
+
+def _format_dt(value: datetime | None) -> str:
+    return value.strftime("%d.%m.%Y %H:%M") if value else "—"
 
 
 def _admin_panel_text(state) -> str:
@@ -51,14 +71,42 @@ def _admin_panel_text(state) -> str:
                 state,
                 "admin_stats_line",
                 name=h(item["name"]),
-                total=item["total_starts"],
                 unique=item["unique_starts"],
+                paid_users=item["paid_users"],
+                commission=h(format_balance_cents(item["commission_amount_cents"])),
             )
         )
-        if item["url"]:
-            lines.append(f"<code>{h(item['url'])}</code>")
         lines.append("")
     return "\n".join(lines).strip()
+
+
+def _admin_link_card_text(state, details: dict[str, object]) -> str:
+    return t(
+        state,
+        "admin_link_card",
+        name=h(details["name"]),
+        percent=h(format_commission_percent(details["commission_bps"])),
+        unique=details["unique_starts"],
+        paid_users=details["paid_users"],
+        commission=h(format_balance_cents(details["commission_amount_cents"])),
+        url=h(details["url"] or f"/start trk_{details['token']}"),
+    )
+
+
+def _admin_link_stats_text(state, details: dict[str, object]) -> str:
+    return (
+        f"{t(state, 'admin_link_stats_title', name=h(details['name']))}\n\n"
+        f"{t(state, 'admin_link_stats_body', total=details['total_starts'], unique=details['unique_starts'], attributed=details['attributed_users'], paid_users=details['paid_users'], payments=details['payments_count'], paid_amount=h(format_balance_cents(details['paid_amount_cents'])), commission=h(format_balance_cents(details['commission_amount_cents'])), subscription_count=details['subscription_count'], subscription_amount=h(format_balance_cents(details['subscription_amount_cents'])), topup_count=details['balance_topup_count'], topup_amount=h(format_balance_cents(details['balance_topup_amount_cents'])), last_started=h(_format_dt(details['last_started_at'])), last_paid=h(_format_dt(details['last_paid_at'])))}"
+    )
+
+
+def _admin_link_settings_text(state, details: dict[str, object]) -> str:
+    return t(
+        state,
+        "admin_link_settings_title",
+        name=h(details["name"]),
+        percent=h(format_commission_percent(details["commission_bps"])),
+    )
 
 
 def handle_promo_code(chat_id: int, user, state, raw_code: str) -> None:
@@ -133,7 +181,7 @@ def handle_message(message: dict[str, object]) -> None:
             start_arg = parts[1].strip()
 
     with app.app_context():
-        account, user = get_or_create_account(tg_user)
+        account, user, account_created = get_or_create_account(tg_user)
         state = get_or_create_state(tg_user)
         is_admin = is_bot_admin(account.telegram_id, account.username)
 
@@ -142,7 +190,7 @@ def handle_message(message: dict[str, object]) -> None:
             if result_key:
                 send_message(chat_id, t(state, result_key))
         else:
-            register_tracked_link_start(start_arg, account.telegram_id)
+            register_tracked_link_start(start_arg, account.telegram_id, is_first_interaction=account_created)
         if start_arg.startswith("login_") or start_arg.startswith("link_") or start_arg.startswith("password_reset_"):
             if start_arg.startswith("password_reset_"):
                 purpose = "password_reset"
@@ -192,9 +240,39 @@ def handle_message(message: dict[str, object]) -> None:
                     name=h(link.name),
                     total=link.total_starts,
                     unique=link.unique_starts,
+                    percent=h(format_commission_percent(link.commission_bps)),
                     url=h(tracked_link_url(link) or f"/start trk_{link.token}"),
                 ),
-                admin_panel_keyboard(state),
+                admin_link_menu_keyboard(link.id, state),
+            )
+            return
+        if (state.pending_action or "").startswith("admin_link_percent:") and text and not text.startswith("/"):
+            if not is_admin:
+                state.pending_action = None
+                state.updated_at = utc_now()
+                db.session.commit()
+                send_message(chat_id, t(state, "admin_access_denied"), main_menu(state, user))
+                return
+            link_id = 0
+            try:
+                link_id = int(state.pending_action.split(":", 1)[1])
+                commission_bps = parse_commission_percent(text)
+                link = update_tracked_link_commission(link_id, commission_bps)
+            except ValueError:
+                send_message(chat_id, t(state, "admin_percent_invalid"), admin_link_percent_keyboard(link_id, state))
+                return
+            state.pending_action = None
+            state.updated_at = utc_now()
+            db.session.commit()
+            if not link:
+                send_message(chat_id, t(state, "admin_link_not_found"), admin_panel_keyboard(state))
+                return
+            details = tracked_link_details(link.id)
+            send_message(
+                chat_id,
+                t(state, "admin_percent_updated", name=h(link.name), percent=h(format_commission_percent(link.commission_bps)))
+                + ("\n\n" + _admin_link_settings_text(state, details) if details else ""),
+                admin_link_settings_keyboard(link.id, state),
             )
             return
 
@@ -213,7 +291,8 @@ def handle_message(message: dict[str, object]) -> None:
             if not is_admin:
                 send_message(chat_id, t(state, "admin_access_denied"), main_menu(state, user))
                 return
-            send_message(chat_id, _admin_panel_text(state), admin_panel_keyboard(state))
+            items = tracked_link_report(limit=20)
+            send_message(chat_id, _admin_panel_text(state), admin_links_keyboard(items, state) if items else admin_panel_keyboard(state))
             return
         if text.startswith("/plans"):
             send_screen(chat_id, "payment", t(state, "choose_plan"), plans_keyboard(state, user))

@@ -35,6 +35,7 @@ from app.services.payments.crystalpay import crystal_credentials, crystal_invoic
 from app.services.payments.cryptobot import cryptobot_api_base, cryptobot_get_invoice_by_id, cryptobot_process_paid_invoice
 from app.services.payments.heleket import heleket_credentials, heleket_json_dumps, heleket_payment_info, heleket_process_paid, heleket_sign_payload
 from app.services.payments.platega import platega_api_base, platega_credentials, platega_get_transaction, platega_process_paid_transaction, platega_quote_amount, platega_raise_for_status
+from app.services.bot_admin_links import ensure_bot_admin_schema
 from app.services.security import get_webhook_secret
 
 
@@ -298,6 +299,7 @@ def handle_balance_topup_method(chat_id: int, message_id: int, user: User, state
 
 def ensure_bot_schema() -> None:
     db.create_all()
+    ensure_bot_admin_schema()
 
 
 def process_crystal_payment(intent: PaymentIntent) -> tuple[bool, str]:

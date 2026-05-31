@@ -65,6 +65,7 @@ class BotTrackedLink(db.Model):
     token = db.Column(db.String(64), unique=True, nullable=False, index=True)
     name = db.Column(db.String(80), nullable=False)
     created_by_telegram_id = db.Column(db.Integer, nullable=False, index=True)
+    commission_bps = db.Column(db.Integer, nullable=False, default=0)
     total_starts = db.Column(db.Integer, nullable=False, default=0)
     unique_starts = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
@@ -84,3 +85,28 @@ class BotTrackedLinkVisit(db.Model):
     __table_args__ = (
         db.UniqueConstraint("link_id", "telegram_id", name="uq_bot_tracked_link_visit_once"),
     )
+
+
+class BotTrackedLinkAttribution(db.Model):
+    __tablename__ = "bot_tracked_link_attribution"
+
+    id = db.Column(db.Integer, primary_key=True)
+    link_id = db.Column(db.Integer, db.ForeignKey("bot_tracked_link.id"), nullable=False, index=True)
+    telegram_id = db.Column(db.Integer, nullable=False, unique=True, index=True)
+    attributed_at = db.Column(db.DateTime, default=utc_now, nullable=False, index=True)
+
+
+class BotTrackedLinkPayment(db.Model):
+    __tablename__ = "bot_tracked_link_payment"
+
+    id = db.Column(db.Integer, primary_key=True)
+    link_id = db.Column(db.Integer, db.ForeignKey("bot_tracked_link.id"), nullable=False, index=True)
+    telegram_id = db.Column(db.Integer, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    intent_token = db.Column(db.String(128), nullable=False, unique=True, index=True)
+    provider = db.Column(db.String(32), nullable=False)
+    purpose = db.Column(db.String(32), nullable=False)
+    payment_amount_cents = db.Column(db.Integer, nullable=False)
+    commission_bps = db.Column(db.Integer, nullable=False, default=0)
+    commission_amount_cents = db.Column(db.Integer, nullable=False, default=0)
+    paid_at = db.Column(db.DateTime, default=utc_now, nullable=False, index=True)

@@ -8,6 +8,7 @@ from app.domain.models import BalanceTransaction, PaymentIntent, User, UserBalan
 from app.domain.plans import plan_duration_label
 from app.services.coupons import apply_coupon_redemption_for_intent, coupon_pricing, intent_pricing
 from app.services.referrals import apply_referral_bonus_if_eligible
+from app.services.bot_admin_links import record_tracked_link_payment
 from app.services.subscriptions import create_remnawave_subscription
 
 
@@ -176,7 +177,9 @@ def fulfill_payment_intent(intent: PaymentIntent, user: User, external_id: str) 
             description=topup_description(amount_cents),
             related_intent_token=intent.token,
         )
+        record_tracked_link_payment(intent, user)
         return
     create_remnawave_subscription(user, int(intent.plan_months), strict=True)
     apply_coupon_redemption_for_intent(intent)
     apply_referral_bonus_if_eligible(user)
+    record_tracked_link_payment(intent, user)

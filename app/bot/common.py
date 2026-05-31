@@ -430,7 +430,7 @@ def get_or_create_state(tg_user: dict[str, Any]) -> BotUserState:
     return state
 
 
-def get_or_create_account(tg_user: dict[str, Any]) -> tuple[TelegramAccount, User]:
+def get_or_create_account(tg_user: dict[str, Any]) -> tuple[TelegramAccount, User, bool]:
     telegram_id = int(tg_user["id"])
     username = tg_user.get("username")
     local_placeholder_email = telegram_local_placeholder_email(telegram_id)
@@ -464,7 +464,7 @@ def get_or_create_account(tg_user: dict[str, Any]) -> tuple[TelegramAccount, Use
         if changed:
             account.updated_at = utc_now()
             db.session.commit()
-        return account, user
+        return account, user, False
     email = local_placeholder_email
     user = User.query.filter_by(email=email).first()
     if not user:
@@ -481,7 +481,7 @@ def get_or_create_account(tg_user: dict[str, Any]) -> tuple[TelegramAccount, Use
     )
     db.session.add(account)
     db.session.commit()
-    return account, user
+    return account, user, True
 
 
 def device_title(device_code: str, state: BotUserState) -> str:

@@ -19,6 +19,7 @@ from flask import abort, request, session
 from app.core.config import _env_bool
 from app.core.extensions import db
 from app.domain.models import AuthThrottle
+from app.services.bot_admin_links import ensure_bot_admin_schema
 
 
 _DB_SCHEMA_READY = False
@@ -103,11 +104,13 @@ def ensure_db_schema() -> None:
             with open(lock_path, "w") as lock_file:
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
                 db.create_all()
+                ensure_bot_admin_schema()
                 _ensure_balance_schema()
                 _ensure_supporting_indexes()
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
         else:
             db.create_all()
+            ensure_bot_admin_schema()
             _ensure_balance_schema()
             _ensure_supporting_indexes()
         _DB_SCHEMA_READY = True

@@ -20,6 +20,7 @@ from app.bot.common import (
 from app.bot.handlers.callbacks import handle_callback
 from app.bot.handlers.messages import handle_message
 from app.bot.subscriptions import dispatch_subscription_reminders
+from app.services.bot_admin_links import ensure_bot_admin_schema
 
 _stop_requested = False
 
@@ -45,6 +46,7 @@ def ensure_bot_schema() -> None:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
         try:
             db.create_all()
+            ensure_bot_admin_schema()
         finally:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
