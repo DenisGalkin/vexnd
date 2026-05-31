@@ -231,45 +231,34 @@
     });
 
     const qrToggles = Array.from(document.querySelectorAll('[data-subscription-qr-toggle]'));
-    let activeQrTrigger = null;
-
-    function closeQrModal(modal, trigger) {
-      if (!modal) return;
-      modal.hidden = true;
-      modal.setAttribute('aria-hidden', 'true');
-      document.body.classList.remove('subscription-qr-open');
-      const control = trigger || activeQrTrigger;
-      if (control) {
-        control.setAttribute('aria-expanded', 'false');
-        control.focus();
-      }
-      activeQrTrigger = null;
+    function setQrPanelState(panel, trigger, isOpen, { focusTrigger = false } = {}) {
+      if (!panel || !trigger) return;
+      panel.classList.toggle('is-open', isOpen);
+      panel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+      trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      if (!isOpen && focusTrigger) trigger.focus();
     }
 
     qrToggles.forEach(control => {
-      const modal = document.getElementById(control.getAttribute('aria-controls'));
-      if (!modal) return;
+      const panel = document.getElementById(control.getAttribute('aria-controls'));
+      if (!panel) return;
 
       control.addEventListener('click', () => {
-        activeQrTrigger = control;
-        control.setAttribute('aria-expanded', 'true');
-        modal.hidden = false;
-        modal.setAttribute('aria-hidden', 'false');
-        document.body.classList.add('subscription-qr-open');
-        const closeButton = modal.querySelector('.subscription-qr-modal__close');
-        if (closeButton) closeButton.focus();
+        const shouldOpen = !panel.classList.contains('is-open');
+        setQrPanelState(panel, control, shouldOpen);
       });
 
-      modal.querySelectorAll('[data-subscription-qr-close]').forEach(closeControl => {
-        closeControl.addEventListener('click', () => closeQrModal(modal, control));
+      panel.querySelectorAll('[data-subscription-qr-close]').forEach(closeControl => {
+        closeControl.addEventListener('click', () => setQrPanelState(panel, control, false, { focusTrigger: true }));
       });
     });
 
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return;
-      const openModal = document.querySelector('.subscription-qr-modal:not([hidden])');
-      if (!openModal) return;
-      closeQrModal(openModal);
+      const openPanel = document.querySelector('.subscription-qr-inline.is-open');
+      if (!openPanel) return;
+      const trigger = qrToggles.find(control => control.getAttribute('aria-controls') === openPanel.id);
+      setQrPanelState(openPanel, trigger, false, { focusTrigger: true });
     });
 
     settingsTiles.forEach(tile => {

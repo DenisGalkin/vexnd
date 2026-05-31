@@ -2400,6 +2400,74 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     align-items: center;
 }
 
+.subscription-qr-inline {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transform: translateY(-.25rem);
+    transition: max-height .36s ease, opacity .24s ease, transform .36s ease, margin-top .36s ease;
+    pointer-events: none;
+}
+
+.subscription-qr-inline.is-open {
+    max-height: 32rem;
+    opacity: 1;
+    margin-top: .2rem;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.subscription-qr-inline__card {
+    position: relative;
+    padding: 1.2rem 1.2rem 1.1rem;
+    border: 1px solid rgba(148, 163, 184, .22);
+    border-radius: 1.35rem;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)),
+        rgba(15, 23, 42, .72);
+    box-shadow: 0 1.15rem 2.5rem rgba(2, 6, 23, .18);
+}
+
+.subscription-qr-inline__header {
+    text-align: center;
+}
+
+.subscription-qr-inline__title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.subscription-qr-inline__close {
+    position: absolute;
+    top: .9rem;
+    right: .9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.15rem;
+    height: 2.15rem;
+    border: 1px solid rgba(148, 163, 184, .2);
+    border-radius: 999px;
+    background: rgba(255,255,255,.04);
+    color: rgba(255,255,255,.9);
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .2s ease, transform .2s ease;
+}
+
+.subscription-qr-inline__close:hover {
+    background: rgba(255,255,255,.08);
+    transform: scale(1.04);
+}
+
+.subscription-qr-inline__close:focus-visible {
+    outline: 2px solid rgba(255,255,255,.65);
+    outline-offset: 2px;
+}
+
 .dashboard-qr-frame {
     width: min(100%, 13.5rem);
 }
@@ -2408,77 +2476,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     display: block;
     width: 100%;
     height: auto;
-}
-
-.subscription-qr-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 1200;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.25rem;
-}
-
-.subscription-qr-modal[hidden] {
-    display: none;
-}
-
-.subscription-qr-modal__backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(2, 6, 23, .68);
-}
-
-.subscription-qr-modal__dialog {
-    position: relative;
-    z-index: 1;
-    width: min(100%, 26rem);
-    padding: 1.5rem 1.5rem 1.25rem;
-    border-radius: 1.5rem;
-    border: 1px solid var(--dash-border);
-    background: rgba(17, 24, 39, .98);
-    box-shadow: 0 1.5rem 3rem rgba(2, 6, 23, .38);
-}
-
-.subscription-qr-modal__header {
-    text-align: center;
-}
-
-.subscription-qr-modal__title {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #fff;
-}
-
-.subscription-qr-modal__close {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
-    border: 1px solid var(--dash-border);
-    border-radius: 999px;
-    background: rgba(255,255,255,.04);
-    color: rgba(255,255,255,.9);
-    font-size: 1.35rem;
-    line-height: 1;
-    cursor: pointer;
-    transition: background .2s ease, transform .2s ease;
-}
-
-.subscription-qr-modal__close:hover {
-    background: rgba(255,255,255,.08);
-    transform: scale(1.04);
-}
-
-.subscription-qr-modal__close:focus-visible {
-    outline: 2px solid rgba(255,255,255,.65);
-    outline-offset: 2px;
 }
 
 .subscription-qr-panel {
@@ -2503,13 +2500,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     border-radius: .6rem;
 }
 
-.subscription-qr-modal__action {
+.subscription-qr-inline__action {
     min-width: 10rem;
     justify-content: center;
-}
-
-body.subscription-qr-open {
-    overflow: hidden;
 }
 
 .subscription-history {
