@@ -2761,6 +2761,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     .subscription-access__layout {
         grid-template-columns: minmax(0, 1.5fr) minmax(260px, .8fr);
         gap: 1.25rem;
+        align-items: start;
     }
 
     .subscription-qr-toggle,
@@ -2780,21 +2781,23 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
     .subscription-qr-inline__card {
         height: 100%;
+        padding-top: 1.05rem;
     }
 
     .subscription-qr-inline__header {
-        text-align: left;
-        width: 100%;
+        display: none;
     }
 
     .subscription-qr-panel {
         align-items: center;
         justify-content: flex-start;
-        gap: .85rem;
+        gap: 0;
+        padding-top: 0;
     }
 
     .dashboard-qr-frame {
         width: min(100%, 10.5rem);
+        margin-top: 0;
     }
 }
 
