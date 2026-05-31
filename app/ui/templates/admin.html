@@ -176,16 +176,6 @@
         </a>
       </nav>
 
-      <section class="admin-sidebar__panel">
-        <div class="admin-sidebar__panel-title">Quick Actions</div>
-        <div class="admin-quick-links">
-          <a href="{{ url_lang('dashboard') }}" class="admin-quick-link">{{ icon('external') }}<span>Open User Dashboard</span></a>
-          <a href="{{ url_lang('admin_panel', tab='users', user_filter='active') }}" class="admin-quick-link">{{ icon('users') }}<span>Active Users</span></a>
-          <a href="{{ url_lang('admin_panel', tab='payments', payment_status='pending') }}" class="admin-quick-link">{{ icon('payments') }}<span>Pending Payments</span></a>
-          <a href="{{ url_lang('admin_panel', tab='promos') }}#promo-editor" class="admin-quick-link">{{ icon('promos') }}<span>Create Promo Code</span></a>
-        </div>
-      </section>
-
       <section class="admin-sidebar__panel admin-sidebar__panel--status">
         <div class="admin-sidebar__panel-head">
           <div>
@@ -1100,9 +1090,8 @@
                       <td>{{ intent.currency or 'USD' }}</td>
                       <td>{{ intent.provider }}</td>
                       <td>
-                        <div class="admin-table-user">
-                          <div class="admin-table-user__avatar">{{ (row.user.email[:1] or 'U')|upper }}</div>
-                          <div>
+                        <div class="admin-table-user admin-table-user--users">
+                          <div class="admin-table-user__body">
                             <strong>{{ row.user.email or 'No email' }}</strong>
                             <span>ID {{ row.user.id }}{% if row.telegram %} · TG {{ row.telegram.telegram_id }}{% endif %}</span>
                           </div>
@@ -1112,24 +1101,29 @@
                       <td>{{ (intent.paid_at or intent.processed_at or intent.created_at).strftime('%d.%m.%Y %H:%M') }}</td>
                       <td class="break-anywhere">{{ intent.external_id or intent.token }}</td>
                       <td>
-                        <div class="admin-payment-actions">
-                          {% if intent.status != 'success' %}
-                            <form method="POST" action="{{ url_for('admin_payment_confirm', payment_id=intent.id) }}">
-                              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                              <button type="submit" class="admin-button admin-button--primary">Confirm</button>
-                            </form>
-                          {% endif %}
-                          <form method="POST" action="{{ url_for('admin_payment_status', payment_id=intent.id) }}" class="admin-payment-status-form">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <select name="status">
-                              <option value="pending" {% if intent.status == 'pending' %}selected{% endif %}>pending</option>
-                              <option value="failed" {% if intent.status == 'failed' %}selected{% endif %}>failed</option>
-                              <option value="refunded" {% if intent.status == 'refunded' %}selected{% endif %}>refunded</option>
-                            </select>
-                            <input type="text" name="failure_reason" value="{{ intent.failure_reason or '' }}" placeholder="Comment">
-                            <button type="submit" class="admin-button admin-button--ghost">Update</button>
-                          </form>
-                        </div>
+                        <details class="admin-payment-disclosure">
+                          <summary class="admin-payment-disclosure__summary">Manage</summary>
+                          <div class="admin-payment-disclosure__panel">
+                            <div class="admin-payment-actions admin-payment-actions--stack">
+                              {% if intent.status != 'success' %}
+                                <form method="POST" action="{{ url_for('admin_payment_confirm', payment_id=intent.id) }}">
+                                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                  <button type="submit" class="admin-button admin-button--primary">Confirm</button>
+                                </form>
+                              {% endif %}
+                              <form method="POST" action="{{ url_for('admin_payment_status', payment_id=intent.id) }}" class="admin-payment-status-form admin-payment-status-form--stack">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <select name="status">
+                                  <option value="pending" {% if intent.status == 'pending' %}selected{% endif %}>pending</option>
+                                  <option value="failed" {% if intent.status == 'failed' %}selected{% endif %}>failed</option>
+                                  <option value="refunded" {% if intent.status == 'refunded' %}selected{% endif %}>refunded</option>
+                                </select>
+                                <input type="text" name="failure_reason" value="{{ intent.failure_reason or '' }}" placeholder="Comment">
+                                <button type="submit" class="admin-button admin-button--ghost">Update</button>
+                              </form>
+                            </div>
+                          </div>
+                        </details>
                       </td>
                     </tr>
                   {% else %}

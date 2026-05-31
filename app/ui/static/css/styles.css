@@ -5609,6 +5609,72 @@ body.admin-body .admin-payment-status-form input {
     min-width: 11rem;
 }
 
+body.admin-body .admin-payment-disclosure {
+    min-width: 9rem;
+}
+
+body.admin-body .admin-payment-disclosure__summary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.35rem;
+    padding: 0.62rem 0.9rem;
+    border-radius: 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(9, 14, 24, 0.94);
+    color: #dbe5f5;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 600;
+    list-style: none;
+    user-select: none;
+}
+
+body.admin-body .admin-payment-disclosure__summary::-webkit-details-marker {
+    display: none;
+}
+
+body.admin-body .admin-payment-disclosure__summary::after {
+    content: "+";
+    font-size: 0.95rem;
+    line-height: 1;
+    color: #91a2c4;
+}
+
+body.admin-body .admin-payment-disclosure[open] .admin-payment-disclosure__summary::after {
+    content: "-";
+}
+
+body.admin-body .admin-payment-disclosure__panel {
+    display: grid;
+    gap: 0.7rem;
+    margin-top: 0.75rem;
+}
+
+body.admin-body .admin-payment-actions--stack {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.7rem;
+    min-width: 15rem;
+}
+
+body.admin-body .admin-payment-actions--stack form {
+    width: 100%;
+}
+
+body.admin-body .admin-payment-status-form--stack {
+    display: grid;
+    gap: 0.7rem;
+}
+
+body.admin-body .admin-payment-actions--stack .admin-button,
+body.admin-body .admin-payment-status-form--stack input,
+body.admin-body .admin-payment-status-form--stack select {
+    width: 100%;
+}
+
 body.admin-body .admin-empty-state-card {
     min-height: 18rem;
     place-content: center;
