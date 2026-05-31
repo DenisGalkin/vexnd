@@ -85,15 +85,19 @@
                         </div>
                         <div class="min-w-0 flex-1">
                             <h3 class="font-bold text-base sm:text-lg leading-snug">
-                                <span class="sm:hidden">{{ method.mobile_name or method.name }}</span>
-                                <span class="hidden sm:inline">{{ method.name }}</span>
+                                {% if method.slug == 'balance' %}
+                                    <span>{{ _('Баланс') }}</span>
+                                {% else %}
+                                    <span class="sm:hidden">{{ method.mobile_name or method.name }}</span>
+                                    <span class="hidden sm:inline">{{ method.name }}</span>
+                                {% endif %}
                             </h3>
                             {# Method-specific subtitle: show what the provider accepts #}
                             {% set m = method.slug %}
                             {% if m in ['cryptobot', 'heleket'] %}
                                 {% set subtitle = _('Криптовалюты') %}
                             {% elif m == 'balance' %}
-                                {% set subtitle = _('Моментальное списание с внутреннего баланса') if method.is_available else (_('Не хватает $') ~ balance_shortfall) %}
+                                {% set subtitle = _('Оплата с баланса') %}
                             {% elif m == 'platega' %}
                                 {% set subtitle = _('СБП (QR)') %}
                             {% elif m == 'crystalpay' %}

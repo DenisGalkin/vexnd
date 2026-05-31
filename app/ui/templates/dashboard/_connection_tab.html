@@ -184,7 +184,7 @@
             {% endfor %}
           </div>
         </div>
-        <div class="connection-screen__actions">
+        <div class="connection-screen__actions connection-screen__actions--offset">
           <button type="button" class="overview-chip overview-chip--primary connection-action" data-step-next>{{ _('Продолжить') }}</button>
         </div>
       </div>
@@ -224,11 +224,13 @@
       <div class="connection-subscription-card" data-active-subscription-card>
         <div class="connection-subscription-card__title">{{ _('Откройте приложение и импортируйте подписку') }}</div>
         <p class="connection-subscription-card__text">{{ _('Кнопка ниже откроет выбранное приложение и передаст в него вашу ссылку подписки.') }}</p>
-        <div class="connection-subscription-card__link" data-subscription-value>{{ subscription_url or '—' }}</div>
+        <div class="connection-subscription-card__link">
+          <div class="connection-subscription-card__link-value" data-subscription-value>{{ subscription_url or '—' }}</div>
+          <button type="button" class="overview-chip connection-action connection-subscription-card__copy" data-copy-subscription>{{ _('Скопировать ссылку') }}</button>
+        </div>
         <p class="connection-subscription-card__hint">{{ _('Если кнопка не сработала, скопируйте ссылку и импортируйте ее вручную в приложении.') }}</p>
-        <div class="connection-screen__actions">
+        <div class="connection-screen__actions connection-screen__actions--offset">
           <a href="{{ subscription_url or '#' }}" class="overview-chip overview-chip--primary connection-action" data-import-link target="_blank" rel="noopener noreferrer">{{ _('Добавить подписку') }}</a>
-          <button type="button" class="overview-chip connection-action" data-copy-subscription>{{ _('Скопировать ссылку') }}</button>
           <button type="button" class="overview-chip connection-action" data-step-next>{{ _('Подписка добавлена') }}</button>
         </div>
       </div>
@@ -250,7 +252,7 @@
       <div class="connection-screen__actions">
         <button type="button" class="overview-chip connection-action" data-step-prev>{{ _('Назад') }}</button>
         <a href="{{ url_lang('setup') }}" class="overview-chip connection-action">{{ _('Подробная инструкция') }}</a>
-        <a href="{{ url_lang('faq_page') }}" class="overview-chip overview-chip--primary connection-action">{{ _('Нужна помощь') }}</a>
+        <a href="{{ url_lang('faq_page') }}" class="overview-chip connection-action">{{ _('Нужна помощь') }}</a>
       </div>
     </div>
   </section>

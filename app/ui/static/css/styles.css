@@ -1169,13 +1169,27 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 .connection-subscription-card__link {
     margin-top: 1rem;
-    padding: .95rem 1rem;
+    padding: .8rem 1rem;
     border-radius: 1rem;
     background: rgba(15,23,42,.38);
     border: 1px solid var(--dash-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .85rem;
+}
+
+.connection-subscription-card__link-value {
     color: rgba(191,219,254,.94);
     word-break: break-all;
     font-size: .92rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.connection-subscription-card__copy {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .connection-empty-state {
@@ -1223,6 +1237,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 .connection-screen__actions--spaced {
     margin-top: .5rem;
+}
+
+.connection-screen__actions--offset {
+    margin-top: 1rem;
 }
 
 .connection-screen__actions--centered {
@@ -3266,6 +3284,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     }
 
     .connection-screen__actions .connection-action {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .connection-subscription-card__link {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .connection-subscription-card__copy {
         width: 100%;
         justify-content: center;
     }
