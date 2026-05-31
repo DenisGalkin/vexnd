@@ -279,12 +279,6 @@
               <div class="admin-stat-card__meta"><span>{{ admin_metrics.registrations_week }} this week</span><em>{{ admin_metrics.registrations_month }} this month</em></div>
               <div class="admin-stat-card__chart">{{ area_chart(registration_series, '#fbbf24', '#fbbf24', 'new-mini', True) }}</div>
             </article>
-            <article class="admin-stat-card admin-stat-card--rose">
-              <div class="admin-stat-card__top"><span class="admin-stat-card__icon">{{ icon('payments') }}</span><strong>Failed Payments</strong></div>
-              <div class="admin-stat-card__value">{{ admin_metrics.failed_payments }}</div>
-              <div class="admin-stat-card__meta"><span>All failed payment intents</span><em>Health</em></div>
-              <div class="admin-stat-card__chart">{{ area_chart(registration_series, '#fb7185', '#fb7185', 'fail-mini', True) }}</div>
-            </article>
             <article class="admin-stat-card admin-stat-card--teal">
               <div class="admin-stat-card__top"><span class="admin-stat-card__icon">{{ icon('payments') }}</span><strong>Revenue Month</strong></div>
               <div class="admin-stat-card__value">${{ '%.2f'|format(admin_metrics.revenue_month) }}</div>
@@ -428,7 +422,7 @@
               </div>
               <div class="admin-note-list">
                 <div class="admin-note-card"><strong>Registrations today</strong><span>{{ admin_metrics.registrations_day }} new users registered today.</span></div>
-                <div class="admin-note-card"><strong>Failed payments</strong><span>{{ admin_metrics.failed_payments }} payment intents require attention.</span></div>
+                <div class="admin-note-card"><strong>Revenue today</strong><span>${{ '%.2f'|format(admin_metrics.revenue_today) }} received from external payments today.</span></div>
                 <div class="admin-note-card"><strong>Trial conversion</strong><span>{{ admin_metrics.trial_conversion }}% of trial users converted to paid.</span></div>
               </div>
             </article>
@@ -464,9 +458,9 @@
             </article>
           </section>
 
-          <section class="admin-two-column">
-            <article class="admin-surface admin-surface--table">
-              <div class="admin-segmented-nav">
+          <section class="admin-two-column admin-two-column--users">
+            <article class="admin-surface admin-surface--table admin-surface--users">
+              <div class="admin-segmented-nav admin-segmented-nav--users">
                 <a href="{{ url_lang('admin_panel', tab='users') }}" class="{% if user_filter == 'all' %}is-active{% endif %}">All Users <span>{{ users_data.total }}</span></a>
                 <a href="{{ url_lang('admin_panel', tab='users', user_filter='active') }}" class="{% if user_filter == 'active' %}is-active{% endif %}">Active <span>{{ users_page_ns.active }}</span></a>
                 <a href="{{ url_lang('admin_panel', tab='users', user_filter='trial_unpaid') }}" class="{% if user_filter == 'trial_unpaid' %}is-active{% endif %}">Trial <span>{{ users_page_ns.trial }}</span></a>
@@ -474,7 +468,7 @@
                 <a href="{{ url_lang('admin_panel', tab='users', user_filter='banned') }}" class="{% if user_filter == 'banned' %}is-active{% endif %}">Banned <span>{{ users_page_ns.banned }}</span></a>
               </div>
 
-              <form method="GET" action="{{ url_lang('admin_panel') }}" class="admin-toolbar">
+              <form method="GET" action="{{ url_lang('admin_panel') }}" class="admin-toolbar admin-toolbar--users">
                 <input type="hidden" name="tab" value="users">
                 <div class="admin-toolbar__group admin-toolbar__group--filters">
                   <label class="admin-filter-chip">
@@ -507,6 +501,14 @@
 
               <div class="admin-table-shell">
                 <table class="admin-table admin-table--users">
+                  <colgroup>
+                    <col class="admin-table__col-id">
+                    <col class="admin-table__col-user">
+                    <col class="admin-table__col-status">
+                    <col class="admin-table__col-plan">
+                    <col class="admin-table__col-expires">
+                    <col class="admin-table__col-purchases">
+                  </colgroup>
                   <thead>
                     <tr>
                       <th>ID</th>
@@ -521,20 +523,29 @@
                     {% for item in users_data["items"] %}
                       {% set row_link = url_lang('admin_panel', tab='users', user=item.id, user_search=user_search, user_filter=user_filter, min_purchases=min_purchases, user_page=users_data.page) %}
                       <tr class="admin-user-row {% if selected_user and selected_user.user.id == item.id %}is-selected{% endif %}" data-href="{{ row_link }}" tabindex="0" role="link" aria-label="Open user #{{ item.id }}">
-                        <td><a href="{{ row_link }}" class="admin-row-primary-link">#{{ item.id }}</a></td>
+                        <td class="admin-user-row__id"><a href="{{ row_link }}" class="admin-row-primary-link">#{{ item.id }}</a></td>
                         <td>
-                          <div class="admin-table-user">
-                            <div class="admin-table-user__avatar">{{ (item.email[:1] or 'U')|upper }}</div>
-                            <div>
+                          <div class="admin-table-user admin-table-user--users">
+                            <div class="admin-table-user__body">
                               <strong>{{ item.email }}</strong>
-                              <span>{% if item.telegram_id %}TG {{ item.telegram_id }}{% else %}No Telegram{% endif %}{% if item.username %} · @{{ item.username.lstrip('@') }}{% endif %}</span>
+                              <span>{% if item.telegram_id %}TG {{ item.telegram_id }}{% else %}No Telegram{% endif %}</span>
+                              {% if item.username %}
+                                <span>@{{ item.username.lstrip('@') }}</span>
+                              {% endif %}
                             </div>
                           </div>
                         </td>
-                        <td><span class="admin-pill {{ tone(item.status) }}">{{ item.status }}</span></td>
-                        <td>{{ item.plan_name }}</td>
-                        <td>{{ item.subscription_expires_at.strftime('%d %b %Y, %H:%M') if item.subscription_expires_at else '—' }}</td>
-                        <td>{{ item.purchase_count }}</td>
+                        <td class="admin-user-row__status"><span class="admin-pill {{ tone(item.status) }}">{{ item.status }}</span></td>
+                        <td class="admin-user-row__plan"><strong>{{ item.plan_name }}</strong></td>
+                        <td class="admin-user-row__expires">
+                          {% if item.subscription_expires_at %}
+                            <strong>{{ item.subscription_expires_at.strftime('%d %b %Y') }}</strong>
+                            <span>{{ item.subscription_expires_at.strftime('%H:%M') }}</span>
+                          {% else %}
+                            <strong>—</strong>
+                          {% endif %}
+                        </td>
+                        <td class="admin-user-row__purchases"><strong>{{ item.purchase_count }}</strong></td>
                       </tr>
                     {% else %}
                       <tr><td colspan="6" class="admin-empty-cell">No users found.</td></tr>
@@ -562,12 +573,17 @@
                 {% set used_bytes = detail.remote.used_bytes %}
                 {% set limit_bytes = detail.remote.limit_bytes %}
                 {% set traffic_progress = ((used_bytes / limit_bytes) * 100) if used_bytes is not none and limit_bytes and limit_bytes > 0 else None %}
-                <article class="admin-surface admin-detail-card admin-detail-card--sticky">
-                  <div class="admin-detail-card__header">
+                <article class="admin-surface admin-detail-card admin-detail-card--sticky admin-user-profile">
+                  <div class="admin-user-profile__hero">
                     <div class="admin-detail-card__avatar">{{ (detail.user.email or 'U')[:1]|upper }}</div>
-                    <div class="admin-detail-card__identity">
-                      <strong class="break-anywhere">{{ detail.telegram.username if detail.telegram and detail.telegram.username else detail.user.email }}</strong>
+                    <div class="admin-user-profile__identity">
+                      <strong class="break-anywhere">
+                        {% if detail.telegram and detail.telegram.username %}@{{ detail.telegram.username.lstrip('@') }}{% else %}{{ detail.user.email or 'Unknown user' }}{% endif %}
+                      </strong>
                       <span>ID: {{ detail.user.id }}</span>
+                      {% if detail.user.email and (not detail.telegram or not detail.telegram.username or detail.user.email != detail.telegram.username) %}
+                        <em class="break-anywhere">{{ detail.user.email }}</em>
+                      {% endif %}
                       <div class="admin-inline-pills">
                         <span class="admin-pill {{ tone(detail.status) }}">{{ detail.status }}</span>
                         <span class="admin-soft-pill">{{ detail.plan_name }}</span>
@@ -575,7 +591,7 @@
                     </div>
                   </div>
 
-                  <div class="admin-detail-card__actions">
+                  <div class="admin-detail-card__actions admin-detail-card__actions--hero">
                     <form method="POST" action="{{ url_for('admin_user_extend', user_id=detail.user.id) }}" class="admin-mini-form">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <input type="hidden" name="days" value="30">
@@ -588,13 +604,32 @@
                     </form>
                   </div>
 
-                  <div class="admin-detail-grid">
-                    <div><span>Expires</span><strong>{{ detail.subscription.expiry_date.strftime('%d %b %Y') if detail.subscription and detail.subscription.expiry_date else '—' }}</strong></div>
-                    <div><span>Devices</span><strong>{{ detail.remote.connections if detail.remote.connections is not none else detail.sessions|length }}</strong></div>
-                    <div><span>Traffic</span><strong>{{ format_bytes(used_bytes) }} / {{ format_bytes(limit_bytes) }}</strong></div>
-                    <div><span>Balance</span><strong>${{ '%.2f'|format(detail.balance_cents / 100) }}</strong></div>
-                    <div><span>Joined</span><strong>{{ detail.user.created_at.strftime('%d %b %Y') if detail.user.created_at else '—' }}</strong></div>
-                    <div><span>Last Seen</span><strong>{{ detail.sessions[0].last_seen_at.strftime('%d %b %Y, %H:%M') if detail.sessions and detail.sessions[0].last_seen_at else '—' }}</strong></div>
+                  <div class="admin-user-profile__stats">
+                    <div class="admin-user-stat">
+                      <span>Expires</span>
+                      <strong>{{ detail.subscription.expiry_date.strftime('%d %b %Y') if detail.subscription and detail.subscription.expiry_date else '—' }}</strong>
+                    </div>
+                    <div class="admin-user-stat">
+                      <span>Devices</span>
+                      <strong>{{ detail.remote.connections if detail.remote.connections is not none else detail.sessions|length }}</strong>
+                    </div>
+                    <div class="admin-user-stat admin-user-stat--traffic">
+                      <span>Traffic</span>
+                      <strong>{{ format_bytes(used_bytes) }}</strong>
+                      <em>/ {{ format_bytes(limit_bytes) }}</em>
+                    </div>
+                    <div class="admin-user-stat">
+                      <span>Balance</span>
+                      <strong>${{ '%.2f'|format(detail.balance_cents / 100) }}</strong>
+                    </div>
+                    <div class="admin-user-stat">
+                      <span>Joined</span>
+                      <strong>{{ detail.user.created_at.strftime('%d %b %Y') if detail.user.created_at else '—' }}</strong>
+                    </div>
+                    <div class="admin-user-stat">
+                      <span>Last Seen</span>
+                      <strong>{{ detail.sessions[0].last_seen_at.strftime('%d %b %Y') if detail.sessions and detail.sessions[0].last_seen_at else '—' }}</strong>
+                    </div>
                   </div>
 
                   <div class="admin-traffic-box">
@@ -610,15 +645,15 @@
                   </div>
                 </article>
 
-                <article class="admin-surface">
+                <article class="admin-surface admin-surface--user-actions">
                   <div class="admin-surface__head">
                     <div>
                       <h2>Admin Actions</h2>
                       <p>Only real POST actions from the current backend.</p>
                     </div>
                   </div>
-                  <div class="admin-form-stack">
-                    <form method="POST" action="{{ url_for('admin_user_extend', user_id=detail.user.id) }}" class="admin-field-grid">
+                  <div class="admin-form-stack admin-form-stack--user-actions">
+                    <form method="POST" action="{{ url_for('admin_user_extend', user_id=detail.user.id) }}" class="admin-field-grid admin-field-grid--action">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <label class="admin-field">
                         <span>Extend subscription by days</span>
@@ -627,7 +662,7 @@
                       <button type="submit" class="admin-button admin-button--primary">Extend Subscription</button>
                     </form>
 
-                    <form method="POST" action="{{ url_for('admin_user_ban', user_id=detail.user.id) }}" class="admin-field-grid">
+                    <form method="POST" action="{{ url_for('admin_user_ban', user_id=detail.user.id) }}" class="admin-field-grid admin-field-grid--action">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <label class="admin-field">
                         <span>Reason</span>
@@ -638,7 +673,7 @@
                       </button>
                     </form>
 
-                    <form method="POST" action="{{ url_for('admin_user_message', user_id=detail.user.id) }}" class="admin-field-grid">
+                    <form method="POST" action="{{ url_for('admin_user_message', user_id=detail.user.id) }}" class="admin-field-grid admin-field-grid--message">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <label class="admin-field">
                         <span>Message via bot</span>
