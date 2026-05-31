@@ -10,7 +10,6 @@ from sqlalchemy import func, inspect, text
 from app.core.extensions import db
 from app.bot.models import BotTrackedLink, BotTrackedLinkAttribution, BotTrackedLinkPayment, BotTrackedLinkVisit, TelegramAccount, utc_now
 from app.domain.models import PaymentIntent, User
-from app.services.coupons import intent_pricing
 from app.services.telegram_links import telegram_bot_deeplink
 
 
@@ -280,6 +279,8 @@ def record_tracked_link_payment(intent: PaymentIntent, user: User) -> None:
     link = db.session.get(BotTrackedLink, attribution.link_id)
     if not link:
         return
+    from app.services.coupons import intent_pricing
+
     pricing = intent_pricing(intent)
     amount_cents = _decimal_to_cents(pricing["final_price"])
     if amount_cents <= 0:
