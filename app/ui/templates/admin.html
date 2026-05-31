@@ -470,7 +470,7 @@
                 <a href="{{ url_lang('admin_panel', tab='users') }}" class="{% if user_filter == 'all' %}is-active{% endif %}">All Users <span>{{ users_data.total }}</span></a>
                 <a href="{{ url_lang('admin_panel', tab='users', user_filter='active') }}" class="{% if user_filter == 'active' %}is-active{% endif %}">Active <span>{{ users_page_ns.active }}</span></a>
                 <a href="{{ url_lang('admin_panel', tab='users', user_filter='trial_unpaid') }}" class="{% if user_filter == 'trial_unpaid' %}is-active{% endif %}">Trial <span>{{ users_page_ns.trial }}</span></a>
-                <a href="{{ url_lang('admin_panel', tab='users', user_filter='expires_3d') }}" class="{% if user_filter == 'expires_3d' %}is-active{% endif %}">Expiring</a>
+                <a href="{{ url_lang('admin_panel', tab='users', user_filter='expires_3d') }}" class="{% if user_filter == 'expires_3d' %}is-active{% endif %}">Expiring <span class="is-muted">{{ users_page_ns.expired }}</span></a>
                 <a href="{{ url_lang('admin_panel', tab='users', user_filter='banned') }}" class="{% if user_filter == 'banned' %}is-active{% endif %}">Banned <span>{{ users_page_ns.banned }}</span></a>
               </div>
 
@@ -519,8 +519,9 @@
                   </thead>
                   <tbody>
                     {% for item in users_data["items"] %}
-                      <tr class="{% if selected_user and selected_user.user.id == item.id %}is-selected{% endif %}">
-                        <td><a href="{{ url_lang('admin_panel', tab='users', user=item.id, user_search=user_search, user_filter=user_filter, min_purchases=min_purchases, user_page=users_data.page) }}">#{{ item.id }}</a></td>
+                      {% set row_link = url_lang('admin_panel', tab='users', user=item.id, user_search=user_search, user_filter=user_filter, min_purchases=min_purchases, user_page=users_data.page) %}
+                      <tr class="admin-user-row {% if selected_user and selected_user.user.id == item.id %}is-selected{% endif %}" data-href="{{ row_link }}" tabindex="0" role="link" aria-label="Open user #{{ item.id }}">
+                        <td><a href="{{ row_link }}" class="admin-row-primary-link">#{{ item.id }}</a></td>
                         <td>
                           <div class="admin-table-user">
                             <div class="admin-table-user__avatar">{{ (item.email[:1] or 'U')|upper }}</div>
@@ -1127,6 +1128,24 @@
     const toggle = document.querySelector('[data-admin-menu]');
     if (!app || !toggle) return;
     toggle.addEventListener('click', () => app.classList.toggle('is-sidebar-open'));
+  })();
+
+  (() => {
+    document.querySelectorAll('.admin-user-row[data-href]').forEach((row) => {
+      const href = row.dataset.href;
+      if (!href) return;
+      row.addEventListener('click', (event) => {
+        const interactive = event.target.closest('a, button, input, select, textarea, label');
+        if (interactive && interactive !== row.querySelector('.admin-row-primary-link')) return;
+        window.location.href = href;
+      });
+      row.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          window.location.href = href;
+        }
+      });
+    });
   })();
 </script>
 {% endblock %}
