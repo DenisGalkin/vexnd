@@ -230,15 +230,46 @@
       });
     });
 
-    document.querySelectorAll('[data-subscription-qr-toggle]').forEach(control => {
+    const qrToggles = Array.from(document.querySelectorAll('[data-subscription-qr-toggle]'));
+    let activeQrTrigger = null;
+
+    function closeQrModal(modal, trigger) {
+      if (!modal) return;
+      modal.hidden = true;
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('subscription-qr-open');
+      const control = trigger || activeQrTrigger;
+      if (control) {
+        control.setAttribute('aria-expanded', 'false');
+        control.focus();
+      }
+      activeQrTrigger = null;
+    }
+
+    qrToggles.forEach(control => {
+      const modal = document.getElementById(control.getAttribute('aria-controls'));
+      if (!modal) return;
+
       control.addEventListener('click', () => {
-        const panel = document.getElementById(control.getAttribute('aria-controls'));
-        if (!panel) return;
-        const isExpanded = control.getAttribute('aria-expanded') === 'true';
-        control.setAttribute('aria-expanded', String(!isExpanded));
-        control.textContent = isExpanded ? '{{ _("Показать QR-код") }}' : '{{ _("Скрыть QR-код") }}';
-        panel.hidden = isExpanded;
+        activeQrTrigger = control;
+        control.setAttribute('aria-expanded', 'true');
+        modal.hidden = false;
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('subscription-qr-open');
+        const closeButton = modal.querySelector('.subscription-qr-modal__close');
+        if (closeButton) closeButton.focus();
       });
+
+      modal.querySelectorAll('[data-subscription-qr-close]').forEach(closeControl => {
+        closeControl.addEventListener('click', () => closeQrModal(modal, control));
+      });
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      const openModal = document.querySelector('.subscription-qr-modal:not([hidden])');
+      if (!openModal) return;
+      closeQrModal(openModal);
     });
 
     settingsTiles.forEach(tile => {

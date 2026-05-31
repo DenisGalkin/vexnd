@@ -2379,7 +2379,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 
 .subscription-link-card,
-.subscription-qr-panel,
 .subscription-history__item {
     border: 1px solid var(--dash-border);
     background: rgba(255,255,255,.03);
@@ -2411,12 +2410,97 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     height: auto;
 }
 
-.subscription-qr-panel {
+.subscription-qr-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
+    padding: 1.25rem;
+}
+
+.subscription-qr-modal[hidden] {
+    display: none;
+}
+
+.subscription-qr-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 6, 23, .76);
+    backdrop-filter: blur(10px);
+}
+
+.subscription-qr-modal__dialog {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 28rem);
+    padding: 1.1rem;
+    border-radius: 1.5rem;
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 1.5rem 4rem rgba(15, 23, 42, .42);
+}
+
+.subscription-qr-modal__header {
+    text-align: center;
+}
+
+.subscription-qr-modal__title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.subscription-qr-modal__close {
+    position: absolute;
+    top: .8rem;
+    right: .8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, .72);
+    color: rgba(255,255,255,.9);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .2s ease, transform .2s ease;
+}
+
+.subscription-qr-modal__close:hover {
+    background: rgba(30, 41, 59, .92);
+    transform: scale(1.04);
+}
+
+.subscription-qr-modal__close:focus-visible {
+    outline: 2px solid rgba(255,255,255,.65);
+    outline-offset: 2px;
+}
+
+.subscription-qr-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1.4rem 1rem 1rem;
     min-height: 100%;
+    border: 1px solid var(--dash-border);
+    background: rgba(255,255,255,.03);
+    border-radius: 1.15rem;
+}
+
+.subscription-qr-modal__action {
+    min-width: 10rem;
+    justify-content: center;
+}
+
+body.subscription-qr-open {
+    overflow: hidden;
 }
 
 .subscription-history {

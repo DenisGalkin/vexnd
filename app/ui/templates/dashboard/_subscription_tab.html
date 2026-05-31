@@ -34,7 +34,7 @@
     <article class="overview-metric glass-effect">
       <div class="overview-metric__label">{{ _('Баланс') }}</div>
       <div class="overview-metric__value">{{ balance_amount_text }}</div>
-      <p class="overview-metric__hint">{{ _('Доступно для оплаты в checkout') }}</p>
+      <p class="overview-metric__hint">{{ _('На покупки и продление') }}</p>
     </article>
 
     <article class="overview-metric glass-effect">
@@ -71,16 +71,28 @@
           <div class="overview-shortcuts subscription-actions">
             <button type="button" class="overview-chip overview-chip--primary" onclick="copyText('{{ subscription_url|e }}', this)">{{ _('Скопировать ссылку') }}</button>
             {% if qr_code %}
-              <button type="button" class="overview-chip" data-subscription-qr-toggle aria-expanded="false" aria-controls="subscription-qr-panel">{{ _('Показать QR-код') }}</button>
+              <button type="button" class="overview-chip" data-subscription-qr-toggle aria-haspopup="dialog" aria-expanded="false" aria-controls="subscription-qr-modal">{{ _('Показать QR-код') }}</button>
             {% endif %}
             <a href="{{ subscription_url }}" class="overview-chip" target="_blank" rel="noopener noreferrer">{{ _('Открыть импорт') }}</a>
           </div>
         </div>
 
         {% if qr_code %}
-          <div class="subscription-qr-panel" id="subscription-qr-panel" hidden>
-            <div class="dashboard-qr-frame">
-              <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="dashboard-qr-image">
+          <div class="subscription-qr-modal" id="subscription-qr-modal" hidden aria-hidden="true">
+            <div class="subscription-qr-modal__backdrop" data-subscription-qr-close></div>
+            <div class="subscription-qr-modal__dialog glass-effect" role="dialog" aria-modal="true" aria-labelledby="subscription-qr-modal-title">
+              <button type="button" class="subscription-qr-modal__close" data-subscription-qr-close aria-label="{{ _('Закрыть QR-код') }}">
+                <span aria-hidden="true">&times;</span>
+              </button>
+              <div class="subscription-qr-panel">
+                <div class="subscription-qr-modal__header">
+                  <h4 class="subscription-qr-modal__title" id="subscription-qr-modal-title">{{ _('QR-код подписки') }}</h4>
+                </div>
+                <div class="dashboard-qr-frame">
+                  <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="dashboard-qr-image">
+                </div>
+                <button type="button" class="overview-chip subscription-qr-modal__action" data-subscription-qr-close>{{ _('Закрыть') }}</button>
+              </div>
             </div>
           </div>
         {% endif %}
