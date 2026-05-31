@@ -73,7 +73,7 @@ def payment_methods_keyboard(plan_months: int, state: BotUserState) -> dict[str,
 
 
 def payment_methods_keyboard_for_user(plan_months: int, state: BotUserState, user: User | None) -> dict[str, object]:
-    rows: list[list[tuple[str, str]]] = [[(t(state, "balance"), f"pm_balance_{plan_months}")]]
+    rows: list[list[tuple[str, str]]] = [[(PAYMENT_METHODS["balance"]["label"], f"pm_balance_{plan_months}")]]
     rows.extend([[(PAYMENT_METHODS[code]["label"], f"pm_{code}_{plan_months}")] for code in ("platega", "cryptobot", "heleket", "crystal") if is_payment_method_enabled(code)])
     rows.append([(t(state, "back_plans"), "plans")])
     return keyboard(rows)

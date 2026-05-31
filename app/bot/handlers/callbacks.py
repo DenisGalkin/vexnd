@@ -232,7 +232,13 @@ def handle_callback(callback: dict[str, object]) -> None:
         if data == "balance_topup":
             answer_callback(callback_id)
             clear_pending_action(state)
-            edit_photo_caption(chat_id, message_id, f"{render_balance_text(state, user)}\n\n{t(state, 'balance_choose_amount')}", balance_topup_amounts_keyboard(state))
+            replace_message_with_screen(
+                chat_id,
+                message_id,
+                "payment",
+                f"{render_balance_text(state, user)}\n\n{t(state, 'balance_choose_amount')}",
+                balance_topup_amounts_keyboard(state),
+            )
             return
         if data == "balance_amount_custom":
             answer_callback(callback_id)

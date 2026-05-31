@@ -475,27 +475,27 @@ CONNECT_CLIENTS: dict[str, list[dict[str, str]]] = {
 
 PAYMENT_METHODS = {
     "balance": {
-        "label": "Balance · Внутренний счёт",
+        "label": "💰 Balance · Внутренний счёт",
         "provider": "balance",
         "env": (),
     },
     "cryptobot": {
-        "label": "CryptoBot · Криптовалюты",
+        "label": "🤖 CryptoBot · Криптовалюты",
         "provider": "cryptobot",
         "env": ("CRYPTO_PAY_API_TOKEN",),
     },
     "crystal": {
-        "label": "CrystalPay · Lolz + Крипта",
+        "label": "💎 CrystalPay · Lolz + Крипта",
         "provider": "crystalpay",
         "env": ("CRYSTALPAY_AUTH_LOGIN", "CRYSTALPAY_AUTH_SECRET"),
     },
     "platega": {
-        "label": "Platega · СБП",
+        "label": "🌍 Platega · СБП",
         "provider": "platega",
         "env": ("PLATEGA_MERCHANT_ID", "PLATEGA_SECRET"),
     },
     "heleket": {
-        "label": "Heleket · Криптовалюты",
+        "label": "🪙 Heleket · Криптовалюты",
         "provider": "heleket",
         "env": ("HELEKET_MERCHANT_ID", "HELEKET_API_KEY"),
     },
