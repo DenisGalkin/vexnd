@@ -246,19 +246,8 @@ def admin_link_menu_keyboard(link_id: int, state: BotUserState) -> dict[str, obj
     return keyboard(
         [
             [(t(state, "admin_link_stats_button"), f"admin_link_stats_{link_id}")],
-            [(t(state, "admin_link_settings_button"), f"admin_link_settings_{link_id}")],
-            [(t(state, "admin_back_to_links"), "admin_panel")],
-            [(t(state, "back_menu"), "menu")],
-        ]
-    )
-
-
-def admin_link_settings_keyboard(link_id: int, state: BotUserState) -> dict[str, object]:
-    return keyboard(
-        [
             [(t(state, "admin_set_percent_button"), f"admin_link_percent_{link_id}")],
-            [(t(state, "admin_link_stats_button"), f"admin_link_stats_{link_id}")],
-            [(t(state, "admin_back_to_link"), f"admin_link_{link_id}")],
+            [(t(state, "admin_back_to_links"), "admin_panel")],
             [(t(state, "back_menu"), "menu")],
         ]
     )
@@ -267,7 +256,7 @@ def admin_link_settings_keyboard(link_id: int, state: BotUserState) -> dict[str,
 def admin_link_stats_keyboard(link_id: int, state: BotUserState) -> dict[str, object]:
     return keyboard(
         [
-            [(t(state, "admin_link_settings_button"), f"admin_link_settings_{link_id}")],
+            [(t(state, "admin_set_percent_button"), f"admin_link_percent_{link_id}")],
             [(t(state, "admin_back_to_link"), f"admin_link_{link_id}")],
             [(t(state, "back_menu"), "menu")],
         ]
@@ -277,7 +266,7 @@ def admin_link_stats_keyboard(link_id: int, state: BotUserState) -> dict[str, ob
 def admin_link_percent_keyboard(link_id: int, state: BotUserState) -> dict[str, object]:
     return keyboard(
         [
-            [(t(state, "admin_back_to_settings"), f"admin_link_settings_{link_id}")],
+            [(t(state, "admin_back_to_link"), f"admin_link_{link_id}")],
             [(t(state, "back_menu"), "menu")],
         ]
     )

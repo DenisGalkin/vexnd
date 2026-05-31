@@ -17,7 +17,6 @@ from app.bot.common import (
 from app.bot.keyboards import (
     admin_link_menu_keyboard,
     admin_link_percent_keyboard,
-    admin_link_settings_keyboard,
     admin_links_keyboard,
     admin_panel_keyboard,
     first_language_keyboard,
@@ -97,15 +96,6 @@ def _admin_link_stats_text(state, details: dict[str, object]) -> str:
     return (
         f"{t(state, 'admin_link_stats_title', name=h(details['name']))}\n\n"
         f"{t(state, 'admin_link_stats_body', total=details['total_starts'], unique=details['unique_starts'], attributed=details['attributed_users'], paid_users=details['paid_users'], payments=details['payments_count'], paid_amount=h(format_balance_cents(details['paid_amount_cents'])), commission=h(format_balance_cents(details['commission_amount_cents'])), subscription_count=details['subscription_count'], subscription_amount=h(format_balance_cents(details['subscription_amount_cents'])), topup_count=details['balance_topup_count'], topup_amount=h(format_balance_cents(details['balance_topup_amount_cents'])), last_started=h(_format_dt(details['last_started_at'])), last_paid=h(_format_dt(details['last_paid_at'])))}"
-    )
-
-
-def _admin_link_settings_text(state, details: dict[str, object]) -> str:
-    return t(
-        state,
-        "admin_link_settings_title",
-        name=h(details["name"]),
-        percent=h(format_commission_percent(details["commission_bps"])),
     )
 
 
@@ -271,8 +261,8 @@ def handle_message(message: dict[str, object]) -> None:
             send_message(
                 chat_id,
                 t(state, "admin_percent_updated", name=h(link.name), percent=h(format_commission_percent(link.commission_bps)))
-                + ("\n\n" + _admin_link_settings_text(state, details) if details else ""),
-                admin_link_settings_keyboard(link.id, state),
+                + ("\n\n" + _admin_link_card_text(state, details) if details else ""),
+                admin_link_menu_keyboard(link.id, state),
             )
             return
 

@@ -28,7 +28,6 @@ from app.bot.keyboards import (
     admin_link_menu_keyboard,
     admin_link_name_keyboard,
     admin_link_percent_keyboard,
-    admin_link_settings_keyboard,
     admin_link_stats_keyboard,
     admin_links_keyboard,
     admin_panel_keyboard,
@@ -119,15 +118,6 @@ def _admin_link_stats_text(state, details: dict[str, object]) -> str:
     return (
         f"{t(state, 'admin_link_stats_title', name=h(details['name']))}\n\n"
         f"{t(state, 'admin_link_stats_body', total=details['total_starts'], unique=details['unique_starts'], attributed=details['attributed_users'], paid_users=details['paid_users'], payments=details['payments_count'], paid_amount=h(format_balance_cents(details['paid_amount_cents'])), commission=h(format_balance_cents(details['commission_amount_cents'])), subscription_count=details['subscription_count'], subscription_amount=h(format_balance_cents(details['subscription_amount_cents'])), topup_count=details['balance_topup_count'], topup_amount=h(format_balance_cents(details['balance_topup_amount_cents'])), last_started=h(_format_dt(details['last_started_at'])), last_paid=h(_format_dt(details['last_paid_at'])))}"
-    )
-
-
-def _admin_link_settings_text(state, details: dict[str, object]) -> str:
-    return t(
-        state,
-        "admin_link_settings_title",
-        name=h(details["name"]),
-        percent=h(format_commission_percent(details["commission_bps"])),
     )
 
 
@@ -234,19 +224,6 @@ def handle_callback(callback: dict[str, object]) -> None:
                 edit_message(chat_id, message_id, t(state, "admin_link_not_found"), admin_panel_keyboard(state))
                 return
             edit_message(chat_id, message_id, _admin_link_stats_text(state, details), admin_link_stats_keyboard(link_id, state))
-            return
-        if data.startswith("admin_link_settings_"):
-            answer_callback(callback_id)
-            if not is_admin:
-                edit_message(chat_id, message_id, t(state, "admin_access_denied"), main_menu(state, user))
-                return
-            clear_pending_action(state)
-            link_id = int(data.rsplit("_", 1)[1])
-            details = tracked_link_details(link_id)
-            if not details:
-                edit_message(chat_id, message_id, t(state, "admin_link_not_found"), admin_panel_keyboard(state))
-                return
-            edit_message(chat_id, message_id, _admin_link_settings_text(state, details), admin_link_settings_keyboard(link_id, state))
             return
         if data.startswith("admin_link_percent_"):
             answer_callback(callback_id)

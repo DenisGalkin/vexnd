@@ -398,19 +398,16 @@ TEXTS["en"].update(
 
 TEXTS["ru"].update(
     {
-        "admin_title": "🛠 <b>Админ-панель ссылок</b>\n\nВыберите ссылку для статистики и настроек.",
+        "admin_title": "🛠 <b>Админ-панель ссылок</b>\n\nВыберите ссылку для статистики и управления процентом.",
         "admin_stats_line": "• <b>{name}</b>\nУники: <b>{unique}</b> | Оплативших: <b>{paid_users}</b> | Выплат: <b>{commission}</b>",
         "admin_link_stats_button": "📈 Статистика",
-        "admin_link_settings_button": "⚙️ Настройки",
         "admin_back_to_links": "⬅️ К списку ссылок",
         "admin_back_to_link": "⬅️ К карточке ссылки",
-        "admin_back_to_settings": "⬅️ К настройкам",
         "admin_set_percent_button": "💸 Изменить процент",
         "admin_link_not_found": "⚠️ Ссылка не найдена.",
         "admin_link_card": "🔗 <b>{name}</b>\n\n<b>Процент:</b> {percent}\n<b>Уникальных стартов:</b> {unique}\n<b>Оплативших пользователей:</b> {paid_users}\n<b>Начислено с оплат:</b> {commission}\n\n<b>Ссылка:</b>\n<code>{url}</code>",
         "admin_link_stats_title": "📈 <b>Статистика по ссылке</b>\n\n<b>{name}</b>",
         "admin_link_stats_body": "Переходов: <b>{total}</b>\nУникальных стартов: <b>{unique}</b>\nАтрибутированных пользователей: <b>{attributed}</b>\nОплативших пользователей: <b>{paid_users}</b>\nВсего оплат: <b>{payments}</b>\nОборот оплат: <b>{paid_amount}</b>\nНачислено по проценту: <b>{commission}</b>\n\nПодписки: <b>{subscription_count}</b> на <b>{subscription_amount}</b>\nПополнения баланса: <b>{topup_count}</b> на <b>{topup_amount}</b>\n\nПоследний старт: <b>{last_started}</b>\nПоследняя оплата: <b>{last_paid}</b>",
-        "admin_link_settings_title": "⚙️ <b>Настройки ссылки</b>\n\n<b>{name}</b>\nТекущий процент с оплаты: <b>{percent}</b>\n\nПроцент считается от конечной фактической суммы оплаты, включая скидки по купону.",
         "admin_percent_prompt": "💸 <b>Новый процент</b>\n\nОтправьте процент для ссылки <b>{name}</b> одним сообщением.\nНапример: <code>12.5</code>",
         "admin_percent_invalid": "⚠️ Укажите число от 0 до 100. Можно с точкой, например <code>7.5</code>.",
         "admin_percent_updated": "✅ Процент для ссылки <b>{name}</b> обновлён: <b>{percent}</b>.",
@@ -420,19 +417,16 @@ TEXTS["ru"].update(
 
 TEXTS["en"].update(
     {
-        "admin_title": "🛠 <b>Tracked links admin</b>\n\nChoose a link to open its stats and settings.",
+        "admin_title": "🛠 <b>Tracked links admin</b>\n\nChoose a link to open stats or change its commission percent.",
         "admin_stats_line": "• <b>{name}</b>\nUnique: <b>{unique}</b> | Paid users: <b>{paid_users}</b> | Commission: <b>{commission}</b>",
         "admin_link_stats_button": "📈 Stats",
-        "admin_link_settings_button": "⚙️ Settings",
         "admin_back_to_links": "⬅️ Links list",
         "admin_back_to_link": "⬅️ Link card",
-        "admin_back_to_settings": "⬅️ Settings",
         "admin_set_percent_button": "💸 Change percent",
         "admin_link_not_found": "⚠️ Link not found.",
         "admin_link_card": "🔗 <b>{name}</b>\n\n<b>Percent:</b> {percent}\n<b>Unique starts:</b> {unique}\n<b>Paid users:</b> {paid_users}\n<b>Commission from payments:</b> {commission}\n\n<b>Link:</b>\n<code>{url}</code>",
         "admin_link_stats_title": "📈 <b>Link stats</b>\n\n<b>{name}</b>",
         "admin_link_stats_body": "Starts: <b>{total}</b>\nUnique starts: <b>{unique}</b>\nAttributed users: <b>{attributed}</b>\nPaid users: <b>{paid_users}</b>\nPayments: <b>{payments}</b>\nGross payment volume: <b>{paid_amount}</b>\nCommission total: <b>{commission}</b>\n\nSubscriptions: <b>{subscription_count}</b> for <b>{subscription_amount}</b>\nBalance top-ups: <b>{topup_count}</b> for <b>{topup_amount}</b>\n\nLast start: <b>{last_started}</b>\nLast payment: <b>{last_paid}</b>",
-        "admin_link_settings_title": "⚙️ <b>Link settings</b>\n\n<b>{name}</b>\nCurrent commission percent: <b>{percent}</b>\n\nThe percent is calculated from the final paid amount, including coupon discounts.",
         "admin_percent_prompt": "💸 <b>New percent</b>\n\nSend the percent for link <b>{name}</b> in one message.\nExample: <code>12.5</code>",
         "admin_percent_invalid": "⚠️ Send a number from 0 to 100. A decimal like <code>7.5</code> is allowed.",
         "admin_percent_updated": "✅ Commission percent for <b>{name}</b> updated to <b>{percent}</b>.",
