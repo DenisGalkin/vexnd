@@ -231,6 +231,8 @@
     });
 
     const qrToggles = Array.from(document.querySelectorAll('[data-subscription-qr-toggle]'));
+    const desktopQrMedia = window.matchMedia('(min-width: 901px)');
+
     function setQrPanelState(panel, trigger, isOpen, { focusTrigger = false } = {}) {
       if (!panel || !trigger) return;
       panel.classList.toggle('is-open', isOpen);
@@ -239,11 +241,24 @@
       if (!isOpen && focusTrigger) trigger.focus();
     }
 
+    function syncQrPanelsForViewport() {
+      qrToggles.forEach(control => {
+        const panel = document.getElementById(control.getAttribute('aria-controls'));
+        if (!panel) return;
+        if (desktopQrMedia.matches) {
+          setQrPanelState(panel, control, true);
+          return;
+        }
+        setQrPanelState(panel, control, panel.classList.contains('is-open'));
+      });
+    }
+
     qrToggles.forEach(control => {
       const panel = document.getElementById(control.getAttribute('aria-controls'));
       if (!panel) return;
 
       control.addEventListener('click', () => {
+        if (desktopQrMedia.matches) return;
         const shouldOpen = !panel.classList.contains('is-open');
         setQrPanelState(panel, control, shouldOpen);
       });
@@ -253,8 +268,12 @@
       });
     });
 
+    syncQrPanelsForViewport();
+    desktopQrMedia.addEventListener('change', syncQrPanelsForViewport);
+
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return;
+      if (desktopQrMedia.matches) return;
       const openPanel = document.querySelector('.subscription-qr-inline.is-open');
       if (!openPanel) return;
       const trigger = qrToggles.find(control => control.getAttribute('aria-controls') === openPanel.id);

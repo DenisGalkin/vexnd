@@ -2412,20 +2412,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .subscription-qr-inline.is-open {
     max-height: 32rem;
     opacity: 1;
-    margin-top: .2rem;
+    margin-top: .35rem;
     transform: translateY(0);
     pointer-events: auto;
 }
 
 .subscription-qr-inline__card {
-    position: relative;
-    padding: 1.2rem 1.2rem 1.1rem;
-    border: 1px solid rgba(148, 163, 184, .22);
-    border-radius: 1.35rem;
-    background:
-        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)),
-        rgba(15, 23, 42, .72);
-    box-shadow: 0 1.15rem 2.5rem rgba(2, 6, 23, .18);
+    padding: 1rem;
+    border: 1px solid var(--dash-border);
+    border-radius: 1.15rem;
+    background: rgba(255,255,255,.03);
 }
 
 .subscription-qr-inline__header {
@@ -2439,37 +2435,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     color: #fff;
 }
 
-.subscription-qr-inline__close {
-    position: absolute;
-    top: .9rem;
-    right: .9rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.15rem;
-    height: 2.15rem;
-    border: 1px solid rgba(148, 163, 184, .2);
-    border-radius: 999px;
-    background: rgba(255,255,255,.04);
-    color: rgba(255,255,255,.9);
-    font-size: 1.3rem;
-    line-height: 1;
-    cursor: pointer;
-    transition: background .2s ease, transform .2s ease;
-}
-
-.subscription-qr-inline__close:hover {
-    background: rgba(255,255,255,.08);
-    transform: scale(1.04);
-}
-
-.subscription-qr-inline__close:focus-visible {
-    outline: 2px solid rgba(255,255,255,.65);
-    outline-offset: 2px;
-}
-
 .dashboard-qr-frame {
-    width: min(100%, 13.5rem);
+    width: min(100%, 12rem);
 }
 
 .dashboard-qr-image {
@@ -2483,21 +2450,20 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1rem;
+    gap: .9rem;
     padding: 0;
     min-height: 100%;
 }
 
 .dashboard-qr-frame {
-    width: min(100%, 15rem);
-    padding: .8rem;
-    border-radius: 1rem;
+    padding: .65rem;
+    border-radius: .9rem;
     background: #fff;
-    box-shadow: 0 .6rem 1.5rem rgba(2, 6, 23, .22);
+    box-shadow: 0 .45rem 1.2rem rgba(2, 6, 23, .18);
 }
 
 .subscription-qr-panel .dashboard-qr-image {
-    border-radius: .6rem;
+    border-radius: .45rem;
 }
 
 .subscription-qr-inline__action {
@@ -2794,6 +2760,41 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 @media (min-width: 901px) {
     .subscription-access__layout {
         grid-template-columns: minmax(0, 1.5fr) minmax(260px, .8fr);
+        gap: 1.25rem;
+    }
+
+    .subscription-qr-toggle,
+    .subscription-qr-inline__action {
+        display: none;
+    }
+
+    .subscription-qr-inline {
+        display: block;
+        max-height: none;
+        opacity: 1;
+        overflow: visible;
+        transform: none;
+        margin-top: 0;
+        pointer-events: auto;
+    }
+
+    .subscription-qr-inline__card {
+        height: 100%;
+    }
+
+    .subscription-qr-inline__header {
+        text-align: left;
+        width: 100%;
+    }
+
+    .subscription-qr-panel {
+        align-items: center;
+        justify-content: flex-start;
+        gap: .85rem;
+    }
+
+    .dashboard-qr-frame {
+        width: min(100%, 10.5rem);
     }
 }
 

@@ -71,30 +71,27 @@
           <div class="overview-shortcuts subscription-actions">
             <button type="button" class="overview-chip overview-chip--primary" onclick="copyText('{{ subscription_url|e }}', this)">{{ _('Скопировать ссылку') }}</button>
             {% if qr_code %}
-              <button type="button" class="overview-chip" data-subscription-qr-toggle aria-expanded="false" aria-controls="subscription-qr-panel">{{ _('Показать QR-код') }}</button>
+              <button type="button" class="overview-chip subscription-qr-toggle" data-subscription-qr-toggle aria-expanded="false" aria-controls="subscription-qr-panel">{{ _('Показать QR-код') }}</button>
             {% endif %}
             <a href="{{ subscription_url }}" class="overview-chip" target="_blank" rel="noopener noreferrer">{{ _('Открыть импорт') }}</a>
           </div>
+        </div>
 
-          {% if qr_code %}
-            <div class="subscription-qr-inline" id="subscription-qr-panel" aria-hidden="true" data-subscription-qr-panel>
-              <div class="subscription-qr-inline__card" role="region" aria-labelledby="subscription-qr-panel-title">
-                <button type="button" class="subscription-qr-inline__close" data-subscription-qr-close aria-label="{{ _('Закрыть QR-код') }}">
-                <span aria-hidden="true">&times;</span>
-                </button>
-                <div class="subscription-qr-panel">
-                  <div class="subscription-qr-inline__header">
-                    <h4 class="subscription-qr-inline__title" id="subscription-qr-panel-title">{{ _('QR-код подписки') }}</h4>
-                  </div>
-                  <div class="dashboard-qr-frame">
-                    <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="dashboard-qr-image">
-                  </div>
-                  <button type="button" class="overview-chip subscription-qr-inline__action" data-subscription-qr-close>{{ _('Скрыть') }}</button>
+        {% if qr_code %}
+          <aside class="subscription-qr-inline" id="subscription-qr-panel" aria-hidden="true" data-subscription-qr-panel>
+            <div class="subscription-qr-inline__card" role="region" aria-labelledby="subscription-qr-panel-title">
+              <div class="subscription-qr-panel">
+                <div class="subscription-qr-inline__header">
+                  <h4 class="subscription-qr-inline__title" id="subscription-qr-panel-title">{{ _('QR-код подписки') }}</h4>
                 </div>
+                <div class="dashboard-qr-frame">
+                  <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="dashboard-qr-image">
+                </div>
+                <button type="button" class="overview-chip subscription-qr-inline__action" data-subscription-qr-close>{{ _('Скрыть') }}</button>
               </div>
             </div>
-          {% endif %}
-        </div>
+          </aside>
+        {% endif %}
       </div>
     {% else %}
       <p class="overview-status__text subscription-access__intro">
