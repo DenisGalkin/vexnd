@@ -59,10 +59,10 @@
     <h3 class="overview-panel__section-title">{{ _('Данные подписки') }}</h3>
 
     {% if is_active and subscription_url %}
-      <p class="overview-status__text subscription-access__intro">{{ _('Используйте ссылку для импорта в приложение или откройте QR-код ниже.') }}</p>
-
       <div class="subscription-access__layout">
         <div class="subscription-access__main">
+          <p class="overview-status__text subscription-access__intro">{{ _('Используйте ссылку для импорта в приложение или откройте QR-код ниже.') }}</p>
+
           <div class="subscription-link-card">
             <div class="overview-metric__label">{{ _('Ссылка подписки') }}</div>
             <div class="subscription-link-card__value break-anywhere">{{ subscription_url }}</div>
