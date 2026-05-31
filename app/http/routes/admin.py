@@ -3,6 +3,7 @@ from __future__ import annotations
 from flask import flash, redirect, render_template, request, url_for
 from flask_login import login_required
 
+from app.bot.common import format_bytes
 from app.core.extensions import db
 from app.domain.models import PaymentIntent, PromoCode, User
 from app.http.helpers import localized_url
@@ -68,6 +69,7 @@ def admin_panel():
         selected_promo_form=(selected_promo["promo"] if selected_promo else None),
         is_admin_user=is_admin_user,
         payment_amount_decimal=payment_amount_decimal,
+        format_bytes=format_bytes,
     )
 
 
