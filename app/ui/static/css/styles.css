@@ -2113,12 +2113,19 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     gap: .75rem;
 }
 
+.promo-block__header {
+    display: flex;
+    flex-direction: column;
+    gap: .55rem;
+}
+
+.promo-block__title,
+.promo-block__meta {
+    margin-top: 0;
+}
+
 .promo-form {
-    margin-top: 1.25rem;
-    padding: 1.25rem;
-    border-radius: 1.25rem;
-    background: rgba(255,255,255,.025);
-    border: 1px solid rgba(255,255,255,.08);
+    margin-top: 1.5rem;
 }
 
 .promo-form__row {
@@ -2131,23 +2138,19 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .promo-form__field {
     display: flex;
     flex-direction: column;
-    gap: .6rem;
     min-width: 0;
-}
-
-.promo-form__label {
-    font-size: .88rem;
-    color: rgba(156,163,175,.92);
 }
 
 .promo-form__field input {
     width: 100%;
     min-height: 3.35rem;
     border-radius: 1rem;
-    border: 1px solid rgba(255,255,255,.09);
-    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.035);
     padding: .95rem 1rem;
     color: #fff;
+    font-size: 1rem;
+    line-height: 1.4;
     outline: none;
     transition: border-color .18s ease, background-color .18s ease;
 }
@@ -2167,6 +2170,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     padding: 0 1.35rem;
     border-radius: 1rem;
     white-space: nowrap;
+    border-color: rgba(255,255,255,.12);
+    background: rgba(255,255,255,.035);
+    color: rgba(248,250,252,.96);
+}
+
+.promo-form__submit:hover {
+    background: rgba(255,255,255,.055);
+    border-color: rgba(255,255,255,.16);
+    color: #fff;
+    transform: none;
 }
 
 .subscription-shell {

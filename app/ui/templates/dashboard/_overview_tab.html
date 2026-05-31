@@ -51,13 +51,14 @@
   </section>
 
   <section class="overview-panel glass-effect">
-    <h3 class="overview-panel__section-title">{{ _('Промокод') }}</h3>
-    <p class="overview-panel__meta">{{ _('Сюда можно активировать бонусные дни и бонус на баланс. Скидочные коды по-прежнему работают на странице оплаты.') }}</p>
+    <div class="promo-block__header">
+      <h3 class="overview-panel__section-title promo-block__title">{{ _('Промокод') }}</h3>
+      <p class="overview-panel__meta promo-block__meta">{{ _('Активируйте бонусные дни или пополнение баланса. Скидочные промокоды вводятся на странице оплаты.') }}</p>
+    </div>
     <form method="POST" action="{{ url_for('redeem_promo') }}" class="promo-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="promo-form__row">
         <label class="promo-form__field">
-          <span class="promo-form__label">{{ _('Код') }}</span>
           <input type="text" name="promo_code" placeholder="WELCOME2026" autocomplete="off" required>
         </label>
         <div class="promo-form__action">
