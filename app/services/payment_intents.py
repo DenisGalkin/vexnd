@@ -19,9 +19,13 @@ def create_intent_with_pricing(
     balance_amount_cents: int | None = None,
     external_id: str | None,
     pricing: dict,
+    expected_provider_amount: Decimal | float | int | str | None = None,
+    expected_provider_currency: str | None = None,
 ) -> Any:
     """Create PaymentIntent (+ optional pricing snapshot) in one transaction."""
     final_amount = pricing.get("final_price") if isinstance(pricing, dict) else None
+    provider_amount = expected_provider_amount if expected_provider_amount is not None else final_amount
+    provider_currency = (expected_provider_currency or "USD").strip().upper() or "USD"
     intent = intent_model(
         provider=provider,
         token=token,
@@ -33,6 +37,8 @@ def create_intent_with_pricing(
         status="pending",
         currency="USD",
         expected_amount_usd=(f"{Decimal(str(final_amount)).quantize(Decimal('0.01')):.2f}" if final_amount is not None else None),
+        expected_provider_amount=(f"{Decimal(str(provider_amount)).quantize(Decimal('0.01')):.2f}" if provider_amount is not None else None),
+        expected_provider_currency=provider_currency,
     )
     db_session.add(intent)
     intent_pricing = create_pricing_fn(token, pricing)

@@ -95,6 +95,8 @@ class PaymentIntent(db.Model):
     status = db.Column(db.String(32), nullable=False, default="pending", index=True)
     currency = db.Column(db.String(8), nullable=False, default="USD")
     expected_amount_usd = db.Column(db.String(32), nullable=True)
+    expected_provider_amount = db.Column(db.String(32), nullable=True)
+    expected_provider_currency = db.Column(db.String(8), nullable=True)
     paid_amount_usd = db.Column(db.String(32), nullable=True)
     paid_at = db.Column(db.DateTime, nullable=True)
     last_checked_at = db.Column(db.DateTime, nullable=True)

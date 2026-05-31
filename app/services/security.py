@@ -134,6 +134,8 @@ def _ensure_admin_schema() -> None:
             ("status", "VARCHAR(32) NOT NULL DEFAULT 'pending'"),
             ("currency", "VARCHAR(8) NOT NULL DEFAULT 'USD'"),
             ("expected_amount_usd", "VARCHAR(32)"),
+            ("expected_provider_amount", "VARCHAR(32)"),
+            ("expected_provider_currency", "VARCHAR(8)"),
             ("paid_amount_usd", "VARCHAR(32)"),
             ("paid_at", "DATETIME"),
             ("last_checked_at", "DATETIME"),
@@ -159,6 +161,18 @@ def _ensure_admin_schema() -> None:
             )
         )
         connection.execute(text("UPDATE payment_intent SET currency = 'USD' WHERE currency IS NULL OR currency = ''"))
+        connection.execute(
+            text(
+                "UPDATE payment_intent "
+                "SET expected_provider_currency = COALESCE(NULLIF(expected_provider_currency, ''), currency, 'USD'), "
+                "expected_provider_amount = COALESCE(NULLIF(expected_provider_amount, ''), expected_amount_usd) "
+                "WHERE provider != 'platega' AND "
+                "("
+                "expected_provider_currency IS NULL OR expected_provider_currency = '' OR "
+                "expected_provider_amount IS NULL OR expected_provider_amount = ''"
+                ")"
+            )
+        )
         connection.execute(
             text(
                 "UPDATE payment_intent "

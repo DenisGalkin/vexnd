@@ -75,9 +75,23 @@ def start_payment(method):
             create_intent_with_pricing(db_session=db.session, intent_model=PaymentIntent, create_pricing_fn=create_intent_pricing, provider="crystalpay", token=intent_token, user_id=current_user.id, plan_months=plan_int, purpose="subscription", balance_amount_cents=None, external_id=inv_id or None, pricing=pricing)
             return redirect(invoice.get("url"))
         if method == "platega":
-            invoice, intent_token = create_platega_transaction(current_user.id, plan_int, amount_usd=amount_usd)
+            invoice, intent_token, payment_details = create_platega_transaction(current_user.id, plan_int, amount_usd=amount_usd)
             tx_id = str(invoice.get("transactionId") or invoice.get("transaction_id") or invoice.get("id") or "").strip()
-            create_intent_with_pricing(db_session=db.session, intent_model=PaymentIntent, create_pricing_fn=create_intent_pricing, provider="platega", token=intent_token, user_id=current_user.id, plan_months=plan_int, purpose="subscription", balance_amount_cents=None, external_id=tx_id or None, pricing=pricing)
+            create_intent_with_pricing(
+                db_session=db.session,
+                intent_model=PaymentIntent,
+                create_pricing_fn=create_intent_pricing,
+                provider="platega",
+                token=intent_token,
+                user_id=current_user.id,
+                plan_months=plan_int,
+                purpose="subscription",
+                balance_amount_cents=None,
+                external_id=tx_id or None,
+                pricing=pricing,
+                expected_provider_amount=payment_details["amount"],
+                expected_provider_currency=payment_details["currency"],
+            )
             return redirect((invoice.get("url") or invoice.get("redirect") or invoice.get("payformSuccessUrl") or "").strip())
         if method == "heleket":
             invoice, intent_token = create_heleket_invoice(current_user.id, plan_int, amount_usd=amount_usd)
@@ -122,7 +136,7 @@ def start_balance_payment(method):
             external_id = str(invoice.get("id") or "").strip()
             pay_url = invoice.get("url")
         elif method == "platega":
-            invoice, intent_token = create_platega_transaction(current_user.id, 0, amount_usd=amount_usd, description=description)
+            invoice, intent_token, payment_details = create_platega_transaction(current_user.id, 0, amount_usd=amount_usd, description=description)
             external_id = str(invoice.get("transactionId") or invoice.get("transaction_id") or invoice.get("id") or "").strip()
             pay_url = (invoice.get("url") or invoice.get("redirect") or invoice.get("payformSuccessUrl") or "").strip()
         else:
@@ -141,6 +155,8 @@ def start_balance_payment(method):
             balance_amount_cents=amount_cents,
             external_id=external_id or None,
             pricing=pricing,
+            expected_provider_amount=(payment_details["amount"] if method == "platega" else None),
+            expected_provider_currency=(payment_details["currency"] if method == "platega" else None),
         )
         return redirect(pay_url)
     except Exception as exc:

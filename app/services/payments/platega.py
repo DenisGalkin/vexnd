@@ -22,6 +22,9 @@ from app.services.subscriptions import create_remnawave_subscription
 from app.http.helpers import public_url
 
 
+PLATEGA_AMOUNT_TOLERANCE = Decimal("0.000000001")
+
+
 def platega_target_currency() -> str:
     return (os.environ.get("PLATEGA_CURRENCY") or "RUB").strip().upper() or "RUB"
 
@@ -68,6 +71,10 @@ def platega_get_rate(payment_method: int, currency_from: str, currency_to: str) 
     return float(data.get("rate"))
 
 
+def platega_format_amount(value: Decimal | float | int | str) -> str:
+    return f"{to_decimal_amount(value).quantize(Decimal('0.01')):.2f}"
+
+
 def platega_quote_amount(amount_usd: Decimal | float | int | str, *, payment_method: int | None = None, currency: str | None = None) -> tuple[float, str, int]:
     price_usd = to_decimal_amount(amount_usd)
     target_currency = (currency or platega_target_currency()).strip().upper() or "RUB"
@@ -93,22 +100,44 @@ def platega_quote_amount(amount_usd: Decimal | float | int | str, *, payment_met
     return round(converted_amount, 2), target_currency, method
 
 
+def platega_extract_payment_details(payload: dict | None) -> tuple[Decimal | None, str]:
+    if not isinstance(payload, dict):
+        return None, ""
+    payment_details = payload.get("paymentDetails") if isinstance(payload.get("paymentDetails"), dict) else {}
+    raw_amount = payment_details.get("amount")
+    if raw_amount is None:
+        raw_amount = payload.get("amount")
+    raw_currency = payment_details.get("currency")
+    if raw_currency is None:
+        raw_currency = payload.get("currency")
+    try:
+        amount = Decimal(str(raw_amount)) if raw_amount is not None and str(raw_amount).strip() else None
+    except Exception:
+        amount = None
+    currency = str(raw_currency or "").strip().upper()
+    return amount, currency
+
+
 def create_platega_transaction(
     user_id: int,
     plan_months: int,
     *,
     amount_usd: Decimal | None = None,
     description: str | None = None,
-) -> tuple[dict, str]:
+) -> tuple[dict, str, dict[str, str]]:
     merchant_id, secret = platega_credentials()
     intent_token = secrets.token_urlsafe(24)
     quoted_amount, currency, payment_method = platega_quote_amount(amount_usd)
+    payment_details = {
+        "amount": platega_format_amount(quoted_amount),
+        "currency": currency,
+    }
     webhook_secret = get_webhook_secret("PLATEGA_WEBHOOK_PATH_SECRET")
     payload = {
         "paymentMethod": payment_method,
         "paymentDetails": {
-            "amount": quoted_amount,
-            "currency": currency,
+            "amount": float(payment_details["amount"]),
+            "currency": payment_details["currency"],
         },
         "return": public_url("platega_return", token=intent_token),
         "failedUrl": public_url("platega_fail", plan=plan_months),
@@ -125,7 +154,7 @@ def create_platega_transaction(
     data = resp.json() or {}
     if not isinstance(data, dict):
         raise RuntimeError("Unexpected Platega response")
-    return data, intent_token
+    return data, intent_token, payment_details
 
 
 def platega_get_transaction(tx_id: str) -> dict | None:
@@ -144,15 +173,24 @@ def platega_transaction_matches_intent(tx: dict, intent: PaymentIntent) -> bool:
         return False
     if str(tx.get("payload") or "").strip() and str(tx.get("payload")).strip() != str(intent.token or "").strip():
         return False
-    amount = tx.get("amount")
-    currency = str(tx.get("currency") or "").strip().upper()
-    if currency == "USD":
+    paid_amount, currency = platega_extract_payment_details(tx)
+    expected_provider_amount = getattr(intent, "expected_provider_amount", None)
+    expected_provider_currency = str(getattr(intent, "expected_provider_currency", "") or "").strip().upper()
+    if expected_provider_amount and expected_provider_currency:
+        if paid_amount is None or not currency:
+            return False
         try:
-            paid_amount = Decimal(str(amount or 0))
+            expected_amount = Decimal(str(expected_provider_amount))
         except Exception:
             return False
+        if currency != expected_provider_currency:
+            return False
+        if abs(paid_amount - expected_amount) > PLATEGA_AMOUNT_TOLERANCE:
+            return False
+        return True
+    if currency == "USD" and paid_amount is not None:
         expected_amounts = intent_expected_amounts(intent)
-        if expected_amounts and all(abs(paid_amount - value) > Decimal("0.000000001") for value in expected_amounts):
+        if expected_amounts and all(abs(paid_amount - value) > PLATEGA_AMOUNT_TOLERANCE for value in expected_amounts):
             return False
     return True
 

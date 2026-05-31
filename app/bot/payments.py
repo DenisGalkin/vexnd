@@ -34,7 +34,7 @@ from app.services.balance import MAX_TOPUP_CENTS, MIN_TOPUP_CENTS, amount_to_cen
 from app.services.payments.crystalpay import crystal_credentials, crystal_invoice_info, crystalpay_process_paid_invoice
 from app.services.payments.cryptobot import cryptobot_api_base, cryptobot_get_invoice_by_id, cryptobot_process_paid_invoice
 from app.services.payments.heleket import heleket_credentials, heleket_json_dumps, heleket_payment_info, heleket_process_paid, heleket_sign_payload
-from app.services.payments.platega import platega_api_base, platega_credentials, platega_get_transaction, platega_process_paid_transaction, platega_quote_amount, platega_raise_for_status
+from app.services.payments.platega import platega_api_base, platega_credentials, platega_format_amount, platega_get_transaction, platega_process_paid_transaction, platega_quote_amount, platega_raise_for_status
 from app.services.bot_admin_links import ensure_bot_admin_schema
 from app.services.security import get_webhook_secret
 
@@ -91,12 +91,18 @@ def create_bot_crystal_invoice(user: User, plan_months: int = 0, amount_cents: i
     return data, intent_token
 
 
-def create_bot_platega_transaction(plan_months: int = 0, amount_cents: int | None = None, description: str | None = None) -> tuple[dict[str, object], str]:
+def create_bot_platega_transaction(plan_months: int = 0, amount_cents: int | None = None, description: str | None = None) -> tuple[dict[str, object], str, dict[str, str]]:
     amount, currency, payment_method = platega_quote_amount((amount_cents / 100) if amount_cents is not None else bot_plan_price_usd(plan_months))
     intent_token = secrets.token_urlsafe(24)
     merchant_id, secret = platega_credentials()
     headers = {"X-MerchantId": merchant_id, "X-Secret": secret, "Accept": "application/json", "Content-Type": "application/json"}
-    body = {"paymentMethod": payment_method, "paymentDetails": {"amount": amount, "currency": currency}, "description": description or f"VEXND subscription for {plan_months} month(s)", "payload": intent_token}
+    payment_details = {"amount": platega_format_amount(amount), "currency": currency}
+    body = {
+        "paymentMethod": payment_method,
+        "paymentDetails": {"amount": float(payment_details["amount"]), "currency": payment_details["currency"]},
+        "description": description or f"VEXND subscription for {plan_months} month(s)",
+        "payload": intent_token,
+    }
     from app.bot.common import telegram_bot_url
 
     tg_return = telegram_bot_url()
@@ -108,7 +114,7 @@ def create_bot_platega_transaction(plan_months: int = 0, amount_cents: int | Non
     data = resp.json() or {}
     if not isinstance(data, dict) or not (data.get("url") or data.get("redirect") or data.get("payformSuccessUrl")):
         raise RuntimeError("Platega create transaction response missing redirect URL")
-    return data, intent_token
+    return data, intent_token, payment_details
 
 
 def create_bot_heleket_invoice(plan_months: int = 0, amount_cents: int | None = None, description: str | None = None, include_callback: bool = True) -> tuple[dict[str, object], str]:
@@ -155,7 +161,7 @@ def create_bot_payment(
         external_id = str(invoice.get("id") or "").strip()
         pay_url = str(invoice.get("url") or "").strip()
     elif method == "platega":
-        invoice, intent_token = create_bot_platega_transaction(plan_months, amount_cents=amount_cents, description=description)
+        invoice, intent_token, payment_details = create_bot_platega_transaction(plan_months, amount_cents=amount_cents, description=description)
         external_id = str(invoice.get("transactionId") or invoice.get("transaction_id") or invoice.get("id") or "").strip()
         pay_url = str(invoice.get("url") or invoice.get("redirect") or invoice.get("payformSuccessUrl") or "").strip()
     elif method == "heleket":
@@ -174,6 +180,8 @@ def create_bot_payment(
         purpose=purpose,
         balance_amount_cents=amount_cents if purpose == "balance_topup" else None,
         external_id=external_id or None,
+        expected_provider_amount=(payment_details["amount"] if method == "platega" else f"{amount_usd:.2f}"),
+        expected_provider_currency=(payment_details["currency"] if method == "platega" else "USD"),
     )
     db.session.add(intent)
     db.session.add(create_bot_intent_pricing(intent_token, amount_usd))
