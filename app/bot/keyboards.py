@@ -42,11 +42,20 @@ def payment_link_keyboard(pay_url: str, intent_id: int, plan_months: int, state:
 
 def main_menu(state: BotUserState, user: User | None = None) -> dict[str, object]:
     rows = [[{"text": t(state, "profile"), "callback_data": "profile"}]]
+    rows.append(
+        [
+            {"text": t(state, "setup"), "callback_data": "connect"},
+            {"text": t(state, "subscription_menu"), "callback_data": "subscription"},
+        ]
+    )
+    rows.append(
+        [
+            {"text": t(state, "buy"), "callback_data": "plans"},
+            {"text": t(state, "referrals"), "callback_data": "referrals"},
+        ]
+    )
     if user is not None and is_trial_eligible(user):
         rows.append([{"text": t(state, "trial_offer"), "callback_data": "trial_activate"}])
-    rows.append([{"text": t(state, "setup"), "callback_data": "connect"}])
-    rows.append([{"text": t(state, "buy"), "callback_data": "plans"}])
-    rows.append([{"text": t(state, "referrals"), "callback_data": "referrals"}])
     account = TelegramAccount.query.filter_by(user_id=user.id).first() if user is not None else None
     if is_bot_admin(getattr(account, "telegram_id", None), getattr(account, "username", None)):
         rows.append([{"text": t(state, "admin_panel"), "callback_data": "admin_panel"}])
